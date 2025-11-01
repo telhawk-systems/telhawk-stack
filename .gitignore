@@ -1,0 +1,45 @@
+# Binaries
+bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+
+# Go
+*.out
+go.work
+go.work.sum
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Config
+.env
+*.local
+config.local.yaml
+
+# Logs
+*.log
+
+# Database
+*.db
+*.sqlite
+
+# Build artifacts
+dist/
+vendor/
+
+# Test coverage
+coverage.txt
+coverage.html
+*.coverprofile
