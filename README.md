@@ -214,43 +214,117 @@ TelHawk Stack is a monorepo containing multiple Go services that work together t
 
 ### Prerequisites
 - Go 1.21+
-- Docker and Docker Compose
-- OpenSearch 2.x
-- Make (optional, for build automation)
+- Docker and Docker Compose (optional, for OpenSearch)
 
-### Quick Start
+### Quick Start (5 Minutes)
 
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/telhawk-systems/telhawk-stack.git
-   cd telhawk-stack
-   ```
+#### 1. Build Everything
+```bash
+cd telhawk-stack
 
-2. **Start OpenSearch:**
-   ```bash
-   docker-compose up -d opensearch
-   ```
+# Build auth service
+cd auth && go build -o ../bin/auth ./cmd/auth && cd ..
 
-3. **Build all services:**
-   ```bash
-   make build
-   # or manually:
-   cd ingest && go build -o ../bin/ingest ./cmd/ingest
-   cd ../core && go build -o ../bin/core ./cmd/core
-   # ... etc
-   ```
+# Build ingest service
+cd ingest && go build -o ../bin/ingest ./cmd/ingest && cd ..
 
-4. **Run the ingestion service:**
-   ```bash
-   ./bin/ingest --config config/ingest.yaml
-   ```
+# Build CLI tool
+cd cli && go build -o ../bin/thawk . && cd ..
 
-5. **Send test events:**
-   ```bash
-   curl -X POST http://localhost:8088/services/collector/event \
-     -H "Authorization: Splunk your-hec-token" \
-     -d '{"event": {"message": "Test security event", "severity": "INFO"}}'
-   ```
+# Add to PATH (optional)
+export PATH=$PATH:$(pwd)/bin
+```
+
+#### 2. Start Services
+```bash
+# Terminal 1: Start auth service (port 8080)
+./bin/auth
+
+# Terminal 2: Start ingest service (port 8088)
+./bin/ingest
+```
+
+#### 3. Create Your First User
+```bash
+# Register admin user
+thawk auth login -u admin -p SecurePassword123 --auth-url http://localhost:8080
+# If user doesn't exist, it will be created automatically
+# (Note: In production, add proper registration endpoint)
+
+# Verify login
+thawk auth whoami
+```
+
+#### 4. Create HEC Token for Ingestion
+```bash
+# Create token for data ingestion
+thawk token create --name my-first-token
+
+# Output will show:
+# ✓ HEC token created: abc123xyz...
+# Use this token with:
+#   curl -H 'Authorization: Splunk abc123xyz...' ...
+```
+
+#### 5. Send Your First Event
+```bash
+# Using thawk CLI
+thawk ingest send \
+  --message "User login successful" \
+  --token <your-hec-token-from-step-4> \
+  --source application \
+  --sourcetype auth_log
+
+# Or using curl
+curl -X POST http://localhost:8088/services/collector/event \
+  -H "Authorization: Splunk <your-hec-token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "event": {
+      "message": "Security alert detected",
+      "severity": "high",
+      "user": "analyst1"
+    },
+    "source": "security_app",
+    "sourcetype": "json"
+  }'
+```
+
+#### 6. Check Ingestion Stats
+```bash
+curl http://localhost:8088/readyz
+
+# Response:
+{
+  "status": "ready",
+  "stats": {
+    "total_events": 1,
+    "total_bytes": 234,
+    "successful_events": 1,
+    "failed_events": 0,
+    "last_event": "2024-11-01T12:34:56Z"
+  }
+}
+```
+
+### Full Stack with OpenSearch (Optional)
+
+For persistent storage, add OpenSearch:
+
+```bash
+# Start OpenSearch
+docker run -d \
+  --name opensearch \
+  -p 9200:9200 \
+  -e "discovery.type=single-node" \
+  -e "OPENSEARCH_INITIAL_ADMIN_PASSWORD=Admin123!" \
+  opensearchproject/opensearch:2
+
+# Verify OpenSearch is running
+curl -u admin:Admin123! http://localhost:9200
+```
+
+Then configure services to use OpenSearch (coming soon in storage service).
 
 ## OCSF Compliance
 
