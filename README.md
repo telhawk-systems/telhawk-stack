@@ -84,6 +84,7 @@ TelHawk Stack is a monorepo containing multiple Go services that work together t
 - Event normalization and enrichment
 - Event routing and filtering logic
 - Common business logic shared across services
+- Normalization pipeline documentation: see `docs/core-pipeline.md`
 
 **Key Features:**
 - Converts raw events to OCSF-compliant format
@@ -513,7 +514,7 @@ kubectl apply -f k8s/
 
 ## License
 
-MIT License - see LICENSE file for details
+Licensed under the Apache License, Version 2.0. See the `LICENSE` file for details.
 
 ## Contributing
 

@@ -9,8 +9,10 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/config"
+	"github.com/telhawk-systems/telhawk-stack/ingest/internal/coreclient"
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/handlers"
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/service"
 )
@@ -31,23 +33,25 @@ func main() {
 		log.Printf("Loaded config from: %s", *configPath)
 	}
 	log.Printf("Auth URL: %s", cfg.Auth.URL)
+	log.Printf("Core URL: %s", cfg.Core.URL)
 	log.Printf("OpenSearch URL: %s", cfg.OpenSearch.URL)
 
 	// Initialize ingestion service
-	ingestService := service.NewIngestService()
+	coreClient := coreclient.New(cfg.Core.URL, 10*time.Second)
+	ingestService := service.NewIngestService(coreClient)
 
 	// Initialize HTTP handlers
 	handler := handlers.NewHECHandler(ingestService)
 
 	// Setup HTTP router
 	mux := http.NewServeMux()
-	
+
 	// Splunk HEC endpoints
 	mux.HandleFunc("/services/collector/event", handler.HandleEvent)
 	mux.HandleFunc("/services/collector/raw", handler.HandleRaw)
 	mux.HandleFunc("/services/collector/health", handler.Health)
 	mux.HandleFunc("/services/collector/ack", handler.Ack)
-	
+
 	// Health endpoints
 	mux.HandleFunc("/healthz", handler.Health)
 	mux.HandleFunc("/readyz", handler.Ready)
