@@ -1,0 +1,28 @@
+server:
+  port: 8088
+  read_timeout: 30s
+  write_timeout: 30s
+  idle_timeout: 120s
+
+auth:
+  url: http://localhost:8080
+  token_validation_cache_ttl: 5m
+
+opensearch:
+  url: https://localhost:9200
+  username: admin
+  password: ""
+  tls_skip_verify: true
+  index_prefix: telhawk
+  bulk_batch_size: 1000
+  bulk_flush_interval: 5s
+
+ingestion:
+  max_event_size: 1048576  # 1MB
+  rate_limit_enabled: true
+  rate_limit_requests: 10000
+  rate_limit_window: 1m
+
+logging:
+  level: info  # debug, info, warn, error
+  format: json  # json or text

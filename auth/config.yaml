@@ -1,0 +1,24 @@
+server:
+  port: 8080
+  read_timeout: 15s
+  write_timeout: 15s
+  idle_timeout: 60s
+
+auth:
+  jwt_secret: "change-this-in-production"
+  access_token_ttl: 15m
+  refresh_token_ttl: 168h  # 7 days
+
+database:
+  type: memory  # memory or postgres
+  postgres:
+    host: localhost
+    port: 5432
+    database: telhawk_auth
+    user: telhawk
+    password: ""
+    sslmode: disable
+
+logging:
+  level: info  # debug, info, warn, error
+  format: json  # json or text

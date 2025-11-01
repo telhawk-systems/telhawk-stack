@@ -22,6 +22,12 @@ var authLoginCmd = &cobra.Command{
 		username, _ := cmd.Flags().GetString("username")
 		password, _ := cmd.Flags().GetString("password")
 		authURL, _ := cmd.Flags().GetString("auth-url")
+		
+		// Use config default if not provided via flag
+		if authURL == "" || !cmd.Flags().Changed("auth-url") {
+			profile, _ := cmd.Flags().GetString("profile")
+			authURL = cfg.GetAuthURL(profile)
+		}
 
 		if username == "" {
 			return fmt.Errorf("username is required")
@@ -102,7 +108,7 @@ func init() {
 
 	authLoginCmd.Flags().StringP("username", "u", "", "Username")
 	authLoginCmd.Flags().StringP("password", "p", "", "Password")
-	authLoginCmd.Flags().String("auth-url", "http://localhost:8080", "Auth service URL")
+	authLoginCmd.Flags().String("auth-url", "", "Auth service URL (default from config/env)")
 	authLoginCmd.MarkFlagRequired("username")
 	authLoginCmd.MarkFlagRequired("password")
 }

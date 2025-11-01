@@ -213,52 +213,51 @@ TelHawk Stack is a monorepo containing multiple Go services that work together t
 ## Getting Started
 
 ### Prerequisites
-- Go 1.21+
-- Docker and Docker Compose (optional, for OpenSearch)
+- Docker and Docker Compose
 
-### Quick Start (5 Minutes)
+**Note:** You don't need Go installed - all services are built and run in Docker containers with OpenSearch included by default.
 
-#### 1. Build Everything
+### Quick Start (2 Minutes)
+
+#### 1. Start the Stack
 ```bash
 cd telhawk-stack
 
-# Build auth service
-cd auth && go build -o ../bin/auth ./cmd/auth && cd ..
+# Start all services (auth, ingest, opensearch)
+docker-compose up -d
 
-# Build ingest service
-cd ingest && go build -o ../bin/ingest ./cmd/ingest && cd ..
-
-# Build CLI tool
-cd cli && go build -o ../bin/thawk . && cd ..
-
-# Add to PATH (optional)
-export PATH=$PATH:$(pwd)/bin
+# Watch logs
+docker-compose logs -f
 ```
 
-#### 2. Start Services
+#### 2. Wait for Services to be Ready
 ```bash
-# Terminal 1: Start auth service (port 8080)
-./bin/auth
+# Check service health
+docker-compose ps
 
-# Terminal 2: Start ingest service (port 8088)
-./bin/ingest
+# All services should show "healthy" status
 ```
 
 #### 3. Create Your First User
 ```bash
-# Register admin user
-thawk auth login -u admin -p SecurePassword123 --auth-url http://localhost:8080
+# Using the CLI tool via Docker
+docker-compose run --rm thawk auth login -u admin -p SecurePassword123
 # If user doesn't exist, it will be created automatically
-# (Note: In production, add proper registration endpoint)
 
 # Verify login
-thawk auth whoami
+docker-compose run --rm thawk auth whoami
+```
+
+**Optional:** For convenience, create an alias:
+```bash
+alias thawk='docker-compose run --rm thawk'
+thawk auth whoami  # Now you can use it like a local command
 ```
 
 #### 4. Create HEC Token for Ingestion
 ```bash
 # Create token for data ingestion
-thawk token create --name my-first-token
+docker-compose run --rm thawk token create --name my-first-token
 
 # Output will show:
 # ✓ HEC token created: abc123xyz...
@@ -269,13 +268,13 @@ thawk token create --name my-first-token
 #### 5. Send Your First Event
 ```bash
 # Using thawk CLI
-thawk ingest send \
+docker-compose run --rm thawk ingest send \
   --message "User login successful" \
   --token <your-hec-token-from-step-4> \
   --source application \
   --sourcetype auth_log
 
-# Or using curl
+# Or using curl directly
 curl -X POST http://localhost:8088/services/collector/event \
   -H "Authorization: Splunk <your-hec-token>" \
   -H "Content-Type: application/json" \
@@ -290,41 +289,40 @@ curl -X POST http://localhost:8088/services/collector/event \
   }'
 ```
 
-#### 6. Check Ingestion Stats
+#### 6. Check Service Health
 ```bash
+# Check ingestion service
 curl http://localhost:8088/readyz
 
-# Response:
-{
-  "status": "ready",
-  "stats": {
-    "total_events": 1,
-    "total_bytes": 234,
-    "successful_events": 1,
-    "failed_events": 0,
-    "last_event": "2024-11-01T12:34:56Z"
-  }
-}
+# Check OpenSearch cluster
+curl -u admin:TelHawk123! http://localhost:9200/_cluster/health
+
+# View all container status
+docker-compose ps
 ```
 
-### Full Stack with OpenSearch (Optional)
-
-For persistent storage, add OpenSearch:
-
+#### 7. Stop the Stack
 ```bash
-# Start OpenSearch
-docker run -d \
-  --name opensearch \
-  -p 9200:9200 \
-  -e "discovery.type=single-node" \
-  -e "OPENSEARCH_INITIAL_ADMIN_PASSWORD=Admin123!" \
-  opensearchproject/opensearch:2
+# Stop all services
+docker-compose down
 
-# Verify OpenSearch is running
-curl -u admin:Admin123! http://localhost:9200
+# Stop and remove volumes (deletes all data)
+docker-compose down -v
 ```
 
-Then configure services to use OpenSearch (coming soon in storage service).
+## Documentation
+
+Comprehensive guides for configuration, deployment, and usage:
+
+- **[Configuration Guide](docs/CONFIGURATION.md)** - Complete service configuration reference (YAML + environment variables)
+- **[CLI Configuration](docs/CLI_CONFIGURATION.md)** - TelHawk CLI (`thawk`) configuration and usage
+- **[Docker Quick Reference](DOCKER.md)** - Docker and docker-compose commands, troubleshooting
+
+### Additional Resources
+
+- **OCSF Compliance** - See section below for OCSF schema implementation details
+- **API Documentation** - Coming soon
+- **Web UI Guide** - Coming soon
 
 ## OCSF Compliance
 
@@ -365,27 +363,32 @@ The ingestion service implements the Splunk HTTP Event Collector (HEC) protocol,
 ### Project Structure
 ```
 telhawk-stack/
+├── auth/           # Authentication service (+ Dockerfile)
+├── cli/            # CLI tool (thawk) (+ Dockerfile)
 ├── core/           # OCSF normalization engine
-├── ingest/         # Event ingestion service
+├── ingest/         # Event ingestion service (+ Dockerfile)
 ├── query/          # Query API service
 ├── storage/        # OpenSearch storage layer
 ├── web/            # Web UI
 ├── common/         # Shared libraries
-├── config/         # Configuration files
-├── docker/         # Docker and compose files
 ├── docs/           # Documentation
-└── scripts/        # Build and deployment scripts
+├── docker-compose.yml  # Complete stack orchestration
+└── bin/            # Compiled binaries (local dev only)
 ```
 
-### Building Individual Services
-Each service can be built independently:
+### Local Development (Without Docker)
+
+If you want to develop locally with Go installed:
 
 ```bash
-cd ingest
-go build -o ../bin/ingest ./cmd/ingest
+# Build individual services
+cd auth && go build -o ../bin/auth ./cmd/auth && cd ..
+cd ingest && go build -o ../bin/ingest ./cmd/ingest && cd ..
+cd cli && go build -o ../bin/thawk . && cd ..
 
-cd ../query
-go build -o ../bin/query ./cmd/query
+# Run locally (requires separate OpenSearch instance)
+./bin/auth &
+./bin/ingest &
 ```
 
 ### Running Tests
@@ -397,27 +400,100 @@ go test ./...
 cd core && go test ./...
 ```
 
+### Rebuilding Docker Images
+```bash
+# Rebuild all services
+docker-compose build
+
+# Rebuild specific service
+docker-compose build auth
+
+# Rebuild and restart
+docker-compose up -d --build
+```
+
 ## Configuration
 
-Each service has its own configuration file in `config/`:
+TelHawk Stack uses **enterprise-grade configuration management**:
 
-- `config/ingest.yaml` - Ingestion service settings
-- `config/core.yaml` - Core engine configuration
-- `config/storage.yaml` - OpenSearch connection settings
-- `config/query.yaml` - Query API settings
-- `config/web.yaml` - Web UI configuration
+- **YAML configuration files** for defaults
+- **Environment variable overrides** for deployment-specific settings
+- **No CLI arguments** for configuration (12-factor compliant)
+
+### Quick Configuration
+
+Each service has a `config.yaml` file embedded in its Docker image at `/etc/telhawk/<service>/config.yaml`.
+
+Override any setting via environment variables:
+
+```bash
+# Auth service
+AUTH_SERVER_PORT=8080
+AUTH_AUTH_JWT_SECRET="your-secret-key"
+
+# Ingest service  
+INGEST_SERVER_PORT=8088
+INGEST_AUTH_URL=http://auth:8080
+INGEST_OPENSEARCH_URL=https://opensearch:9200
+INGEST_OPENSEARCH_PASSWORD="YourPassword"
+```
+
+See [`docs/CONFIGURATION.md`](docs/CONFIGURATION.md) for complete configuration guide.
+
+### Docker Compose Configuration
+
+The `docker-compose.yml` demonstrates proper configuration:
+
+```yaml
+services:
+  auth:
+    environment:
+      - AUTH_SERVER_PORT=8080
+      - AUTH_AUTH_JWT_SECRET=${AUTH_JWT_SECRET:-default-secret}
+  
+  ingest:
+    environment:
+      - INGEST_OPENSEARCH_PASSWORD=${OPENSEARCH_PASSWORD:-TelHawk123!}
+```
+
+Create a `.env` file for local overrides:
+
+```bash
+# .env
+AUTH_JWT_SECRET=my-local-dev-secret
+OPENSEARCH_PASSWORD=DevPassword123!
+```
 
 ## Deployment
 
-### Docker Compose (Development)
+### Docker Compose (Development & Production)
 ```bash
+# Start the full stack
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Scale specific services
+docker-compose up -d --scale ingest=3
+
+# Update services
+docker-compose pull
 docker-compose up -d
 ```
 
-### Kubernetes (Production)
+### Kubernetes (Production) - Coming Soon
 ```bash
 kubectl apply -f k8s/
 ```
+
+### Production Considerations
+- Change default OpenSearch password in docker-compose.yml
+- Enable TLS/SSL for production traffic
+- Configure proper resource limits
+- Set up external volumes for data persistence
+- Implement backup strategy for OpenSearch data
+- Use secrets management for sensitive credentials
 
 ## Roadmap
 
