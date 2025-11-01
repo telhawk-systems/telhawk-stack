@@ -8,11 +8,12 @@ import (
 )
 
 type Config struct {
-	Server    ServerConfig    `mapstructure:"server"`
-	Auth      AuthConfig      `mapstructure:"auth"`
+	Server     ServerConfig     `mapstructure:"server"`
+	Auth       AuthConfig       `mapstructure:"auth"`
+	Core       CoreConfig       `mapstructure:"core"`
 	OpenSearch OpenSearchConfig `mapstructure:"opensearch"`
-	Ingestion IngestionConfig `mapstructure:"ingestion"`
-	Logging   LoggingConfig   `mapstructure:"logging"`
+	Ingestion  IngestionConfig  `mapstructure:"ingestion"`
+	Logging    LoggingConfig    `mapstructure:"logging"`
 }
 
 type ServerConfig struct {
@@ -23,8 +24,12 @@ type ServerConfig struct {
 }
 
 type AuthConfig struct {
-	URL                    string        `mapstructure:"url"`
+	URL                     string        `mapstructure:"url"`
 	TokenValidationCacheTTL time.Duration `mapstructure:"token_validation_cache_ttl"`
+}
+
+type CoreConfig struct {
+	URL string `mapstructure:"url"`
 }
 
 type OpenSearchConfig struct {
@@ -38,10 +43,10 @@ type OpenSearchConfig struct {
 }
 
 type IngestionConfig struct {
-	MaxEventSize       int           `mapstructure:"max_event_size"`
-	RateLimitEnabled   bool          `mapstructure:"rate_limit_enabled"`
-	RateLimitRequests  int           `mapstructure:"rate_limit_requests"`
-	RateLimitWindow    time.Duration `mapstructure:"rate_limit_window"`
+	MaxEventSize      int           `mapstructure:"max_event_size"`
+	RateLimitEnabled  bool          `mapstructure:"rate_limit_enabled"`
+	RateLimitRequests int           `mapstructure:"rate_limit_requests"`
+	RateLimitWindow   time.Duration `mapstructure:"rate_limit_window"`
 }
 
 type LoggingConfig struct {
@@ -51,7 +56,7 @@ type LoggingConfig struct {
 
 func Load(configPath string) (*Config, error) {
 	v := viper.New()
-	
+
 	// Set defaults
 	v.SetDefault("server.port", 8088)
 	v.SetDefault("server.read_timeout", "30s")
@@ -59,6 +64,7 @@ func Load(configPath string) (*Config, error) {
 	v.SetDefault("server.idle_timeout", "120s")
 	v.SetDefault("auth.url", "http://localhost:8080")
 	v.SetDefault("auth.token_validation_cache_ttl", "5m")
+	v.SetDefault("core.url", "http://localhost:8090")
 	v.SetDefault("opensearch.url", "https://localhost:9200")
 	v.SetDefault("opensearch.username", "admin")
 	v.SetDefault("opensearch.tls_skip_verify", true)
@@ -71,7 +77,7 @@ func Load(configPath string) (*Config, error) {
 	v.SetDefault("ingestion.rate_limit_window", "1m")
 	v.SetDefault("logging.level", "info")
 	v.SetDefault("logging.format", "json")
-	
+
 	// Read config file
 	if configPath != "" {
 		v.SetConfigFile(configPath)
@@ -81,11 +87,11 @@ func Load(configPath string) (*Config, error) {
 		v.AddConfigPath(".")
 		v.AddConfigPath("/etc/telhawk/ingest")
 	}
-	
+
 	// Environment variables override
 	v.SetEnvPrefix("INGEST")
 	v.AutomaticEnv()
-	
+
 	// Read config
 	if err := v.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
@@ -93,11 +99,11 @@ func Load(configPath string) (*Config, error) {
 		}
 		// Config file not found; use defaults
 	}
-	
+
 	var cfg Config
 	if err := v.Unmarshal(&cfg); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal config: %w", err)
 	}
-	
+
 	return &cfg, nil
 }

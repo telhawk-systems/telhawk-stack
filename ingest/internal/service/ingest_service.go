@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -8,6 +9,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/telhawk-systems/telhawk-stack/ingest/internal/coreclient"
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/models"
 )
 
@@ -16,15 +18,21 @@ type IngestService struct {
 	statsMutex sync.RWMutex
 	eventQueue chan *models.Event
 	stopChan   chan struct{}
+	coreClient NormalizationClient
 }
 
-func NewIngestService() *IngestService {
+type NormalizationClient interface {
+	Normalize(ctx context.Context, event *models.Event) (*coreclient.NormalizationResult, error)
+}
+
+func NewIngestService(coreClient NormalizationClient) *IngestService {
 	s := &IngestService{
 		eventQueue: make(chan *models.Event, 10000),
 		stopChan:   make(chan struct{}),
 		stats: models.IngestionStats{
 			LastEvent: time.Now(),
 		},
+		coreClient: coreClient,
 	}
 
 	// Start event processor
@@ -99,15 +107,10 @@ func (s *IngestService) processEvents() {
 	for {
 		select {
 		case event := <-s.eventQueue:
-			// TODO: Send to core service for OCSF normalization
-			// TODO: Forward to storage service
 			log.Printf("Processing event: id=%s source=%s", event.ID, event.Source)
-			
-			// Placeholder: just log the event
-			// In production, this would:
-			// 1. Send to core service for OCSF transformation
-			// 2. Send to storage service for indexing
-			// 3. Handle acks if enabled
+			s.normalizeEvent(event)
+			// TODO: Forward to storage service
+			// TODO: Handle acks if enabled
 
 		case <-s.stopChan:
 			log.Println("Stopping event processor")
@@ -116,11 +119,25 @@ func (s *IngestService) processEvents() {
 	}
 }
 
+func (s *IngestService) normalizeEvent(event *models.Event) {
+	if s.coreClient == nil {
+		log.Printf("core client not configured; skipping normalization for event %s", event.ID)
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if _, err := s.coreClient.Normalize(ctx, event); err != nil {
+		log.Printf("failed to normalize event %s: %v", event.ID, err)
+		return
+	}
+	log.Printf("event %s normalized via core service", event.ID)
+}
+
 func (s *IngestService) parseTime(t *float64) time.Time {
 	if t == nil {
 		return time.Now()
 	}
-	
+
 	// Splunk HEC time format: seconds.milliseconds since epoch
 	sec := int64(*t)
 	nsec := int64((*t - float64(sec)) * 1e9)
