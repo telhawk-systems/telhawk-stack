@@ -36,6 +36,12 @@ var ingestSendCmd = &cobra.Command{
 		}
 
 		ingestURL, _ := cmd.Flags().GetString("ingest-url")
+		// Use config default if not provided via flag
+		if ingestURL == "" || !cmd.Flags().Changed("ingest-url") {
+			profile, _ := cmd.Flags().GetString("profile")
+			ingestURL = cfg.GetIngestURL(profile)
+		}
+		
 		ingestClient := client.NewIngestClient(ingestURL)
 
 		var event map[string]interface{}
@@ -67,5 +73,5 @@ func init() {
 	ingestSendCmd.Flags().String("source", "thawk-cli", "Event source")
 	ingestSendCmd.Flags().String("sourcetype", "manual", "Event source type")
 	ingestSendCmd.Flags().StringP("token", "t", "", "HEC token")
-	ingestSendCmd.Flags().String("ingest-url", "http://localhost:8088", "Ingest service URL")
+	ingestSendCmd.Flags().String("ingest-url", "", "Ingest service URL (default from config/env)")
 }

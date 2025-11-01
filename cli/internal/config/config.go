@@ -5,50 +5,80 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/spf13/viper"
 	"gopkg.in/yaml.v3"
 )
 
 type Config struct {
-	CurrentProfile string              `yaml:"current_profile"`
-	Profiles       map[string]*Profile `yaml:"profiles"`
+	CurrentProfile string              `yaml:"current_profile" mapstructure:"current_profile"`
+	Profiles       map[string]*Profile `yaml:"profiles" mapstructure:"profiles"`
+	Defaults       *Defaults           `yaml:"defaults" mapstructure:"defaults"`
 	path           string
 }
 
 type Profile struct {
-	AuthURL      string `yaml:"auth_url"`
-	AccessToken  string `yaml:"access_token"`
-	RefreshToken string `yaml:"refresh_token"`
+	AuthURL      string `yaml:"auth_url" mapstructure:"auth_url"`
+	IngestURL    string `yaml:"ingest_url" mapstructure:"ingest_url"`
+	AccessToken  string `yaml:"access_token" mapstructure:"access_token"`
+	RefreshToken string `yaml:"refresh_token" mapstructure:"refresh_token"`
+}
+
+type Defaults struct {
+	AuthURL   string `yaml:"auth_url" mapstructure:"auth_url"`
+	IngestURL string `yaml:"ingest_url" mapstructure:"ingest_url"`
 }
 
 func Default() *Config {
 	return &Config{
 		CurrentProfile: "default",
 		Profiles:       make(map[string]*Profile),
+		Defaults: &Defaults{
+			AuthURL:   "http://localhost:8080",
+			IngestURL: "http://localhost:8088",
+		},
 	}
 }
 
 func Load(cfgFile string) (*Config, error) {
+	v := viper.New()
+	
+	// Set defaults
+	v.SetDefault("current_profile", "default")
+	v.SetDefault("defaults.auth_url", "http://localhost:8080")
+	v.SetDefault("defaults.ingest_url", "http://localhost:8088")
+	
+	// Determine config file path
 	if cfgFile == "" {
 		home, err := os.UserHomeDir()
-		if err != nil {
-			return nil, err
+		if err == nil {
+			cfgFile = filepath.Join(home, ".thawk", "config.yaml")
 		}
-		cfgFile = filepath.Join(home, ".thawk", "config.yaml")
+		// If we can't determine home dir, just skip config file
 	}
 
+	// Environment variable overrides  
+	v.SetEnvPrefix("THAWK")
+	v.AutomaticEnv()
+	
+	// Bind specific env vars
+	v.BindEnv("defaults.auth_url", "THAWK_AUTH_URL")
+	v.BindEnv("defaults.ingest_url", "THAWK_INGEST_URL")
+	
 	cfg := Default()
 	cfg.path = cfgFile
-
-	data, err := os.ReadFile(cfgFile)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return cfg, nil
-		}
-		return nil, err
+	
+	// Read config file (optional - skip if path is empty or doesn't exist)
+	if cfgFile != "" {
+		v.SetConfigFile(cfgFile)
+		v.SetConfigType("yaml")
+		
+		// Try to read config file - ignore any errors
+		_ = v.ReadInConfig()
 	}
-
-	if err := yaml.Unmarshal(data, cfg); err != nil {
-		return nil, err
+	
+	// Unmarshal into config struct
+	if err := v.Unmarshal(cfg); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal config: %w", err)
 	}
 
 	return cfg, nil
@@ -116,4 +146,24 @@ func (c *Config) RemoveProfile(name string) error {
 	}
 
 	return c.Save()
+}
+
+// GetAuthURL returns the auth URL from profile or defaults
+func (c *Config) GetAuthURL(profile string) string {
+	if profile != "" {
+		if p, err := c.GetProfile(profile); err == nil && p.AuthURL != "" {
+			return p.AuthURL
+		}
+	}
+	return c.Defaults.AuthURL
+}
+
+// GetIngestURL returns the ingest URL from profile or defaults
+func (c *Config) GetIngestURL(profile string) string {
+	if profile != "" {
+		if p, err := c.GetProfile(profile); err == nil && p.IngestURL != "" {
+			return p.IngestURL
+		}
+	}
+	return c.Defaults.IngestURL
 }

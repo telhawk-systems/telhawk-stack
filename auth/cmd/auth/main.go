@@ -2,19 +2,36 @@ package main
 
 import (
 	"context"
+	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
+	"github.com/telhawk-systems/telhawk-stack/auth/internal/config"
 	"github.com/telhawk-systems/telhawk-stack/auth/internal/handlers"
 	"github.com/telhawk-systems/telhawk-stack/auth/internal/repository"
 	"github.com/telhawk-systems/telhawk-stack/auth/internal/service"
 )
 
 func main() {
+	// Parse command line flags
+	configPath := flag.String("config", "", "path to config file")
+	flag.Parse()
+
+	// Load configuration
+	cfg, err := config.Load(*configPath)
+	if err != nil {
+		log.Fatalf("Failed to load config: %v", err)
+	}
+
+	log.Printf("Starting Auth service on port %d", cfg.Server.Port)
+	if *configPath != "" {
+		log.Printf("Loaded config from: %s", *configPath)
+	}
+
 	// Initialize repository (will be PostgreSQL in production)
 	repo := repository.NewInMemoryRepository()
 
@@ -33,18 +50,18 @@ func main() {
 	mux.HandleFunc("/api/v1/auth/revoke", handler.RevokeToken)
 	mux.HandleFunc("/healthz", handler.HealthCheck)
 
-	// Create server
+	// Create server with config values
 	srv := &http.Server{
-		Addr:         ":8080",
+		Addr:         fmt.Sprintf(":%d", cfg.Server.Port),
 		Handler:      mux,
-		ReadTimeout:  15 * time.Second,
-		WriteTimeout: 15 * time.Second,
-		IdleTimeout:  60 * time.Second,
+		ReadTimeout:  cfg.Server.ReadTimeout,
+		WriteTimeout: cfg.Server.WriteTimeout,
+		IdleTimeout:  cfg.Server.IdleTimeout,
 	}
 
 	// Start server in goroutine
 	go func() {
-		log.Printf("Auth service starting on %s", srv.Addr)
+		log.Printf("Auth service listening on %s", srv.Addr)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("Server error: %v", err)
 		}
@@ -56,7 +73,7 @@ func main() {
 	<-quit
 
 	log.Println("Shutting down server...")
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), cfg.Server.WriteTimeout)
 	defer cancel()
 
 	if err := srv.Shutdown(ctx); err != nil {
