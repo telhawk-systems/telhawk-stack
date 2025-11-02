@@ -26,28 +26,59 @@ func (HECNormalizer) Normalize(ctx context.Context, envelope *model.RawEventEnve
 		return nil, fmt.Errorf("decode hec payload: %w", err)
 	}
 
+	// Base event (class_uid 0) for generic events
+	categoryUID := ocsf.CategoryOther
+	classUID := 0
+	activityID := ocsf.StatusUnknown
+
+	eventTime := envelope.ReceivedAt
+	if t, ok := payload["time"].(float64); ok {
+		eventTime = time.Unix(int64(t), int64((t-float64(int64(t)))*1e9))
+	}
+
 	event := &ocsf.Event{
-		Class:        "generic_event",
-		Category:     "activity",
-		Activity:     fmt.Sprintf("ingest:%s", envelope.SourceType),
-		Severity:     "unknown",
-		ObservedTime: envelope.ReceivedAt, // placeholder until payload mapping defined
-		Schema: ocsf.SchemaMetadata{
-			Namespace: "ocsf",
-			Version:   "1.1.0",
+		// Required OCSF fields
+		CategoryUID: categoryUID,
+		ClassUID:    classUID,
+		ActivityID:  activityID,
+		TypeUID:     ocsf.ComputeTypeUID(categoryUID, classUID, activityID),
+		Time:        eventTime,
+		SeverityID:  ocsf.SeverityUnknown,
+
+		// Human-readable fields
+		Class:    "base_event",
+		Category: "other",
+		Activity: fmt.Sprintf("ingest:%s", envelope.SourceType),
+		Severity: "Unknown",
+
+		// Status
+		StatusID: ocsf.StatusUnknown,
+		Status:   "Unknown",
+
+		// Timing
+		ObservedTime: envelope.ReceivedAt,
+
+		// Metadata
+		Metadata: ocsf.Metadata{
+			Product: ocsf.Product{
+				Name:   "TelHawk Stack",
+				Vendor: "TelHawk Systems",
+			},
+			Version:  "1.1.0",
+			Profiles: []string{},
 		},
+
+		// Raw data preservation
 		Raw: ocsf.RawDescriptor{
 			Format: envelope.Format,
 			Data:   payload,
 		},
+
+		// Additional properties
 		Properties: map[string]interface{}{
 			"source":      envelope.Source,
 			"source_type": envelope.SourceType,
 		},
-	}
-
-	if t, ok := payload["time"].(float64); ok {
-		event.ObservedTime = time.Unix(int64(t), int64((t-float64(int64(t)))*1e9))
 	}
 
 	return event, nil
