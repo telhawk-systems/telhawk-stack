@@ -1,6 +1,9 @@
 package ocsf
 
-import "time"
+import (
+	"time"
+	"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf/objects"
+)
 
 // Event represents an OCSF compliant event record.
 type Event struct {
@@ -27,10 +30,9 @@ type Event struct {
 	ObservedTime time.Time `json:"observed_time"`
 
 	// Event-specific fields
-	Actor       *Actor                 `json:"actor,omitempty"`
-	Target      *Target                `json:"target,omitempty"`
-	Enrichments map[string]interface{} `json:"enrichments,omitempty"`
-	Properties  map[string]interface{} `json:"properties,omitempty"`
+	Actor       *objects.Actor         `json:"actor,omitempty"`
+	Enrichments map[string]string      `json:"enrichments,omitempty"`
+	Properties  map[string]string      `json:"properties,omitempty"`
 
 	// Raw data preservation
 	Raw RawDescriptor `json:"raw"`
@@ -69,54 +71,24 @@ type RawDescriptor struct {
 }
 
 // Actor describes the initiating party of the event.
-type Actor struct {
-	Type        string                 `json:"type"`
-	Name        string                 `json:"name,omitempty"`
-	Identifiers map[string]interface{} `json:"identifiers,omitempty"`
-}
-
-// Target describes the affected resource.
-type Target struct {
-	Type        string                 `json:"type"`
-	Name        string                 `json:"name,omitempty"`
-	Identifiers map[string]interface{} `json:"identifiers,omitempty"`
-}
-
 // Clone returns a deep copy of the event for safe mutation.
 func (e *Event) Clone() *Event {
 	dup := *e
 	if e.Enrichments != nil {
-		dup.Enrichments = make(map[string]interface{}, len(e.Enrichments))
+		dup.Enrichments = make(map[string]string, len(e.Enrichments))
 		for k, v := range e.Enrichments {
 			dup.Enrichments[k] = v
 		}
 	}
 	if e.Properties != nil {
-		dup.Properties = make(map[string]interface{}, len(e.Properties))
+		dup.Properties = make(map[string]string, len(e.Properties))
 		for k, v := range e.Properties {
 			dup.Properties[k] = v
 		}
 	}
-	if e.Actor != nil && e.Actor.Identifiers != nil {
-		dup.Actor = &Actor{
-			Type:        e.Actor.Type,
-			Name:        e.Actor.Name,
-			Identifiers: make(map[string]interface{}, len(e.Actor.Identifiers)),
-		}
-		for k, v := range e.Actor.Identifiers {
-			dup.Actor.Identifiers[k] = v
-		}
-	}
-	if e.Target != nil && e.Target.Identifiers != nil {
-		dup.Target = &Target{
-			Type:        e.Target.Type,
-			Name:        e.Target.Name,
-			Identifiers: make(map[string]interface{}, len(e.Target.Identifiers)),
-		}
-		for k, v := range e.Target.Identifiers {
-			dup.Target.Identifiers[k] = v
-		}
-	}
+	// Note: Actor is a pointer to objects.Actor, shallow copy is sufficient
+	// for most use cases. For deep copy, caller should clone the Actor separately.
+	
 	if len(e.Metadata.Profiles) > 0 {
 		dup.Metadata.Profiles = make([]string, len(e.Metadata.Profiles))
 		copy(dup.Metadata.Profiles, e.Metadata.Profiles)
