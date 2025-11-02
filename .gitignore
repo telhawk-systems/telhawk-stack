@@ -43,5 +43,12 @@ vendor/
 coverage.txt
 coverage.html
 *.coverprofile
+coverage.out
+coverage_filtered.out
+
+# OCSF schema (external dependency - download separately)
+ocsf-schema/
+
+# Temporary/analysis files
 findings.txt
 core/pkg/ocsf/Archive.zip
