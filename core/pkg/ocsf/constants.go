@@ -2,49 +2,49 @@ package ocsf
 
 // Category UIDs as defined by OCSF schema
 const (
-	CategoryOther              = 0
-	CategorySystemActivity     = 1
-	CategoryFindings           = 2
-	CategoryIAM                = 3
-	CategoryNetworkActivity    = 4
-	CategoryDiscovery          = 5
+	CategoryOther               = 0
+	CategorySystemActivity      = 1
+	CategoryFindings            = 2
+	CategoryIAM                 = 3
+	CategoryNetworkActivity     = 4
+	CategoryDiscovery           = 5
 	CategoryApplicationActivity = 6
-	CategoryRemediation        = 7
-	CategoryUnmannedSystems    = 8
+	CategoryRemediation         = 7
+	CategoryUnmannedSystems     = 8
 )
 
 // Class UIDs for System Activity (Category 1)
 const (
-	ClassFileActivity          = 1001
-	ClassKernelExtension       = 1002
-	ClassKernelActivity        = 1003
-	ClassMemoryActivity        = 1004
-	ClassModuleActivity        = 1005
-	ClassScheduledJobActivity  = 1006
-	ClassProcessActivity       = 1007
-	ClassEventLogActivity      = 1008
-	ClassScriptActivity        = 1009
+	ClassFileActivity         = 1001
+	ClassKernelExtension      = 1002
+	ClassKernelActivity       = 1003
+	ClassMemoryActivity       = 1004
+	ClassModuleActivity       = 1005
+	ClassScheduledJobActivity = 1006
+	ClassProcessActivity      = 1007
+	ClassEventLogActivity     = 1008
+	ClassScriptActivity       = 1009
 )
 
 // Class UIDs for Findings (Category 2)
 const (
-	ClassVulnerabilityFinding             = 2002
-	ClassComplianceFinding                = 2003
-	ClassDetectionFinding                 = 2004
-	ClassIncidentFinding                  = 2005
-	ClassDataSecurityFinding              = 2006
+	ClassVulnerabilityFinding              = 2002
+	ClassComplianceFinding                 = 2003
+	ClassDetectionFinding                  = 2004
+	ClassIncidentFinding                   = 2005
+	ClassDataSecurityFinding               = 2006
 	ClassApplicationSecurityPostureFinding = 2007
-	ClassIAMAnalysisFinding               = 2008
+	ClassIAMAnalysisFinding                = 2008
 )
 
 // Class UIDs for IAM (Category 3)
 const (
-	ClassAccountChange      = 3001
-	ClassAuthentication     = 3002
-	ClassAuthorizeSession   = 3003
-	ClassEntityManagement   = 3004
-	ClassUserAccess         = 3005
-	ClassGroupManagement    = 3006
+	ClassAccountChange    = 3001
+	ClassAuthentication   = 3002
+	ClassAuthorizeSession = 3003
+	ClassEntityManagement = 3004
+	ClassUserAccess       = 3005
+	ClassGroupManagement  = 3006
 )
 
 // Class UIDs for Network Activity (Category 4)
@@ -64,14 +64,14 @@ const (
 
 // Class UIDs for Discovery (Category 5)
 const (
-	ClassInventoryInfo              = 5001
-	ClassUserInventory              = 5003
-	ClassPatchState                 = 5004
-	ClassDeviceConfigStateChange    = 5019
-	ClassSoftwareInfo               = 5020
-	ClassOSINTInventoryInfo         = 5021
+	ClassInventoryInfo               = 5001
+	ClassUserInventory               = 5003
+	ClassPatchState                  = 5004
+	ClassDeviceConfigStateChange     = 5019
+	ClassSoftwareInfo                = 5020
+	ClassOSINTInventoryInfo          = 5021
 	ClassCloudResourcesInventoryInfo = 5023
-	ClassEvidenceInfo               = 5040
+	ClassEvidenceInfo                = 5040
 )
 
 // Class UIDs for Application Activity (Category 6)
@@ -95,19 +95,19 @@ const (
 
 // Class UIDs for Unmanned Systems (Category 8)
 const (
-	ClassDroneFlightsActivity     = 8001
+	ClassDroneFlightsActivity      = 8001
 	ClassAirborneBroadcastActivity = 8002
 )
 
 // Severity IDs as defined by OCSF
 const (
-	SeverityUnknown      = 0
+	SeverityUnknown       = 0
 	SeverityInformational = 1
-	SeverityLow          = 2
-	SeverityMedium       = 3
-	SeverityHigh         = 4
-	SeverityCritical     = 5
-	SeverityFatal        = 6
+	SeverityLow           = 2
+	SeverityMedium        = 3
+	SeverityHigh          = 4
+	SeverityCritical      = 5
+	SeverityFatal         = 6
 )
 
 // Status IDs as defined by OCSF
@@ -120,53 +120,53 @@ const (
 
 // Authentication Activity IDs (for Class 3002)
 const (
-	AuthActivityUnknown  = 0
-	AuthActivityLogon    = 1
-	AuthActivityLogoff   = 2
-	AuthActivityAuthTicket = 3
+	AuthActivityUnknown       = 0
+	AuthActivityLogon         = 1
+	AuthActivityLogoff        = 2
+	AuthActivityAuthTicket    = 3
 	AuthActivityServiceTicket = 4
-	AuthActivityPreAuth  = 5
-	AuthActivityOther    = 99
+	AuthActivityPreAuth       = 5
+	AuthActivityOther         = 99
 )
 
 // Process Activity IDs (for Class 1007)
 const (
-	ProcessActivityUnknown  = 0
-	ProcessActivityLaunch   = 1
+	ProcessActivityUnknown   = 0
+	ProcessActivityLaunch    = 1
 	ProcessActivityTerminate = 2
-	ProcessActivityInject   = 3
-	ProcessActivityOpen     = 4
-	ProcessActivityOther    = 99
+	ProcessActivityInject    = 3
+	ProcessActivityOpen      = 4
+	ProcessActivityOther     = 99
 )
 
 // File Activity IDs (for Class 1001)
 const (
-	FileActivityUnknown     = 0
-	FileActivityCreate      = 1
-	FileActivityRead        = 2
-	FileActivityUpdate      = 3
-	FileActivityDelete      = 4
-	FileActivityRename      = 5
+	FileActivityUnknown       = 0
+	FileActivityCreate        = 1
+	FileActivityRead          = 2
+	FileActivityUpdate        = 3
+	FileActivityDelete        = 4
+	FileActivityRename        = 5
 	FileActivitySetAttributes = 6
-	FileActivitySetSecurity = 7
-	FileActivityEncrypt     = 8
-	FileActivityDecrypt     = 9
-	FileActivityMount       = 10
-	FileActivityUnmount     = 11
-	FileActivityOther       = 99
+	FileActivitySetSecurity   = 7
+	FileActivityEncrypt       = 8
+	FileActivityDecrypt       = 9
+	FileActivityMount         = 10
+	FileActivityUnmount       = 11
+	FileActivityOther         = 99
 )
 
 // Network Activity IDs (for Class 4001)
 const (
-	NetworkActivityUnknown      = 0
-	NetworkActivityOpen         = 1
-	NetworkActivityClose        = 2
-	NetworkActivityConnect      = 3
-	NetworkActivityRefuse       = 4
-	NetworkActivityTraffic      = 5
-	NetworkActivityReconnect    = 6
-	NetworkActivityRenew        = 7
-	NetworkActivityOther        = 99
+	NetworkActivityUnknown   = 0
+	NetworkActivityOpen      = 1
+	NetworkActivityClose     = 2
+	NetworkActivityConnect   = 3
+	NetworkActivityRefuse    = 4
+	NetworkActivityTraffic   = 5
+	NetworkActivityReconnect = 6
+	NetworkActivityRenew     = 7
+	NetworkActivityOther     = 99
 )
 
 // Detection Finding Activity IDs (for Class 2004)
@@ -189,7 +189,7 @@ func ComputeTypeUID(categoryUID, classUID, activityID int) int {
 	}
 	// Standard classes
 	baseClass := classUID % 1000
-	return (categoryUID * 100 + baseClass) * 100 + activityID
+	return (categoryUID*100+baseClass)*100 + activityID
 }
 
 // SeverityName returns the human-readable severity name.
