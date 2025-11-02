@@ -75,7 +75,7 @@ func (HECNormalizer) Normalize(ctx context.Context, envelope *model.RawEventEnve
 		},
 
 		// Additional properties
-		Properties: map[string]interface{}{
+		Properties: map[string]string{
 			"source":      envelope.Source,
 			"source_type": envelope.SourceType,
 		},
