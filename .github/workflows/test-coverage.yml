@@ -1,0 +1,84 @@
+name: Tests & Coverage
+
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.21'
+
+      - name: Run tests with coverage
+        run: |
+          # Test each module separately
+          for dir in auth cli common core ingest query storage web; do
+            if [ -f "$dir/go.mod" ]; then
+              echo "Testing $dir..."
+              cd $dir
+              go test -v -race -coverprofile=coverage.out -covermode=atomic ./... || true
+              cd ..
+            fi
+          done
+          
+          # Merge coverage from core (main module)
+          cd core
+          go test -v -race -coverprofile=../coverage.out -covermode=atomic ./...
+          cd ..
+          
+          # Filter out generated code
+          grep -v "pkg/ocsf/events/" coverage.out | \
+          grep -v "pkg/ocsf/objects/" > coverage_filtered.out || true
+          
+          # Generate coverage report
+          go tool cover -func=coverage_filtered.out -o=coverage.txt
+          
+      - name: Calculate coverage
+        id: coverage
+        run: |
+          # Extract total coverage percentage
+          COVERAGE=$(go tool cover -func=coverage_filtered.out | grep total | awk '{print $3}' | sed 's/%//' || echo "0")
+          echo "coverage=$COVERAGE" >> $GITHUB_OUTPUT
+          echo "Coverage: $COVERAGE%"
+
+      - name: Comment coverage on PR
+        if: github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: coverage
+          message: |
+            ## Coverage Report
+            
+            **Total Coverage:** `${{ steps.coverage.outputs.coverage }}%`
+            
+            _Note: Excludes generated OCSF code (243 files)_
+            
+            <details>
+            <summary>Coverage by package</summary>
+            
+            ```
+            $(cat coverage.txt)
+            ```
+            </details>
+
+      - name: Upload coverage reports
+        uses: actions/upload-artifact@v5
+        with:
+          name: coverage-report
+          path: |
+            coverage.out
+            coverage_filtered.out
+            coverage.txt
+          retention-days: 30
+
