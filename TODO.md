@@ -1,0 +1,42 @@
+# TelHawk Stack TODO
+
+## Core Service
+- [ ] Flesh out OCSF schema coverage beyond generic placeholder
+- [ ] Implement class-specific validators (endpoint, authentication, network, etc.)
+- [ ] Add enrichment hooks (GeoIP, threat intel) post-normalization
+- [ ] Persist normalized events to storage once pipeline succeeds
+- [ ] Capture normalization errors to a dead-letter queue for replay/analysis
+
+## Ingest Service
+- [ ] Validate HEC tokens against the auth service
+- [ ] Backpressure + retries when core returns 4xx/5xx during normalization
+- [ ] Forward normalized events to storage service
+- [ ] Implement HEC ack channel
+- [ ] Add Redis-backed rate limiting in the ingestion pipeline
+- [ ] Expose Prometheus metrics for queue depth and normalization latency
+
+## Query Service
+- [ ] Replace stubbed search implementation with real OpenSearch queries
+- [ ] Add cursor pagination and aggregation support
+- [ ] Implement alert scheduling and notification delivery
+- [ ] Connect dashboards to saved query definitions
+
+## Storage Service
+- [ ] Scaffold OpenSearch client and index lifecycle management
+- [ ] Define OCSF-aware index templates and ILM policies
+- [ ] Implement bulk ingestion pipeline fed by normalized events
+
+## Web
+- [ ] Bootstrap UI shell with authentication
+- [ ] Build search console backed by query API
+- [ ] Add dashboard visualization components
+
+## DevOps & Tooling
+- [ ] Provide docker-compose to run full stack locally
+- [ ] Add CI pipeline with linting, gofmt, and go test
+- [ ] Publish OpenAPI docs automatically (query/core endpoints)
+
+## Documentation
+- [ ] Expand core pipeline docs with class mapping examples
+- [ ] Document auth integration and token lifecycle
+- [ ] Provide onboarding guide for adding new data sources

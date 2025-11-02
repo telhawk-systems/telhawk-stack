@@ -512,6 +512,8 @@ kubectl apply -f k8s/
 - [ ] Threat intelligence enrichment
 - [ ] Machine learning anomaly detection
 
+See [TODO.md](TODO.md) for the detailed backlog.
+
 ## License
 
 Licensed under the Apache License, Version 2.0. See the `LICENSE` file for details.
