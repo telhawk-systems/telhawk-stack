@@ -21,17 +21,20 @@ func (BasicValidator) Validate(ctx context.Context, event *ocsf.Event) error {
 	if event.Class == "" {
 		return fmt.Errorf("missing class")
 	}
-	if event.Schema.Namespace == "" {
-		return fmt.Errorf("missing schema namespace")
-	}
-	if event.Schema.Version == "" {
-		return fmt.Errorf("missing schema version")
+	if event.ClassUID == 0 && event.Class != "base_event" {
+		return fmt.Errorf("missing class_uid")
 	}
 	if event.Category == "" {
 		return fmt.Errorf("missing category")
 	}
-	if event.ObservedTime.IsZero() {
-		return fmt.Errorf("missing observed_time")
+	if event.Time.IsZero() {
+		return fmt.Errorf("missing time")
+	}
+	if event.Metadata.Product.Name == "" {
+		return fmt.Errorf("missing metadata.product.name")
+	}
+	if event.Metadata.Version == "" {
+		return fmt.Errorf("missing metadata.version")
 	}
 	return nil
 }
