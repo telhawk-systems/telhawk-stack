@@ -3,13 +3,14 @@ package ocsf_test
 import (
 	"encoding/json"
 	"fmt"
+	"testing"
 	"time"
 
 	"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf"
 )
 
-// ExampleEvent_Authentication demonstrates creating an OCSF Authentication event
-func ExampleEvent_Authentication() {
+// TestAuthentication demonstrates creating an OCSF Authentication event
+func TestAuthentication(t *testing.T) {
 	event := &ocsf.Event{
 		// Required OCSF base fields
 		CategoryUID: ocsf.CategoryIAM,
@@ -56,8 +57,8 @@ func ExampleEvent_Authentication() {
 	fmt.Println(string(data))
 }
 
-// ExampleEvent_NetworkActivity demonstrates creating an OCSF Network Activity event
-func ExampleEvent_NetworkActivity() {
+// TestNetworkActivity demonstrates creating an OCSF Network Activity event
+func TestNetworkActivity(t *testing.T) {
 	event := &ocsf.Event{
 		// Required OCSF base fields
 		CategoryUID: ocsf.CategoryNetworkActivity,
@@ -104,8 +105,8 @@ func ExampleEvent_NetworkActivity() {
 	fmt.Println(string(data))
 }
 
-// ExampleComputeTypeUID demonstrates calculating the OCSF type_uid
-func ExampleComputeTypeUID() {
+// TestComputeTypeUID demonstrates calculating the OCSF type_uid
+func TestComputeTypeUID(t *testing.T) {
 	// Authentication event
 	authTypeUID := ocsf.ComputeTypeUID(
 		ocsf.CategoryIAM,
@@ -131,8 +132,8 @@ func ExampleComputeTypeUID() {
 	fmt.Printf("Process Launch type_uid: %d\n", processTypeUID)
 }
 
-// ExampleSeverityName demonstrates severity ID to name mapping
-func ExampleSeverityName() {
+// TestSeverityName demonstrates severity ID to name mapping
+func TestSeverityName(t *testing.T) {
 	for i := 0; i <= 6; i++ {
 		fmt.Printf("Severity %d: %s\n", i, ocsf.SeverityName(i))
 	}

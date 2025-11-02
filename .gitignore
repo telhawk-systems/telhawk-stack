@@ -43,3 +43,5 @@ vendor/
 coverage.txt
 coverage.html
 *.coverprofile
+findings.txt
+core/pkg/ocsf/Archive.zip
