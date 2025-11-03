@@ -11,28 +11,35 @@ import (
 	"github.com/google/uuid"
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/coreclient"
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/models"
+	"github.com/telhawk-systems/telhawk-stack/ingest/internal/storageclient"
 )
 
 type IngestService struct {
-	stats      models.IngestionStats
-	statsMutex sync.RWMutex
-	eventQueue chan *models.Event
-	stopChan   chan struct{}
-	coreClient NormalizationClient
+	stats         models.IngestionStats
+	statsMutex    sync.RWMutex
+	eventQueue    chan *models.Event
+	stopChan      chan struct{}
+	coreClient    NormalizationClient
+	storageClient StorageClient
 }
 
 type NormalizationClient interface {
 	Normalize(ctx context.Context, event *models.Event) (*coreclient.NormalizationResult, error)
 }
 
-func NewIngestService(coreClient NormalizationClient) *IngestService {
+type StorageClient interface {
+	Ingest(ctx context.Context, events []map[string]interface{}) (*storageclient.IngestResponse, error)
+}
+
+func NewIngestService(coreClient NormalizationClient, storageClient StorageClient) *IngestService {
 	s := &IngestService{
 		eventQueue: make(chan *models.Event, 10000),
 		stopChan:   make(chan struct{}),
 		stats: models.IngestionStats{
 			LastEvent: time.Now(),
 		},
-		coreClient: coreClient,
+		coreClient:    coreClient,
+		storageClient: storageClient,
 	}
 
 	// Start event processor
@@ -108,9 +115,21 @@ func (s *IngestService) processEvents() {
 		select {
 		case event := <-s.eventQueue:
 			log.Printf("Processing event: id=%s source=%s", event.ID, event.Source)
-			s.normalizeEvent(event)
-			// TODO: Forward to storage service
-			// TODO: Handle acks if enabled
+			
+			// Normalize event via Core service
+			normalizedEvent, err := s.normalizeEvent(event)
+			if err != nil {
+				log.Printf("failed to normalize event %s: %v", event.ID, err)
+				continue
+			}
+			
+			// Forward to Storage service
+			if err := s.forwardToStorage(normalizedEvent); err != nil {
+				log.Printf("failed to forward event %s to storage: %v", event.ID, err)
+				continue
+			}
+			
+			log.Printf("event %s successfully stored", event.ID)
 
 		case <-s.stopChan:
 			log.Println("Stopping event processor")
@@ -119,18 +138,67 @@ func (s *IngestService) processEvents() {
 	}
 }
 
-func (s *IngestService) normalizeEvent(event *models.Event) {
+func (s *IngestService) normalizeEvent(event *models.Event) (map[string]interface{}, error) {
 	if s.coreClient == nil {
 		log.Printf("core client not configured; skipping normalization for event %s", event.ID)
-		return
+		// Return basic event structure without normalization
+		return s.eventToMap(event), nil
 	}
+	
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	if _, err := s.coreClient.Normalize(ctx, event); err != nil {
-		log.Printf("failed to normalize event %s: %v", event.ID, err)
-		return
+	
+	result, err := s.coreClient.Normalize(ctx, event)
+	if err != nil {
+		return nil, fmt.Errorf("normalization failed: %w", err)
 	}
+	
+	// Parse normalized event
+	var normalizedEvent map[string]interface{}
+	if err := json.Unmarshal(result.Event, &normalizedEvent); err != nil {
+		return nil, fmt.Errorf("failed to parse normalized event: %w", err)
+	}
+	
 	log.Printf("event %s normalized via core service", event.ID)
+	return normalizedEvent, nil
+}
+
+func (s *IngestService) forwardToStorage(event map[string]interface{}) error {
+	if s.storageClient == nil {
+		log.Println("storage client not configured; skipping storage")
+		return nil
+	}
+	
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	
+	events := []map[string]interface{}{event}
+	resp, err := s.storageClient.Ingest(ctx, events)
+	if err != nil {
+		return fmt.Errorf("storage ingest failed: %w", err)
+	}
+	
+	if resp.Failed > 0 {
+		return fmt.Errorf("storage reported %d failures: %v", resp.Failed, resp.Errors)
+	}
+	
+	return nil
+}
+
+func (s *IngestService) eventToMap(event *models.Event) map[string]interface{} {
+	return map[string]interface{}{
+		"id":          event.ID,
+		"timestamp":   event.Timestamp,
+		"host":        event.Host,
+		"source":      event.Source,
+		"sourcetype":  event.SourceType,
+		"source_ip":   event.SourceIP,
+		"index":       event.Index,
+		"event":       event.Event,
+		"fields":      event.Fields,
+		"hec_token_id": event.HECTokenID,
+		"signature":   event.Signature,
+	}
 }
 
 func (s *IngestService) parseTime(t *float64) time.Time {

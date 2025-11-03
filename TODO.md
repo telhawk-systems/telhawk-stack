@@ -10,7 +10,7 @@
 ## Ingest Service
 - [ ] Validate HEC tokens against the auth service
 - [ ] Backpressure + retries when core returns 4xx/5xx during normalization
-- [ ] Forward normalized events to storage service
+- [x] Forward normalized events to storage service (✅ Complete pipeline: Ingest → Core → Storage → OpenSearch)
 - [ ] Implement HEC ack channel
 - [ ] Add Redis-backed rate limiting in the ingestion pipeline
 - [ ] Expose Prometheus metrics for queue depth and normalization latency
