@@ -1,0 +1,168 @@
+{
+  "patterns": {
+    "authentication": {
+      "class_uid": 3002,
+      "category": "iam",
+      "sourcetype_patterns": [
+        "^auth",
+        "^login",
+        "^logon",
+        "^session",
+        "^sso",
+        "^oauth",
+        "^saml",
+        "^ldap",
+        "^kerberos",
+        "^ad_auth"
+      ],
+      "content_patterns": [
+        "login",
+        "logon",
+        "logout",
+        "logoff",
+        "authentication",
+        "authenticate",
+        "credential",
+        "password"
+      ],
+      "priority": 100,
+      "activity_keywords": {
+        "logon": ["login", "logon", "signin", "sign_in"],
+        "logoff": ["logout", "logoff", "signout", "sign_out"]
+      }
+    },
+    "network_activity": {
+      "class_uid": 4001,
+      "category": "network",
+      "sourcetype_patterns": [
+        "^network",
+        "^traffic",
+        "^connection",
+        "^flow",
+        "^firewall",
+        "^proxy",
+        "^netflow"
+      ],
+      "content_patterns": [
+        "src_ip",
+        "dst_ip",
+        "source_ip",
+        "dest_ip",
+        "src_port",
+        "dst_port",
+        "protocol"
+      ],
+      "priority": 90,
+      "activity_keywords": {
+        "open": ["open", "connect", "establish"],
+        "close": ["close", "disconnect", "terminate"],
+        "refuse": ["refuse", "reject", "deny"]
+      }
+    },
+    "http_activity": {
+      "class_uid": 4002,
+      "category": "network",
+      "sourcetype_patterns": [
+        "^http",
+        "^https",
+        "^web",
+        "^apache",
+        "^nginx",
+        "^iis",
+        "access_log"
+      ],
+      "content_patterns": [
+        "GET",
+        "POST",
+        "PUT",
+        "DELETE",
+        "http_status",
+        "status_code",
+        "user_agent"
+      ],
+      "priority": 95
+    },
+    "dns_activity": {
+      "class_uid": 4003,
+      "category": "network",
+      "sourcetype_patterns": [
+        "^dns",
+        "^bind",
+        "^named"
+      ],
+      "content_patterns": [
+        "query",
+        "answer",
+        "domain",
+        "hostname",
+        "qtype",
+        "rcode"
+      ],
+      "priority": 95
+    },
+    "process_activity": {
+      "class_uid": 1007,
+      "category": "system",
+      "sourcetype_patterns": [
+        "^process",
+        "^exec",
+        "^sysmon",
+        "^procmon",
+        "^endpoint"
+      ],
+      "content_patterns": [
+        "process_name",
+        "pid",
+        "parent_pid",
+        "command_line",
+        "executable"
+      ],
+      "priority": 90,
+      "activity_keywords": {
+        "launch": ["launch", "start", "create", "exec"],
+        "terminate": ["terminate", "exit", "kill", "stop"]
+      }
+    },
+    "file_activity": {
+      "class_uid": 1001,
+      "category": "system",
+      "sourcetype_patterns": [
+        "^file",
+        "^fmon",
+        "^fsmon",
+        "^filesystem",
+        "^audit"
+      ],
+      "content_patterns": [
+        "file_path",
+        "filename",
+        "path",
+        "directory"
+      ],
+      "priority": 90
+    },
+    "detection_finding": {
+      "class_uid": 2004,
+      "category": "findings",
+      "sourcetype_patterns": [
+        "^alert",
+        "^detection",
+        "^security",
+        "^ids",
+        "^ips",
+        "^edr",
+        "^av",
+        "^antivirus"
+      ],
+      "content_patterns": [
+        "alert",
+        "detection",
+        "threat",
+        "malware",
+        "virus",
+        "suspicious"
+      ],
+      "priority": 95
+    }
+  }
+}
