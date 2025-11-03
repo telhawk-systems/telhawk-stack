@@ -8,7 +8,7 @@
 - [ ] Capture normalization errors to a dead-letter queue for replay/analysis
 
 ## Ingest Service
-- [ ] Validate HEC tokens against the auth service
+- [x] Validate HEC tokens against the auth service (✅ Token validation with caching)
 - [ ] Backpressure + retries when core returns 4xx/5xx during normalization
 - [x] Forward normalized events to storage service (✅ Complete pipeline: Ingest → Core → Storage → OpenSearch)
 - [ ] Implement HEC ack channel
