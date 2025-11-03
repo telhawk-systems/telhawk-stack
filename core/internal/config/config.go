@@ -12,6 +12,7 @@ import (
 type Config struct {
 	Server   ServerConfig   `json:"server"`
 	Pipeline PipelineConfig `json:"pipeline"`
+	Storage  StorageConfig  `json:"storage"`
 }
 
 // ServerConfig holds HTTP server settings.
@@ -27,6 +28,11 @@ type PipelineConfig struct {
 	MaxWorkers int `json:"max_workers"`
 }
 
+// StorageConfig holds storage service connection settings.
+type StorageConfig struct {
+	URL string `json:"url"`
+}
+
 // Default returns Config populated with sane defaults.
 func Default() Config {
 	return Config{
@@ -38,6 +44,9 @@ func Default() Config {
 		},
 		Pipeline: PipelineConfig{
 			MaxWorkers: 4,
+		},
+		Storage: StorageConfig{
+			URL: "http://storage:8083",
 		},
 	}
 }
@@ -90,6 +99,9 @@ func applyEnvOverrides(cfg *Config) {
 		if parsed, err := strconv.Atoi(v); err == nil {
 			cfg.Pipeline.MaxWorkers = parsed
 		}
+	}
+	if v := os.Getenv("CORE_STORAGE_URL"); v != "" {
+		cfg.Storage.URL = v
 	}
 }
 
