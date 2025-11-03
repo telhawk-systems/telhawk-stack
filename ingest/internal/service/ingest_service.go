@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/telhawk-systems/telhawk-stack/ingest/internal/authclient"
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/coreclient"
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/models"
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/storageclient"
@@ -21,6 +22,7 @@ type IngestService struct {
 	stopChan      chan struct{}
 	coreClient    NormalizationClient
 	storageClient StorageClient
+	authClient    AuthClient
 }
 
 type NormalizationClient interface {
@@ -31,7 +33,11 @@ type StorageClient interface {
 	Ingest(ctx context.Context, events []map[string]interface{}) (*storageclient.IngestResponse, error)
 }
 
-func NewIngestService(coreClient NormalizationClient, storageClient StorageClient) *IngestService {
+type AuthClient interface {
+	ValidateHECToken(ctx context.Context, token string) (*authclient.ValidateHECTokenResponse, error)
+}
+
+func NewIngestService(coreClient NormalizationClient, storageClient StorageClient, authClient AuthClient) *IngestService {
 	s := &IngestService{
 		eventQueue: make(chan *models.Event, 10000),
 		stopChan:   make(chan struct{}),
@@ -40,6 +46,7 @@ func NewIngestService(coreClient NormalizationClient, storageClient StorageClien
 		},
 		coreClient:    coreClient,
 		storageClient: storageClient,
+		authClient:    authClient,
 	}
 
 	// Start event processor
@@ -199,6 +206,28 @@ func (s *IngestService) eventToMap(event *models.Event) map[string]interface{} {
 		"hec_token_id": event.HECTokenID,
 		"signature":   event.Signature,
 	}
+}
+
+func (s *IngestService) ValidateHECToken(token string) error {
+	if s.authClient == nil {
+		log.Println("auth client not configured; skipping token validation")
+		return nil
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	resp, err := s.authClient.ValidateHECToken(ctx, token)
+	if err != nil {
+		return fmt.Errorf("token validation failed: %w", err)
+	}
+
+	if !resp.Valid {
+		return fmt.Errorf("invalid or expired HEC token")
+	}
+
+	log.Printf("HEC token validated: token_id=%s user_id=%s", resp.TokenID, resp.UserID)
+	return nil
 }
 
 func (s *IngestService) parseTime(t *float64) time.Time {

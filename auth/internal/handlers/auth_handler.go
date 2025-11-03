@@ -143,6 +143,39 @@ func (h *AuthHandler) RevokeToken(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+func (h *AuthHandler) ValidateHECToken(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req models.ValidateHECTokenRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	ipAddress := getClientIP(r)
+	userAgent := r.Header.Get("User-Agent")
+
+	hecToken, err := h.service.ValidateHECToken(req.Token, ipAddress, userAgent)
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(models.ValidateHECTokenResponse{
+			Valid: false,
+		})
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(models.ValidateHECTokenResponse{
+		Valid:     true,
+		TokenID:   hecToken.ID,
+		TokenName: hecToken.Name,
+		UserID:    hecToken.UserID,
+	})
+}
+
 func (h *AuthHandler) HealthCheck(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"status": "healthy"})

@@ -36,3 +36,14 @@ type ValidateTokenResponse struct {
 	UserID string   `json:"user_id,omitempty"`
 	Roles  []string `json:"roles,omitempty"`
 }
+
+type ValidateHECTokenRequest struct {
+	Token string `json:"token"`
+}
+
+type ValidateHECTokenResponse struct {
+	Valid     bool   `json:"valid"`
+	TokenID   string `json:"token_id,omitempty"`
+	TokenName string `json:"token_name,omitempty"`
+	UserID    string `json:"user_id,omitempty"`
+}
