@@ -22,9 +22,9 @@
 - [ ] Connect dashboards to saved query definitions
 
 ## Storage Service
-- [ ] Scaffold OpenSearch client and index lifecycle management
-- [ ] Define OCSF-aware index templates and ILM policies
-- [ ] Implement bulk ingestion pipeline fed by normalized events
+- [x] Scaffold OpenSearch client and index lifecycle management
+- [x] Define OCSF-aware index templates and ILM policies
+- [x] Implement bulk ingestion pipeline fed by normalized events
 
 ## Web
 - [ ] Bootstrap UI shell with authentication
