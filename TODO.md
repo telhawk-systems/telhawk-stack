@@ -1,12 +1,13 @@
 # TelHawk Stack TODO
 
 ## Core Service
-- [ ] Create normalizer generator (extends tools/ocsf-generator pattern)
+- [x] Create normalizer generator (extends tools/ocsf-generator pattern) ✅
   * Generate one normalizer per OCSF class from schema
   * Include intelligent field mapping (common variants → OCSF fields)
   * Auto-generate source type classification patterns
   * Output: core/internal/normalizer/generated/*.go files
-- [ ] Flesh out OCSF schema coverage with generated normalizers
+- [ ] Expand normalizer patterns to cover all 59+ OCSF classes
+- [ ] Integrate generated normalizers into pipeline
 - [ ] Implement class-specific validators (can also be generated)
 - [ ] Add enrichment hooks (GeoIP, threat intel) post-normalization
 - [ ] Persist normalized events to storage once pipeline succeeds
