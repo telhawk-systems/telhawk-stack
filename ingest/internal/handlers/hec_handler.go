@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"io"
+	"log"
 	"net/http"
 	"strings"
 
@@ -34,8 +35,12 @@ func (h *HECHandler) HandleEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Validate token with auth service
-	// For now, accept any non-empty token
+	// Validate token with auth service
+	if err := h.service.ValidateHECToken(token); err != nil {
+		log.Printf("HEC token validation failed: %v", err)
+		h.sendError(w, hec.ErrUnauthorized, http.StatusUnauthorized)
+		return
+	}
 
 	// Get client IP
 	sourceIP := getClientIP(r)
@@ -98,6 +103,13 @@ func (h *HECHandler) HandleRaw(w http.ResponseWriter, r *http.Request) {
 	// Authenticate HEC token
 	token := hec.ExtractToken(r.Header.Get("Authorization"))
 	if token == "" {
+		h.sendError(w, hec.ErrUnauthorized, http.StatusUnauthorized)
+		return
+	}
+
+	// Validate token with auth service
+	if err := h.service.ValidateHECToken(token); err != nil {
+		log.Printf("HEC token validation failed: %v", err)
 		h.sendError(w, hec.ErrUnauthorized, http.StatusUnauthorized)
 		return
 	}

@@ -47,6 +47,7 @@ func main() {
 	mux.HandleFunc("/api/v1/auth/login", handler.Login)
 	mux.HandleFunc("/api/v1/auth/refresh", handler.RefreshToken)
 	mux.HandleFunc("/api/v1/auth/validate", handler.ValidateToken)
+	mux.HandleFunc("/api/v1/auth/validate-hec", handler.ValidateHECToken)
 	mux.HandleFunc("/api/v1/auth/revoke", handler.RevokeToken)
 	mux.HandleFunc("/healthz", handler.HealthCheck)
 
