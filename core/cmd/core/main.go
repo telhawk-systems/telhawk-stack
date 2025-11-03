@@ -16,6 +16,7 @@ import (
 	"github.com/telhawk-systems/telhawk-stack/core/internal/pipeline"
 	"github.com/telhawk-systems/telhawk-stack/core/internal/server"
 	"github.com/telhawk-systems/telhawk-stack/core/internal/service"
+	"github.com/telhawk-systems/telhawk-stack/core/internal/storage"
 	"github.com/telhawk-systems/telhawk-stack/core/internal/validator"
 )
 
@@ -37,7 +38,8 @@ func main() {
 	registry := normalizer.NewRegistry(normalizer.HECNormalizer{})
 	validators := validator.NewChain(validator.BasicValidator{})
 	pipe := pipeline.New(registry, validators)
-	processor := service.NewProcessor(pipe)
+	storageClient := storage.NewClient(cfg.Storage.URL)
+	processor := service.NewProcessor(pipe, storageClient)
 	handler := handlers.NewProcessorHandler(processor)
 
 	srv := &http.Server{
