@@ -1,0 +1,20 @@
+server:
+  port: 8083
+  read_timeout: 15s
+  write_timeout: 15s
+  idle_timeout: 60s
+
+opensearch:
+  url: https://opensearch:9200
+  username: admin
+  password: TelHawk123!
+  insecure: true
+
+index_management:
+  index_prefix: telhawk-events
+  shard_count: 1
+  replica_count: 0
+  refresh_interval: 5s
+  retention_days: 30
+  rollover_size_gb: 50
+  rollover_age: 24h
