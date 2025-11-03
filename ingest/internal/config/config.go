@@ -11,6 +11,7 @@ type Config struct {
 	Server     ServerConfig     `mapstructure:"server"`
 	Auth       AuthConfig       `mapstructure:"auth"`
 	Core       CoreConfig       `mapstructure:"core"`
+	Storage    StorageConfig    `mapstructure:"storage"`
 	OpenSearch OpenSearchConfig `mapstructure:"opensearch"`
 	Ingestion  IngestionConfig  `mapstructure:"ingestion"`
 	Logging    LoggingConfig    `mapstructure:"logging"`
@@ -29,6 +30,10 @@ type AuthConfig struct {
 }
 
 type CoreConfig struct {
+	URL string `mapstructure:"url"`
+}
+
+type StorageConfig struct {
 	URL string `mapstructure:"url"`
 }
 
@@ -65,6 +70,7 @@ func Load(configPath string) (*Config, error) {
 	v.SetDefault("auth.url", "http://localhost:8080")
 	v.SetDefault("auth.token_validation_cache_ttl", "5m")
 	v.SetDefault("core.url", "http://localhost:8090")
+	v.SetDefault("storage.url", "http://localhost:8083")
 	v.SetDefault("opensearch.url", "https://localhost:9200")
 	v.SetDefault("opensearch.username", "admin")
 	v.SetDefault("opensearch.tls_skip_verify", true)

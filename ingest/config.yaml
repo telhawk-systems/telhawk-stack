@@ -8,6 +8,12 @@ auth:
   url: http://localhost:8080
   token_validation_cache_ttl: 5m
 
+core:
+  url: http://localhost:8090
+
+storage:
+  url: http://localhost:8083
+
 opensearch:
   url: https://localhost:9200
   username: admin
