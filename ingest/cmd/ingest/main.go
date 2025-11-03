@@ -15,6 +15,7 @@ import (
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/coreclient"
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/handlers"
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/service"
+	"github.com/telhawk-systems/telhawk-stack/ingest/internal/storageclient"
 )
 
 func main() {
@@ -34,11 +35,13 @@ func main() {
 	}
 	log.Printf("Auth URL: %s", cfg.Auth.URL)
 	log.Printf("Core URL: %s", cfg.Core.URL)
+	log.Printf("Storage URL: %s", cfg.Storage.URL)
 	log.Printf("OpenSearch URL: %s", cfg.OpenSearch.URL)
 
 	// Initialize ingestion service
 	coreClient := coreclient.New(cfg.Core.URL, 10*time.Second)
-	ingestService := service.NewIngestService(coreClient)
+	storageClient := storageclient.New(cfg.Storage.URL, 30*time.Second)
+	ingestService := service.NewIngestService(coreClient, storageClient)
 
 	// Initialize HTTP handlers
 	handler := handlers.NewHECHandler(ingestService)
