@@ -1,0 +1,131 @@
+{
+  "common_fields": {
+    "timestamp": {
+      "ocsf_field": "Time",
+      "variants": ["timestamp", "time", "@timestamp", "event_time", "datetime", "event_datetime"],
+      "type": "timestamp",
+      "parser": "parseTimestamp"
+    },
+    "user": {
+      "ocsf_field": "User.Name",
+      "variants": ["user", "username", "user_name", "account", "principal", "identity", "actor"],
+      "type": "string"
+    },
+    "user_id": {
+      "ocsf_field": "User.Uid",
+      "variants": ["user_id", "uid", "user_uid", "account_id", "principal_id"],
+      "type": "string"
+    },
+    "user_domain": {
+      "ocsf_field": "User.Domain",
+      "variants": ["domain", "user_domain", "realm", "ad_domain"],
+      "type": "string"
+    },
+    "user_email": {
+      "ocsf_field": "User.EmailAddr",
+      "variants": ["email", "user_email", "mail", "email_address"],
+      "type": "string"
+    },
+    "message": {
+      "ocsf_field": "StatusDetail",
+      "variants": ["message", "msg", "description", "detail", "reason", "error_message"],
+      "type": "string"
+    },
+    "status": {
+      "ocsf_field": "Status",
+      "variants": ["status", "result", "outcome", "state"],
+      "type": "string",
+      "parser": "parseStatus"
+    },
+    "severity": {
+      "ocsf_field": "Severity",
+      "variants": ["severity", "level", "priority", "criticality"],
+      "type": "string",
+      "parser": "parseSeverity"
+    },
+    "source_ip": {
+      "ocsf_field": "SrcEndpoint.Uid",
+      "variants": ["src_ip", "source_ip", "src_addr", "source_address", "client_ip"],
+      "type": "string"
+    },
+    "dest_ip": {
+      "ocsf_field": "DstEndpoint.Uid",
+      "variants": ["dst_ip", "dest_ip", "destination_ip", "dst_addr", "dest_addr", "server_ip"],
+      "type": "string"
+    },
+    "source_port": {
+      "ocsf_field": "SrcEndpoint.Port",
+      "variants": ["src_port", "source_port", "client_port"],
+      "type": "int"
+    },
+    "dest_port": {
+      "ocsf_field": "DstEndpoint.Port",
+      "variants": ["dst_port", "dest_port", "destination_port", "server_port"],
+      "type": "int"
+    },
+    "protocol": {
+      "ocsf_field": "Protocol",
+      "variants": ["protocol", "proto", "ip_protocol", "network_protocol"],
+      "type": "string"
+    },
+    "action": {
+      "ocsf_field": "ActivityID",
+      "variants": ["action", "event_type", "activity", "event", "operation"],
+      "type": "string",
+      "parser": "parseActivityID"
+    },
+    "process_name": {
+      "ocsf_field": "Process.Name",
+      "variants": ["process_name", "process", "image", "executable", "exe", "command"],
+      "type": "string"
+    },
+    "process_id": {
+      "ocsf_field": "Process.Pid",
+      "variants": ["pid", "process_id", "process_pid"],
+      "type": "int"
+    },
+    "parent_process_id": {
+      "ocsf_field": "Process.ParentProcess.Pid",
+      "variants": ["ppid", "parent_pid", "parent_process_id"],
+      "type": "int"
+    },
+    "command_line": {
+      "ocsf_field": "Process.Cmd",
+      "variants": ["command_line", "cmdline", "cmd", "process_command"],
+      "type": "string"
+    },
+    "file_path": {
+      "ocsf_field": "File.Path",
+      "variants": ["file_path", "path", "file", "filename", "filepath"],
+      "type": "string"
+    }
+  },
+  "extraction_helpers": {
+    "parseTimestamp": {
+      "description": "Parse various timestamp formats to time.Time",
+      "try_formats": [
+        "RFC3339",
+        "RFC3339Nano",
+        "Unix",
+        "UnixMilli"
+      ]
+    },
+    "parseStatus": {
+      "description": "Map status strings to OCSF status codes",
+      "mappings": {
+        "success|succeeded|ok|allowed|accepted": "StatusSuccess",
+        "fail|failed|error|denied|rejected|blocked": "StatusFailure"
+      }
+    },
+    "parseSeverity": {
+      "description": "Map severity strings to OCSF severity codes",
+      "mappings": {
+        "critical|fatal": "SeverityCritical",
+        "high|error": "SeverityHigh",
+        "medium|warn|warning": "SeverityMedium",
+        "low|info|informational": "SeverityLow",
+        "unknown": "SeverityUnknown"
+      }
+    }
+  }
+}
