@@ -16,19 +16,32 @@ type SortOptions struct {
 
 // SearchRequest captures the SPL query and optional constraints.
 type SearchRequest struct {
-	Query         string       `json:"query"`
-	TimeRange     *TimeRange   `json:"time_range,omitempty"`
-	Limit         int          `json:"limit,omitempty"`
-	Sort          *SortOptions `json:"sort,omitempty"`
-	IncludeFields []string     `json:"include_fields,omitempty"`
+	Query         string                   `json:"query"`
+	TimeRange     *TimeRange               `json:"time_range,omitempty"`
+	Limit         int                      `json:"limit,omitempty"`
+	Sort          *SortOptions             `json:"sort,omitempty"`
+	IncludeFields []string                 `json:"include_fields,omitempty"`
+	SearchAfter   []interface{}            `json:"search_after,omitempty"`
+	Aggregations  map[string]AggregationRequest `json:"aggregations,omitempty"`
+}
+
+// AggregationRequest defines an aggregation to compute.
+type AggregationRequest struct {
+	Type  string                 `json:"type"`
+	Field string                 `json:"field,omitempty"`
+	Size  int                    `json:"size,omitempty"`
+	Opts  map[string]interface{} `json:"opts,omitempty"`
 }
 
 // SearchResponse is returned after executing a search.
 type SearchResponse struct {
-	RequestID   string                   `json:"request_id"`
-	LatencyMS   int                      `json:"latency_ms"`
-	ResultCount int                      `json:"result_count"`
-	Results     []map[string]interface{} `json:"results"`
+	RequestID    string                   `json:"request_id"`
+	LatencyMS    int                      `json:"latency_ms"`
+	ResultCount  int                      `json:"result_count"`
+	TotalMatches int                      `json:"total_matches,omitempty"`
+	Results      []map[string]interface{} `json:"results"`
+	SearchAfter  []interface{}            `json:"search_after,omitempty"`
+	Aggregations map[string]interface{}   `json:"aggregations,omitempty"`
 }
 
 // AlertSchedule controls when an alert runs and its lookback window.

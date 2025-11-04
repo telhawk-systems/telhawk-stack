@@ -132,7 +132,8 @@ This allows for index rollover while maintaining search continuity.
 
 ## Performance
 
-- Maximum result size: 10,000 events per query
+- Cursor-based pagination: Deep pagination beyond 10,000 events using `search_after`
+- Aggregations: Statistical analysis and grouping without loading all documents
 - Query timeout: Inherited from OpenSearch cluster settings
 - Recommended: Use time ranges to limit search scope
 - For large exports, use the export endpoint for async processing
@@ -170,5 +171,92 @@ curl -X POST http://localhost:8082/api/v1/search \
     "query": "*",
     "limit": 10,
     "include_fields": ["time", "class_name", "severity"]
+  }'
+```
+
+### Deep pagination with search_after
+```bash
+# First request
+curl -X POST http://localhost:8082/api/v1/search \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "severity:high",
+    "limit": 1000,
+    "sort": {"field": "time", "order": "desc"}
+  }'
+# Response includes "search_after": [1698883200, "doc123"]
+
+# Next page using search_after from previous response
+curl -X POST http://localhost:8082/api/v1/search \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "severity:high",
+    "limit": 1000,
+    "sort": {"field": "time", "order": "desc"},
+    "search_after": [1698883200, "doc123"]
+  }'
+```
+
+### Aggregations - Count by severity
+```bash
+curl -X POST http://localhost:8082/api/v1/search \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "*",
+    "limit": 0,
+    "aggregations": {
+      "severity_count": {
+        "type": "terms",
+        "field": "severity",
+        "size": 10
+      }
+    }
+  }'
+```
+
+### Aggregations - Events over time
+```bash
+curl -X POST http://localhost:8082/api/v1/search \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "class_name:\"Network Activity\"",
+    "limit": 0,
+    "aggregations": {
+      "events_over_time": {
+        "type": "date_histogram",
+        "field": "time",
+        "opts": {
+          "interval": "1h"
+        }
+      }
+    }
+  }'
+```
+
+### Multiple aggregations
+```bash
+curl -X POST http://localhost:8082/api/v1/search \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "severity:high",
+    "limit": 100,
+    "aggregations": {
+      "by_class": {
+        "type": "terms",
+        "field": "class_name",
+        "size": 20
+      },
+      "avg_duration": {
+        "type": "avg",
+        "field": "duration"
+      },
+      "timeline": {
+        "type": "date_histogram",
+        "field": "time",
+        "opts": {
+          "interval": "5m"
+        }
+      }
+    }
   }'
 ```

@@ -16,8 +16,10 @@
   * All normalizers registered in pipeline
   * Generator now schema-driven (auto-generates from event classes)
   * Custom patterns via sourcetype_patterns.json (optional)
-- [ ] Implement class-specific validators (can also be generated)
-- [ ] Add enrichment hooks (GeoIP, threat intel) post-normalization
+- [x] Implement class-specific validators (can also be generated) ✅
+  * BasicValidator checks required OCSF fields
+  * Validator chain pattern integrated into pipeline
+  * Validators run after normalization before storage
 - [x] Persist normalized events to storage once pipeline succeeds ✅
   * Events now stored with automatic retry (3 attempts, exponential backoff)
   * Storage failures properly returned (no silent data loss)
@@ -35,7 +37,12 @@
 - [ ] Expose Prometheus metrics for queue depth and normalization latency
 
 ## Query Service
-- [ ] Replace stubbed search implementation with real OpenSearch queries
+- [x] Replace stubbed search implementation with real OpenSearch queries ✅
+  * OpenSearch client with TLS/mTLS support
+  * Full query_string syntax with time-based filtering
+  * Field projection, pagination (10k results), sorting
+  * Query performance tracking and comprehensive error handling
+  * Documentation: docs/QUERY_SERVICE_READ_PATH.md, query/README.md
 - [ ] Add cursor pagination and aggregation support
 - [ ] Implement alert scheduling and notification delivery
 - [ ] Connect dashboards to saved query definitions
@@ -51,7 +58,11 @@
 - [ ] Add dashboard visualization components
 
 ## DevOps & Tooling
-- [ ] Provide docker-compose to run full stack locally
+- [x] Provide docker-compose to run full stack locally ✅
+  * Full stack deployment with auth, ingest, core, storage, query services
+  * OpenSearch integration with health checks
+  * CLI tool (thawk) container for administration
+  * Documentation: DOCKER.md
 - [ ] Add CI pipeline with linting, gofmt, and go test
 - [ ] Publish OpenAPI docs automatically (query/core endpoints)
 
