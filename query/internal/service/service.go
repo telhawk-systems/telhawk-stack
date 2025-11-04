@@ -1,14 +1,18 @@
 package service
 
 import (
+	"bytes"
 	context "context"
 	crypto_rand "crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"sort"
 	"sync"
 	"time"
 
+	"github.com/telhawk-systems/telhawk-stack/query/internal/client"
 	"github.com/telhawk-systems/telhawk-stack/query/internal/models"
 )
 
@@ -17,21 +21,23 @@ var (
 	ErrDashboardNotFound = errors.New("dashboard not found")
 )
 
-// QueryService provides stubbed implementations for the query API surface.
+// QueryService provides implementations for the query API surface.
 type QueryService struct {
 	mu         sync.RWMutex
 	startedAt  time.Time
 	version    string
 	alerts     map[string]models.Alert
 	dashboards map[string]models.Dashboard
+	osClient   *client.OpenSearchClient
 }
 
 // NewQueryService seeds in-memory data used by the HTTP handlers.
-func NewQueryService(version string) *QueryService {
+func NewQueryService(version string, osClient *client.OpenSearchClient) *QueryService {
 	now := time.Now().UTC()
 	return &QueryService{
 		startedAt: now,
 		version:   version,
+		osClient:  osClient,
 		alerts: map[string]models.Alert{
 			"a1b6e360-3c35-4d63-87fd-03b27ef77d1f": {
 				ID:          "a1b6e360-3c35-4d63-87fd-03b27ef77d1f",
@@ -77,39 +83,140 @@ func NewQueryService(version string) *QueryService {
 	}
 }
 
-// ExecuteSearch returns canned results representing a query invocation.
+// ExecuteSearch executes a search query against OpenSearch.
 func (s *QueryService) ExecuteSearch(ctx context.Context, req *models.SearchRequest) (*models.SearchResponse, error) {
-	_ = ctx
+	startTime := time.Now()
+	
 	limit := req.Limit
 	if limit <= 0 {
 		limit = 100
 	}
-	results := []map[string]interface{}{
-		{
-			"event_time": time.Now().UTC().Add(-45 * time.Minute).Format(time.RFC3339),
-			"log_source": "edr",
-			"class":      "malware",
-			"severity":   "high",
-			"host":       "workstation-17",
-		},
-		{
-			"event_time": time.Now().UTC().Add(-30 * time.Minute).Format(time.RFC3339),
-			"log_source": "edr",
-			"class":      "malware",
-			"severity":   "medium",
-			"host":       "workstation-22",
-		},
+	if limit > 10000 {
+		limit = 10000
 	}
-	if limit < len(results) {
-		results = results[:limit]
+
+	query := s.buildOpenSearchQuery(req)
+	
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(query); err != nil {
+		return nil, fmt.Errorf("encode query: %w", err)
 	}
-	resp := &models.SearchResponse{
+
+	res, err := s.osClient.Client().Search(
+		s.osClient.Client().Search.WithContext(ctx),
+		s.osClient.Client().Search.WithIndex(s.osClient.Index()+"*"),
+		s.osClient.Client().Search.WithBody(&buf),
+		s.osClient.Client().Search.WithSize(limit),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("search request: %w", err)
+	}
+	defer res.Body.Close()
+
+	if res.IsError() {
+		return nil, fmt.Errorf("search error: %s", res.String())
+	}
+
+	var searchResult struct {
+		Hits struct {
+			Total struct {
+				Value int `json:"value"`
+			} `json:"total"`
+			Hits []struct {
+				Source map[string]interface{} `json:"_source"`
+			} `json:"hits"`
+		} `json:"hits"`
+	}
+
+	if err := json.NewDecoder(res.Body).Decode(&searchResult); err != nil {
+		return nil, fmt.Errorf("decode response: %w", err)
+	}
+
+	results := make([]map[string]interface{}, 0, len(searchResult.Hits.Hits))
+	for _, hit := range searchResult.Hits.Hits {
+		event := hit.Source
+		if req.IncludeFields != nil && len(req.IncludeFields) > 0 {
+			filtered := make(map[string]interface{})
+			for _, field := range req.IncludeFields {
+				if val, ok := event[field]; ok {
+					filtered[field] = val
+				}
+			}
+			results = append(results, filtered)
+		} else {
+			results = append(results, event)
+		}
+	}
+
+	latency := time.Since(startTime).Milliseconds()
+	
+	return &models.SearchResponse{
 		RequestID:   generateID(),
-		LatencyMS:   42,
+		LatencyMS:   int(latency),
 		ResultCount: len(results),
 		Results:     results,
+	}, nil
+}
+
+func (s *QueryService) buildOpenSearchQuery(req *models.SearchRequest) map[string]interface{} {
+	query := make(map[string]interface{})
+	
+	boolQuery := make(map[string]interface{})
+	must := []interface{}{}
+	
+	if req.Query != "" && req.Query != "*" {
+		must = append(must, map[string]interface{}{
+			"query_string": map[string]interface{}{
+				"query":            req.Query,
+				"default_operator": "AND",
+			},
+		})
 	}
-	return resp, nil
+	
+	if req.TimeRange != nil {
+		must = append(must, map[string]interface{}{
+			"range": map[string]interface{}{
+				"time": map[string]interface{}{
+					"gte": req.TimeRange.From.Unix(),
+					"lte": req.TimeRange.To.Unix(),
+				},
+			},
+		})
+	}
+	
+	if len(must) > 0 {
+		boolQuery["must"] = must
+	} else {
+		query["query"] = map[string]interface{}{
+			"match_all": map[string]interface{}{},
+		}
+		if req.Sort != nil {
+			query["sort"] = []interface{}{
+				map[string]interface{}{
+					req.Sort.Field: map[string]interface{}{
+						"order": req.Sort.Order,
+					},
+				},
+			}
+		}
+		return query
+	}
+	
+	query["query"] = map[string]interface{}{
+		"bool": boolQuery,
+	}
+	
+	if req.Sort != nil {
+		query["sort"] = []interface{}{
+			map[string]interface{}{
+				req.Sort.Field: map[string]interface{}{
+					"order": req.Sort.Order,
+				},
+			},
+		}
+	}
+	
+	return query
 }
 
 // ListAlerts returns all stubbed alert definitions sorted by name.

@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/telhawk-systems/telhawk-stack/query/internal/client"
 	"github.com/telhawk-systems/telhawk-stack/query/internal/config"
 	"github.com/telhawk-systems/telhawk-stack/query/internal/handlers"
 	"github.com/telhawk-systems/telhawk-stack/query/internal/server"
@@ -31,7 +32,13 @@ func main() {
 		listenAddr = *addr
 	}
 
-	svc := service.NewQueryService("0.1.0")
+	osClient, err := client.NewOpenSearchClient(cfg.OpenSearch)
+	if err != nil {
+		log.Fatalf("create opensearch client: %v", err)
+	}
+	log.Printf("connected to opensearch at %s", cfg.OpenSearch.URL)
+
+	svc := service.NewQueryService("0.1.0", osClient)
 	h := handlers.New(svc)
 
 	srv := &http.Server{
