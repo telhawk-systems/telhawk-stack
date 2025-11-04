@@ -1,0 +1,12 @@
+server:
+  port: 8082
+  read_timeout_seconds: 15
+  write_timeout_seconds: 15
+  idle_timeout_seconds: 60
+
+opensearch:
+  url: "https://localhost:9200"
+  username: "admin"
+  password: "admin"
+  insecure: true
+  index: "ocsf-events"
