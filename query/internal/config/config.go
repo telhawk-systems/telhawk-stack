@@ -10,7 +10,17 @@ import (
 
 // Config contains runtime configuration for the query service.
 type Config struct {
-	Server ServerConfig `json:"server"`
+	Server      ServerConfig      `json:"server"`
+	OpenSearch  OpenSearchConfig  `json:"opensearch"`
+}
+
+// OpenSearchConfig captures OpenSearch connection settings.
+type OpenSearchConfig struct {
+	URL      string `json:"url"`
+	Username string `json:"username"`
+	Password string `json:"password"`
+	Insecure bool   `json:"insecure"`
+	Index    string `json:"index"`
 }
 
 // ServerConfig captures HTTP server settings.
@@ -44,6 +54,13 @@ func Default() Config {
 			ReadTimeoutSeconds:  15,
 			WriteTimeoutSeconds: 15,
 			IdleTimeoutSeconds:  60,
+		},
+		OpenSearch: OpenSearchConfig{
+			URL:      "https://localhost:9200",
+			Username: "admin",
+			Password: "admin",
+			Insecure: true,
+			Index:    "ocsf-events",
 		},
 	}
 }
@@ -91,5 +108,20 @@ func applyEnvOverrides(cfg *Config) {
 		if parsed, err := strconv.Atoi(v); err == nil {
 			cfg.Server.IdleTimeoutSeconds = parsed
 		}
+	}
+	if v := os.Getenv("QUERY_OPENSEARCH_URL"); v != "" {
+		cfg.OpenSearch.URL = v
+	}
+	if v := os.Getenv("QUERY_OPENSEARCH_USERNAME"); v != "" {
+		cfg.OpenSearch.Username = v
+	}
+	if v := os.Getenv("QUERY_OPENSEARCH_PASSWORD"); v != "" {
+		cfg.OpenSearch.Password = v
+	}
+	if v := os.Getenv("QUERY_OPENSEARCH_INSECURE"); v != "" {
+		cfg.OpenSearch.Insecure = v == "true"
+	}
+	if v := os.Getenv("QUERY_OPENSEARCH_INDEX"); v != "" {
+		cfg.OpenSearch.Index = v
 	}
 }
