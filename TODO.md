@@ -26,11 +26,23 @@
   * Health metrics track storage success rate
   * Tests: TestStoragePersistence, TestStorageRetry, TestStorageFailure
   * Documentation: docs/STORAGE_PERSISTENCE.md
-- [ ] Capture normalization errors to a dead-letter queue for replay/analysis
+- [x] Capture normalization errors to a dead-letter queue for replay/analysis ✅
+  * File-based DLQ at /var/lib/telhawk/dlq
+  * Captures normalization and storage failures
+  * API endpoints for list and purge operations
+  * Full event context preserved for debugging/replay
+  * Metrics exposed via health endpoint
+  * Documentation: docs/DLQ_AND_BACKPRESSURE.md
 
 ## Ingest Service
 - [x] Validate HEC tokens against the auth service (✅ Token validation with caching)
-- [ ] Backpressure + retries when core returns 4xx/5xx during normalization
+- [x] Backpressure + retries when core returns 4xx/5xx during normalization ✅
+  * Exponential backoff retry (3 attempts, 100ms initial delay)
+  * Retries on 5xx, 429, and network errors
+  * No retry on 4xx client errors (except 429)
+  * Total retry window: ~700ms
+  * Prevents cascade failures
+  * Documentation: docs/DLQ_AND_BACKPRESSURE.md
 - [x] Forward normalized events to storage service (✅ Complete pipeline: Ingest → Core → Storage → OpenSearch)
 - [ ] Implement HEC ack channel
 - [ ] Add Redis-backed rate limiting in the ingestion pipeline
