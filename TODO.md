@@ -6,11 +6,24 @@
   * Include intelligent field mapping (common variants → OCSF fields)
   * Auto-generate source type classification patterns
   * Output: core/internal/normalizer/generated/*.go files
-- [ ] Expand normalizer patterns to cover all 59+ OCSF classes
-- [ ] Integrate generated normalizers into pipeline
+- [x] Integrate generated normalizers into pipeline ✅
+  * 7 normalizers integrated (Auth, Network, Process, File, DNS, HTTP, Detection)
+  * Integration tests passing with real log data (8 test files, 26 test cases)
+  * Documentation: docs/NORMALIZATION_INTEGRATION.md
+- [x] Expand normalizer patterns to cover all 77 OCSF classes ✅
+  * OCSF classes generated: 77 (by ocsf-generator)
+  * Normalizers generated: 77 (by enhanced normalizer-generator)
+  * All normalizers registered in pipeline
+  * Generator now schema-driven (auto-generates from event classes)
+  * Custom patterns via sourcetype_patterns.json (optional)
 - [ ] Implement class-specific validators (can also be generated)
 - [ ] Add enrichment hooks (GeoIP, threat intel) post-normalization
-- [ ] Persist normalized events to storage once pipeline succeeds
+- [x] Persist normalized events to storage once pipeline succeeds ✅
+  * Events now stored with automatic retry (3 attempts, exponential backoff)
+  * Storage failures properly returned (no silent data loss)
+  * Health metrics track storage success rate
+  * Tests: TestStoragePersistence, TestStorageRetry, TestStorageFailure
+  * Documentation: docs/STORAGE_PERSISTENCE.md
 - [ ] Capture normalization errors to a dead-letter queue for replay/analysis
 
 ## Ingest Service

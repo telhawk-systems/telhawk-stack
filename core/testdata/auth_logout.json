@@ -1,0 +1,9 @@
+{
+  "username": "jane.smith",
+  "uid": "67890",
+  "action": "logout",
+  "result": "success",
+  "@timestamp": "2025-11-03T23:20:00Z",
+  "source_ip": "10.0.0.50",
+  "user_domain": "corp.example.com"
+}
