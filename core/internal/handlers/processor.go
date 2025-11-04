@@ -98,6 +98,54 @@ func (h *ProcessorHandler) Health(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, h.processor.Health())
 }
 
+// ListDLQ handles GET /api/v1/dlq - lists failed events.
+func (h *ProcessorHandler) ListDLQ(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		methodNotAllowed(w, http.MethodGet)
+		return
+	}
+	
+	dlqQueue := h.processor.DLQ()
+	if dlqQueue == nil {
+		writeError(w, http.StatusNotImplemented, "dlq_disabled", "dead-letter queue is not enabled")
+		return
+	}
+	
+	events, err := dlqQueue.List(r.Context(), 100)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "dlq_list_failed", err.Error())
+		return
+	}
+	
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"events": events,
+		"count":  len(events),
+	})
+}
+
+// PurgeDLQ handles DELETE /api/v1/dlq - removes all failed events.
+func (h *ProcessorHandler) PurgeDLQ(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete {
+		methodNotAllowed(w, http.MethodDelete)
+		return
+	}
+	
+	dlqQueue := h.processor.DLQ()
+	if dlqQueue == nil {
+		writeError(w, http.StatusNotImplemented, "dlq_disabled", "dead-letter queue is not enabled")
+		return
+	}
+	
+	if err := dlqQueue.Purge(r.Context()); err != nil {
+		writeError(w, http.StatusInternalServerError, "dlq_purge_failed", err.Error())
+		return
+	}
+	
+	writeJSON(w, http.StatusOK, map[string]string{
+		"status": "purged",
+	})
+}
+
 func writeJSON(w http.ResponseWriter, status int, v interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)

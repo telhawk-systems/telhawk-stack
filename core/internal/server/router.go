@@ -10,6 +10,8 @@ import (
 func NewRouter(h *handlers.ProcessorHandler) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/v1/normalize", h.Normalize)
+	mux.HandleFunc("/api/v1/dlq", h.ListDLQ)
+	mux.HandleFunc("/api/v1/dlq/purge", h.PurgeDLQ)
 	mux.HandleFunc("/healthz", h.Health)
 	return mux
 }
