@@ -43,7 +43,12 @@
   * Field projection, pagination (10k results), sorting
   * Query performance tracking and comprehensive error handling
   * Documentation: docs/QUERY_SERVICE_READ_PATH.md, query/README.md
-- [ ] Add cursor pagination and aggregation support
+- [x] Add cursor pagination and aggregation support ✅
+  * Cursor-based pagination with search_after (no 10k limit)
+  * Aggregations: terms, date_histogram, metrics (avg, sum, min, max, stats, cardinality)
+  * Combined queries with both results and aggregations
+  * Total matches tracking in responses
+  * Documentation: docs/QUERY_PAGINATION_AGGREGATIONS.md
 - [ ] Implement alert scheduling and notification delivery
 - [ ] Connect dashboards to saved query definitions
 
