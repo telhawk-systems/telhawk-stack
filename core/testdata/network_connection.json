@@ -1,0 +1,12 @@
+{
+  "src_ip": "192.168.1.100",
+  "src_port": 54321,
+  "dst_ip": "8.8.8.8",
+  "dst_port": 443,
+  "protocol": "tcp",
+  "action": "allow",
+  "bytes_sent": 1024,
+  "bytes_received": 2048,
+  "timestamp": "2025-11-03T23:25:00Z",
+  "status": "success"
+}
