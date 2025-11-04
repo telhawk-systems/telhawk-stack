@@ -61,7 +61,7 @@ func TestStoragePersistence(t *testing.T) {
 
 	// Setup storage client and processor
 	storageClient := storage.NewClient(storageServer.URL)
-	processor := service.NewProcessor(pipe, storageClient)
+	processor := service.NewProcessor(pipe, storageClient, nil) // nil DLQ for tests
 
 	testCases := []struct {
 		name        string
@@ -175,7 +175,7 @@ func TestStorageRetry(t *testing.T) {
 	validators := validator.NewChain(validator.BasicValidator{})
 	pipe := pipeline.New(registry, validators)
 	storageClient := storage.NewClient(storageServer.URL)
-	processor := service.NewProcessor(pipe, storageClient)
+	processor := service.NewProcessor(pipe, storageClient, nil)
 
 	envelope := &model.RawEventEnvelope{
 		Format:     "json",
@@ -216,7 +216,7 @@ func TestStorageFailure(t *testing.T) {
 	validators := validator.NewChain(validator.BasicValidator{})
 	pipe := pipeline.New(registry, validators)
 	storageClient := storage.NewClient(storageServer.URL)
-	processor := service.NewProcessor(pipe, storageClient)
+	processor := service.NewProcessor(pipe, storageClient, nil)
 
 	envelope := &model.RawEventEnvelope{
 		Format:     "json",

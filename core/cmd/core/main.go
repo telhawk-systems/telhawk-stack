@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/telhawk-systems/telhawk-stack/core/internal/config"
+	"github.com/telhawk-systems/telhawk-stack/core/internal/dlq"
 	"github.com/telhawk-systems/telhawk-stack/core/internal/handlers"
 	"github.com/telhawk-systems/telhawk-stack/core/internal/normalizer"
 	"github.com/telhawk-systems/telhawk-stack/core/internal/normalizer/generated"
@@ -138,7 +139,22 @@ func main() {
 	validators := validator.NewChain(validator.BasicValidator{})
 	pipe := pipeline.New(registry, validators)
 	storageClient := storage.NewClient(cfg.Storage.URL)
-	processor := service.NewProcessor(pipe, storageClient)
+	
+	// Initialize DLQ if enabled
+	var dlqQueue *dlq.Queue
+	if cfg.DLQ.Enabled {
+		var err error
+		dlqQueue, err = dlq.NewQueue(cfg.DLQ.BasePath)
+		if err != nil {
+			log.Printf("WARN: failed to initialize DLQ: %v (continuing without DLQ)", err)
+		} else {
+			log.Printf("DLQ enabled at %s", cfg.DLQ.BasePath)
+		}
+	} else {
+		log.Println("DLQ disabled")
+	}
+	
+	processor := service.NewProcessor(pipe, storageClient, dlqQueue)
 	handler := handlers.NewProcessorHandler(processor)
 
 	srv := &http.Server{

@@ -13,6 +13,7 @@ type Config struct {
 	Server   ServerConfig   `json:"server"`
 	Pipeline PipelineConfig `json:"pipeline"`
 	Storage  StorageConfig  `json:"storage"`
+	DLQ      DLQConfig      `json:"dlq"`
 }
 
 // ServerConfig holds HTTP server settings.
@@ -33,6 +34,12 @@ type StorageConfig struct {
 	URL string `json:"url"`
 }
 
+// DLQConfig controls dead-letter queue settings.
+type DLQConfig struct {
+	Enabled  bool   `json:"enabled"`
+	BasePath string `json:"base_path"`
+}
+
 // Default returns Config populated with sane defaults.
 func Default() Config {
 	return Config{
@@ -47,6 +54,10 @@ func Default() Config {
 		},
 		Storage: StorageConfig{
 			URL: "http://storage:8083",
+		},
+		DLQ: DLQConfig{
+			Enabled:  true,
+			BasePath: "/var/lib/telhawk/dlq",
 		},
 	}
 }
@@ -102,6 +113,14 @@ func applyEnvOverrides(cfg *Config) {
 	}
 	if v := os.Getenv("CORE_STORAGE_URL"); v != "" {
 		cfg.Storage.URL = v
+	}
+	if v := os.Getenv("CORE_DLQ_ENABLED"); v != "" {
+		if parsed, err := strconv.ParseBool(v); err == nil {
+			cfg.DLQ.Enabled = parsed
+		}
+	}
+	if v := os.Getenv("CORE_DLQ_BASE_PATH"); v != "" {
+		cfg.DLQ.BasePath = v
 	}
 }
 
