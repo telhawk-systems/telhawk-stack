@@ -36,10 +36,22 @@ type Pattern struct {
 }
 
 type EventClass struct {
+	UID         int                        `json:"uid"`
+	Caption     string                     `json:"caption"`
+	Name        string                     `json:"name"`
+	Category    string                     `json:"category"`
+	Description string                     `json:"description"`
+	Extends     string                     `json:"extends"`
+	Attributes  map[string]json.RawMessage `json:"attributes"`
+}
+
+type Categories struct {
+	Attributes map[string]Category `json:"attributes"`
+}
+
+type Category struct {
 	UID         int    `json:"uid"`
 	Caption     string `json:"caption"`
-	Name        string `json:"name"`
-	Category    string `json:"category"`
 	Description string `json:"description"`
 }
 
@@ -50,6 +62,7 @@ var (
 	
 	fieldMappings      FieldMappings
 	sourceTypePatterns SourceTypePatterns
+	categories         Categories
 )
 
 func main() {
@@ -77,18 +90,27 @@ func run() error {
 		return fmt.Errorf("generate helpers: %w", err)
 	}
 
-	// Generate normalizers for configured patterns
+	// Try to scan OCSF schema if available, otherwise use generated event classes
 	totalGenerated := 0
-	for className, pattern := range sourceTypePatterns.Patterns {
-		if err := generateNormalizer(className, pattern); err != nil {
-			if *verbose {
-				fmt.Printf("Warning: failed to generate %s: %v\n", className, err)
-			}
-			continue
-		}
-		totalGenerated++
+	schemaEventsDir := filepath.Join(*schemaDir, "events")
+	if _, err := os.Stat(schemaEventsDir); err == nil {
+		// Schema available - use it
 		if *verbose {
-			fmt.Printf("Generated: %s_normalizer.go\n", className)
+			fmt.Println("Using OCSF schema from:", *schemaDir)
+		}
+		totalGenerated, err = generateFromSchema(schemaEventsDir)
+		if err != nil {
+			return fmt.Errorf("generate from schema: %w", err)
+		}
+	} else {
+		// Schema not available - scan generated event classes
+		if *verbose {
+			fmt.Println("Schema not found, scanning generated event classes...")
+		}
+		generatedEventsDir := filepath.Join("../../core/pkg/ocsf/events")
+		totalGenerated, err = generateFromEventClasses(generatedEventsDir)
+		if err != nil {
+			return fmt.Errorf("generate from event classes: %w", err)
 		}
 	}
 
@@ -106,16 +128,190 @@ func loadConfig() error {
 		return fmt.Errorf("parse field_mappings.json: %w", err)
 	}
 
-	// Load sourcetype patterns
+	// Load sourcetype patterns (for overrides - optional)
 	patternsData, err := os.ReadFile("sourcetype_patterns.json")
 	if err != nil {
-		return fmt.Errorf("read sourcetype_patterns.json: %w", err)
-	}
-	if err := json.Unmarshal(patternsData, &sourceTypePatterns); err != nil {
-		return fmt.Errorf("parse sourcetype_patterns.json: %w", err)
+		// OK if doesn't exist - we'll use defaults
+		if *verbose {
+			fmt.Println("No sourcetype_patterns.json found, using auto-generated patterns")
+		}
+		sourceTypePatterns.Patterns = make(map[string]Pattern)
+	} else {
+		if err := json.Unmarshal(patternsData, &sourceTypePatterns); err != nil {
+			return fmt.Errorf("parse sourcetype_patterns.json: %w", err)
+		}
+		if *verbose {
+			fmt.Printf("Loaded %d pattern overrides from sourcetype_patterns.json\n", len(sourceTypePatterns.Patterns))
+		}
 	}
 
 	return nil
+}
+
+func loadEventClass(path string) (*EventClass, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	var class EventClass
+	if err := json.Unmarshal(data, &class); err != nil {
+		return nil, err
+	}
+
+	return &class, nil
+}
+
+func getPatternForClass(class *EventClass) Pattern {
+	// Check for explicit override in sourcetype_patterns.json
+	if override, exists := sourceTypePatterns.Patterns[class.Name]; exists {
+		return override
+	}
+
+	// Generate default pattern from class name
+	patterns := generateDefaultPatterns(class.Name)
+	
+	return Pattern{
+		ClassUID:           class.UID,
+		Category:           class.Category,
+		SourceTypePatterns: patterns,
+		Priority:           50, // Default priority
+	}
+}
+
+func generateDefaultPatterns(className string) []string {
+	patterns := []string{className}
+	
+	// Add common variations
+	parts := strings.Split(className, "_")
+	if len(parts) > 1 {
+		// Add first part (e.g., "auth" from "authentication")
+		patterns = append(patterns, parts[0])
+	}
+	
+	// Add simplified version without "_activity" suffix
+	simplified := strings.TrimSuffix(className, "_activity")
+	if simplified != className {
+		patterns = append(patterns, simplified)
+	}
+	
+	return patterns
+}
+
+func generateFromSchema(schemaEventsDir string) (int, error) {
+	totalGenerated := 0
+	categoryDirs, err := os.ReadDir(schemaEventsDir)
+	if err != nil {
+		return 0, err
+	}
+
+	for _, categoryDir := range categoryDirs {
+		if !categoryDir.IsDir() {
+			continue
+		}
+
+		categoryName := categoryDir.Name()
+		categoryPath := filepath.Join(schemaEventsDir, categoryName)
+		
+		eventFiles, err := os.ReadDir(categoryPath)
+		if err != nil {
+			if *verbose {
+				fmt.Printf("Warning: cannot read category %s: %v\n", categoryName, err)
+			}
+			continue
+		}
+
+		for _, eventFile := range eventFiles {
+			if !strings.HasSuffix(eventFile.Name(), ".json") {
+				continue
+			}
+
+			// Skip category base files
+			if eventFile.Name() == categoryName+".json" {
+				continue
+			}
+
+			eventPath := filepath.Join(categoryPath, eventFile.Name())
+			class, err := loadEventClass(eventPath)
+			if err != nil {
+				if *verbose {
+					fmt.Printf("Warning: failed to load %s: %v\n", eventFile.Name(), err)
+				}
+				continue
+			}
+
+			pattern := getPatternForClass(class)
+			if err := generateNormalizer(class.Name, pattern); err != nil {
+				if *verbose {
+					fmt.Printf("Warning: failed to generate normalizer for %s: %v\n", class.Name, err)
+				}
+				continue
+			}
+			
+			totalGenerated++
+			if *verbose {
+				fmt.Printf("Generated: %s_normalizer.go (class_uid=%d, category=%s)\n", class.Name, class.UID, categoryName)
+			}
+		}
+	}
+
+	return totalGenerated, nil
+}
+
+func generateFromEventClasses(generatedEventsDir string) (int, error) {
+	totalGenerated := 0
+	categoryDirs, err := os.ReadDir(generatedEventsDir)
+	if err != nil {
+		return 0, fmt.Errorf("read generated events dir: %w", err)
+	}
+
+	for _, categoryDir := range categoryDirs {
+		if !categoryDir.IsDir() {
+			continue
+		}
+
+		categoryName := categoryDir.Name()
+		categoryPath := filepath.Join(generatedEventsDir, categoryName)
+		
+		eventFiles, err := os.ReadDir(categoryPath)
+		if err != nil {
+			if *verbose {
+				fmt.Printf("Warning: cannot read category %s: %v\n", categoryName, err)
+			}
+			continue
+		}
+
+		for _, eventFile := range eventFiles {
+			if !strings.HasSuffix(eventFile.Name(), ".go") {
+				continue
+			}
+
+			// Extract class name from filename (e.g., "authentication.go" → "authentication")
+			className := strings.TrimSuffix(eventFile.Name(), ".go")
+			
+			// Create a minimal EventClass for pattern generation
+			class := &EventClass{
+				Name:     className,
+				Category: categoryName,
+				UID:      0, // Will be filled from override if exists
+			}
+
+			pattern := getPatternForClass(class)
+			if err := generateNormalizer(class.Name, pattern); err != nil {
+				if *verbose {
+					fmt.Printf("Warning: failed to generate normalizer for %s: %v\n", class.Name, err)
+				}
+				continue
+			}
+			
+			totalGenerated++
+			if *verbose {
+				fmt.Printf("Generated: %s_normalizer.go (category=%s)\n", class.Name, categoryName)
+			}
+		}
+	}
+
+	return totalGenerated, nil
 }
 
 func generateNormalizer(className string, pattern Pattern) error {

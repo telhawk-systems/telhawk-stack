@@ -19,6 +19,7 @@ type Processor struct {
 	startedAt     time.Time
 	processed     atomic.Uint64
 	failed        atomic.Uint64
+	stored        atomic.Uint64
 }
 
 // NewProcessor creates a new Processor instance.
@@ -38,10 +39,14 @@ func (p *Processor) Process(ctx context.Context, envelope *model.RawEventEnvelop
 		return nil, err
 	}
 
+	// Persist normalized event to storage
 	if p.storageClient != nil {
 		if err := p.storageClient.StoreEvent(ctx, event); err != nil {
-			log.Printf("failed to persist event to storage: %v", err)
+			p.failed.Add(1)
+			log.Printf("ERROR: failed to persist event to storage: %v", err)
+			return nil, err
 		}
+		p.stored.Add(1)
 	}
 
 	p.processed.Add(1)
@@ -53,6 +58,7 @@ type Stats struct {
 	UptimeSeconds int64  `json:"uptime_seconds"`
 	Processed     uint64 `json:"processed"`
 	Failed        uint64 `json:"failed"`
+	Stored        uint64 `json:"stored"`
 }
 
 // Health returns live status for health checks.
@@ -61,5 +67,6 @@ func (p *Processor) Health() Stats {
 		UptimeSeconds: int64(time.Since(p.startedAt).Seconds()),
 		Processed:     p.processed.Load(),
 		Failed:        p.failed.Load(),
+		Stored:        p.stored.Load(),
 	}
 }

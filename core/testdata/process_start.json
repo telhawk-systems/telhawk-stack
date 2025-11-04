@@ -1,0 +1,10 @@
+{
+  "process_name": "nginx",
+  "process_id": 1234,
+  "parent_process_id": 1,
+  "user": "www-data",
+  "command_line": "/usr/sbin/nginx -g daemon off;",
+  "action": "start",
+  "timestamp": "2025-11-03T23:30:00Z",
+  "status": "success"
+}
