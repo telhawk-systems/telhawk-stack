@@ -1,6 +1,18 @@
 version: '3.8'
 
 services:
+  # Certificate generator - runs once before OpenSearch
+  # NO HEALTH CHECK - one-shot init container
+  opensearch-certs:
+    build:
+      context: ./opensearch/cert-generator
+      dockerfile: Dockerfile
+    container_name: telhawk-opensearch-certs
+    volumes:
+      - opensearch-certs:/certs
+    networks:
+      - telhawk
+
   opensearch:
     build:
       context: ./opensearch
@@ -22,11 +34,15 @@ services:
         hard: 65536
     volumes:
       - opensearch-data:/usr/share/opensearch/data
+      - opensearch-certs:/certs:ro
     ports:
       - "9200:9200"
       - "9600:9600"
     networks:
       - telhawk
+    depends_on:
+      opensearch-certs:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD-SHELL", "curl -fk -u $${OPENSEARCH_ADMIN_USER}:$${OPENSEARCH_INITIAL_ADMIN_PASSWORD} https://localhost:9200/_cluster/health | grep -q 'yellow\\|green'"]
       interval: 15s
@@ -246,5 +262,6 @@ networks:
 
 volumes:
   opensearch-data:
+  opensearch-certs:
   auth-db-data:
     driver: local
