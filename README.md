@@ -483,11 +483,6 @@ docker-compose pull
 docker-compose up -d
 ```
 
-### Kubernetes (Production) - Coming Soon
-```bash
-kubectl apply -f k8s/
-```
-
 ### Production Considerations
 - Change default OpenSearch password in docker-compose.yml
 - Enable TLS/SSL for production traffic
