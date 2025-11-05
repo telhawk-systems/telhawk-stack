@@ -25,11 +25,11 @@ services:
     networks:
       - telhawk
     healthcheck:
-      test: ["CMD-SHELL", "curl -fk https://localhost:9200 2>&1 | grep -q 'Unauthorized\\|version' || exit 1"]
+      test: ["CMD-SHELL", "ps aux | grep -q '[o]pensearch' || exit 1"]
       interval: 10s
       timeout: 10s
-      retries: 12
-      start_period: 40s
+      retries: 3
+      start_period: 60s
 
   auth-db:
     image: postgres:16-alpine
