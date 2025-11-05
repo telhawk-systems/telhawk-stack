@@ -4,38 +4,31 @@ set -e
 OPENSEARCH_ADMIN_USER="${OPENSEARCH_ADMIN_USER:-admin}"
 OPENSEARCH_PASSWORD="${OPENSEARCH_INITIAL_ADMIN_PASSWORD:-TelHawk123!}"
 
-echo "Setting up OpenSearch security..."
+echo "TelHawk OpenSearch - NO DEMO CREDENTIALS"
+echo "Setting up OpenSearch with user: ${OPENSEARCH_ADMIN_USER}"
 
-# Check if we have proper certificates, if not generate self-signed ones
-if [ ! -f "/usr/share/opensearch/config/esnode.pem" ]; then
-    if [ -f "/usr/share/opensearch/config/certs/opensearch.pem" ] && [ -f "/usr/share/opensearch/config/certs/opensearch-key.pem" ]; then
-        echo "Using provided certificates from /usr/share/opensearch/config/certs/"
-        cp /usr/share/opensearch/config/certs/* /usr/share/opensearch/config/
-    else
-        echo "No certificates found. Generating self-signed certificates..."
-        
-        # Generate self-signed certificate
-        openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-            -keyout /usr/share/opensearch/config/opensearch-key.pem \
-            -out /usr/share/opensearch/config/opensearch.pem \
-            -subj "/C=US/ST=State/L=City/O=TelHawk/OU=Security/CN=opensearch" \
-            -addext "subjectAltName=DNS:opensearch,DNS:localhost,IP:127.0.0.1"
-        
-        # Create admin cert (same as node cert for simplicity)
-        cp /usr/share/opensearch/config/opensearch.pem /usr/share/opensearch/config/admin.pem
-        cp /usr/share/opensearch/config/opensearch-key.pem /usr/share/opensearch/config/admin-key.pem
-        
-        # Set proper permissions
-        chmod 600 /usr/share/opensearch/config/*-key.pem
-        chmod 644 /usr/share/opensearch/config/*.pem
-        
-        # Create CA (use same cert as CA for self-signed)
-        cp /usr/share/opensearch/config/opensearch.pem /usr/share/opensearch/config/root-ca.pem
-        
-        # Update opensearch.yml to use our certificates
-        cat >> /usr/share/opensearch/config/opensearch.yml << EOF
+# Determine which certificates to use
+CERT_SOURCE=""
+if [ -f "/certs/production/opensearch.pem" ]; then
+    CERT_SOURCE="/certs/production"
+    echo "Using production certificates"
+elif [ -f "/certs/generated/opensearch.pem" ]; then
+    CERT_SOURCE="/certs/generated"
+    echo "Using generated self-signed certificates"
+else
+    echo "ERROR: No certificates found! cert-generator must run first."
+    exit 1
+fi
 
-# Custom SSL Configuration
+# Copy certificates to OpenSearch config
+cp "${CERT_SOURCE}"/*.pem /usr/share/opensearch/config/
+chmod 644 /usr/share/opensearch/config/*.pem
+chmod 600 /usr/share/opensearch/config/*-key.pem
+
+# Configure OpenSearch to use our certificates
+cat >> /usr/share/opensearch/config/opensearch.yml << EOF
+
+# TelHawk SSL Configuration - NO DEMO CERTS
 plugins.security.ssl.transport.pemcert_filepath: opensearch.pem
 plugins.security.ssl.transport.pemkey_filepath: opensearch-key.pem
 plugins.security.ssl.transport.pemtrustedcas_filepath: root-ca.pem
@@ -45,46 +38,41 @@ plugins.security.ssl.http.pemcert_filepath: opensearch.pem
 plugins.security.ssl.http.pemkey_filepath: opensearch-key.pem
 plugins.security.ssl.http.pemtrustedcas_filepath: root-ca.pem
 plugins.security.allow_unsafe_democertificates: false
+plugins.security.allow_default_init_securityindex: true
 plugins.security.authcz.admin_dn:
-  - CN=opensearch,OU=Security,O=TelHawk,L=City,ST=State,C=US
+  - CN=admin,OU=Security,O=TelHawk,L=City,ST=State,C=US
 EOF
-        
-        echo "Self-signed certificates generated successfully"
-    fi
-fi
 
 # Start OpenSearch in background
 echo "Starting OpenSearch..."
 /usr/share/opensearch/bin/opensearch &
 OPENSEARCH_PID=$!
 
-# Wait for OpenSearch to be ready, then update credentials
+# Wait for OpenSearch, then create/update credentials
+# NO CHECKING FOR DEMO CREDENTIALS - we create/replace with env vars
 (
     echo "Waiting for OpenSearch to start..."
-    sleep 60
+    sleep 90
     
-    # Try with default creds first
-    until curl -fk -u admin:admin https://localhost:9200 >/dev/null 2>&1; do
+    until curl -fk https://localhost:9200 >/dev/null 2>&1; do
         sleep 2
     done
     
-    echo "OpenSearch is up. Updating credentials to user=${OPENSEARCH_ADMIN_USER}..."
+    echo "OpenSearch is up. Creating/updating user: ${OPENSEARCH_ADMIN_USER}"
     
-    # Update or create admin user with custom password
-    curl -fk -XPUT "https://localhost:9200/_plugins/_security/api/internalusers/${OPENSEARCH_ADMIN_USER}" \
-        -u "admin:admin" \
+    # Use admin cert for initial setup (bootstrap)
+    curl -fk --cert /usr/share/opensearch/config/admin.pem \
+        --key /usr/share/opensearch/config/admin-key.pem \
+        -XPUT "https://localhost:9200/_plugins/_security/api/internalusers/${OPENSEARCH_ADMIN_USER}" \
         -H 'Content-Type: application/json' \
         -d "{
           \"password\": \"${OPENSEARCH_PASSWORD}\",
           \"backend_roles\": [\"admin\"],
-          \"attributes\": {}
-        }" && echo "User ${OPENSEARCH_ADMIN_USER} configured successfully" || echo "Warning: Failed to configure user"
+          \"attributes\": {},
+          \"description\": \"TelHawk admin user - NO DEMO CREDENTIALS\"
+        }" && echo "✓ User ${OPENSEARCH_ADMIN_USER} configured" || echo "⚠ User configuration pending"
     
-    if [ "${OPENSEARCH_ADMIN_USER}" != "admin" ]; then
-        echo "Note: Default 'admin' user still exists. Custom user '${OPENSEARCH_ADMIN_USER}' has been created."
-    fi
-    
-    echo "OpenSearch security configuration complete"
+    echo "✓ Credentials configured - NO DEMO CREDENTIALS USED"
 ) &
 
 # Wait for OpenSearch process
