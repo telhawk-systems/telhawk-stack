@@ -167,6 +167,36 @@ services:
       start_period: 10s
     restart: unless-stopped
 
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    container_name: telhawk-web
+    ports:
+      - "3000:3000"
+    environment:
+      - WEB_PORT=3000
+      - STATIC_DIR=/app/static
+      - AUTH_SERVICE_URL=http://auth:8080
+      - QUERY_SERVICE_URL=http://query:8082
+      - CORE_SERVICE_URL=http://core:8090
+      - COOKIE_DOMAIN=
+      - COOKIE_SECURE=false
+      - DEV_MODE=false
+    networks:
+      - telhawk
+    depends_on:
+      - auth
+      - query
+      - core
+    healthcheck:
+      test: ["CMD", "/busybox/wget", "-q", "-O", "-", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
   thawk:
     build:
       context: ./cli
