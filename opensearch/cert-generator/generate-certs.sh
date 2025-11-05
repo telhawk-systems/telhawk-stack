@@ -77,9 +77,10 @@ openssl x509 -req -in "${CERT_DIR}/admin.csr" \
     -days 365 \
     -sha256
 
-# Set permissions
+# Set permissions - make readable by all (opensearch user needs to read)
+chmod 755 "${CERT_DIR}"
 chmod 644 "${CERT_DIR}"/*.pem
-chmod 600 "${CERT_DIR}"/*-key.pem
+chmod 644 "${CERT_DIR}"/*-key.pem  # Keys need to be readable by opensearch user
 rm -f "${CERT_DIR}"/*.csr "${CERT_DIR}"/*.srl "${CERT_DIR}/san.cnf"
 
 echo "✓ Self-signed certificates generated successfully"
