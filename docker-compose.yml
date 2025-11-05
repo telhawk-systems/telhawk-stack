@@ -10,7 +10,8 @@ services:
       - discovery.type=single-node
       - bootstrap.memory_lock=true
       - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
-      - OPENSEARCH_INITIAL_ADMIN_PASSWORD=TelHawk123!
+      - OPENSEARCH_ADMIN_USER=${OPENSEARCH_ADMIN_USER:-admin}
+      - OPENSEARCH_INITIAL_ADMIN_PASSWORD=${OPENSEARCH_PASSWORD:-TelHawk123!}
       - plugins.security.disabled=false
       - DISABLE_INSTALL_DEMO_CONFIG=true
     ulimits:
@@ -28,7 +29,7 @@ services:
     networks:
       - telhawk
     healthcheck:
-      test: ["CMD-SHELL", "curl -fk -u admin:$${OPENSEARCH_INITIAL_ADMIN_PASSWORD} https://localhost:9200/_cluster/health | grep -q 'yellow\\|green'"]
+      test: ["CMD-SHELL", "curl -fk -u $${OPENSEARCH_ADMIN_USER}:$${OPENSEARCH_INITIAL_ADMIN_PASSWORD} https://localhost:9200/_cluster/health | grep -q 'yellow\\|green'"]
       interval: 15s
       timeout: 10s
       retries: 20
@@ -99,7 +100,7 @@ services:
       - "8083:8083"
     environment:
       - OPENSEARCH_URL=https://opensearch:9200
-      - OPENSEARCH_USERNAME=admin
+      - OPENSEARCH_USERNAME=${OPENSEARCH_ADMIN_USER:-admin}
       - OPENSEARCH_PASSWORD=${OPENSEARCH_PASSWORD:-TelHawk123!}
     networks:
       - telhawk
@@ -123,7 +124,7 @@ services:
       - "8082:8082"
     environment:
       - OPENSEARCH_URL=https://opensearch:9200
-      - OPENSEARCH_USERNAME=admin
+      - OPENSEARCH_USERNAME=${OPENSEARCH_ADMIN_USER:-admin}
       - OPENSEARCH_PASSWORD=${OPENSEARCH_PASSWORD:-TelHawk123!}
       - OPENSEARCH_TLS_SKIP_VERIFY=true
     networks:
@@ -177,7 +178,7 @@ services:
       - INGEST_CORE_URL=http://core:8090
       - INGEST_STORAGE_URL=http://storage:8083
       - INGEST_OPENSEARCH_URL=https://opensearch:9200
-      - INGEST_OPENSEARCH_USERNAME=admin
+      - INGEST_OPENSEARCH_USERNAME=${OPENSEARCH_ADMIN_USER:-admin}
       - INGEST_OPENSEARCH_PASSWORD=${OPENSEARCH_PASSWORD:-TelHawk123!}
       - INGEST_OPENSEARCH_TLS_SKIP_VERIFY=true
     networks:
