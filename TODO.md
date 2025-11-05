@@ -70,9 +70,10 @@
 - [x] Implement bulk ingestion pipeline fed by normalized events
 
 ## Web
-- [ ] Bootstrap UI shell with authentication
+- [ ] Bootstrap UI shell with authentication (React, NOT NextJS - avoid magic)
 - [ ] Build search console backed by query API
 - [ ] Add dashboard visualization components
+- [ ] Establish testing strategy for UI rendering validation
 
 ## DevOps & Tooling
 - [x] Provide docker-compose to run full stack locally ✅
@@ -85,5 +86,9 @@
 
 ## Documentation
 - [ ] Expand core pipeline docs with class mapping examples
-- [ ] Document auth integration and token lifecycle
+- [x] Document auth integration and token lifecycle ✅
+  * Documentation: docs/AUTH_INTEGRATION.md
+  * Covers: JWT/refresh tokens, HEC tokens, web UI integration
+  * Security patterns: cookie storage, token refresh, rate limiting
+  * PostgreSQL schema with audit logging
 - [ ] Provide onboarding guide for adding new data sources

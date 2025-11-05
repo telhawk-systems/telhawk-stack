@@ -147,3 +147,9 @@ func (r *InMemoryRepository) RevokeHECToken(token string) error {
 	hecToken.Enabled = false
 	return nil
 }
+
+func (r *InMemoryRepository) LogAudit(entry *models.AuditLogEntry) error {
+	// In-memory implementation doesn't persist audit logs
+	// This is for development only
+	return nil
+}

@@ -11,15 +11,28 @@ import (
 	"github.com/telhawk-systems/telhawk-stack/auth/internal/models"
 )
 
+type Repository interface {
+	LogAudit(entry *models.AuditLogEntry) error
+}
+
 type Logger struct {
 	secretKey []byte
 	logs      []*models.AuditLog
+	repo      Repository
 }
 
 func NewLogger(secretKey string) *Logger {
 	return &Logger{
 		secretKey: []byte(secretKey),
 		logs:      make([]*models.AuditLog, 0),
+	}
+}
+
+func NewLoggerWithRepo(secretKey string, repo Repository) *Logger {
+	return &Logger{
+		secretKey: []byte(secretKey),
+		logs:      make([]*models.AuditLog, 0),
+		repo:      repo,
 	}
 }
 
@@ -42,6 +55,27 @@ func (l *Logger) Log(actorType, actorID, actorUsername, action, resource, resour
 
 	log.Signature = l.sign(log)
 	l.logs = append(l.logs, log)
+
+	if l.repo != nil {
+		entry := &models.AuditLogEntry{
+			Timestamp:     log.Timestamp,
+			ActorType:     actorType,
+			ActorID:       actorID,
+			ActorName:     actorUsername,
+			Action:        action,
+			ResourceType:  resource,
+			ResourceID:    resourceID,
+			IPAddress:     ipAddress,
+			UserAgent:     userAgent,
+			Result:        result,
+			ErrorMessage:  reason,
+			Metadata:      metadata,
+		}
+		if err := l.repo.LogAudit(entry); err != nil {
+			// Silently ignore audit persistence errors to not block auth operations
+			_ = err
+		}
+	}
 
 	return log
 }
