@@ -2,7 +2,9 @@ version: '3.8'
 
 services:
   opensearch:
-    image: opensearchproject/opensearch:2.11.0
+    build:
+      context: ./opensearch
+      dockerfile: Dockerfile
     container_name: telhawk-opensearch
     environment:
       - discovery.type=single-node
@@ -27,10 +29,10 @@ services:
       - telhawk
     healthcheck:
       test: ["CMD-SHELL", "curl -fk -u admin:$${OPENSEARCH_INITIAL_ADMIN_PASSWORD} https://localhost:9200/_cluster/health | grep -q 'yellow\\|green'"]
-      interval: 10s
+      interval: 15s
       timeout: 10s
-      retries: 12
-      start_period: 60s
+      retries: 20
+      start_period: 90s
 
   auth-db:
     image: postgres:16-alpine
