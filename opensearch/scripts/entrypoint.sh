@@ -23,10 +23,13 @@ fi
 # Copy certificates to OpenSearch config
 cp "${CERT_SOURCE}"/*.pem /usr/share/opensearch/config/
 chmod 644 /usr/share/opensearch/config/*.pem
-chmod 644 /usr/share/opensearch/config/*-key.pem  # Need to be readable
+chmod 644 /usr/share/opensearch/config/*-key.pem
 
-# Configure OpenSearch SSL - append only SSL config
+# Configure OpenSearch - single-node + SSL
 cat >> /usr/share/opensearch/config/opensearch.yml << EOF
+
+# TelHawk Single Node Configuration
+discovery.type: single-node
 
 # TelHawk SSL Configuration - NO DEMO CERTS
 plugins.security.ssl.transport.pemcert_filepath: opensearch.pem
@@ -49,7 +52,6 @@ echo "Starting OpenSearch..."
 OPENSEARCH_PID=$!
 
 # Wait for OpenSearch, then create/update credentials
-# NO CHECKING FOR DEMO CREDENTIALS - we create/replace with env vars
 (
     echo "Waiting for OpenSearch to start..."
     sleep 90
@@ -60,7 +62,7 @@ OPENSEARCH_PID=$!
     
     echo "OpenSearch is up. Creating/updating user: ${OPENSEARCH_ADMIN_USER}"
     
-    # Use admin cert for initial setup (bootstrap)
+    # Use admin cert for initial setup
     curl -fk --cert /usr/share/opensearch/config/admin.pem \
         --key /usr/share/opensearch/config/admin-key.pem \
         -XPUT "https://localhost:9200/_plugins/_security/api/internalusers/${OPENSEARCH_ADMIN_USER}" \
@@ -75,5 +77,4 @@ OPENSEARCH_PID=$!
     echo "✓ Credentials configured - NO DEMO CREDENTIALS USED"
 ) &
 
-# Wait for OpenSearch process
 wait $OPENSEARCH_PID
