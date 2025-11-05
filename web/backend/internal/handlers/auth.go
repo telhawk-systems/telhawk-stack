@@ -1,0 +1,129 @@
+package handlers
+
+import (
+	"encoding/json"
+	"log"
+	"net/http"
+
+	"github.com/telhawk/web/internal/auth"
+)
+
+type AuthHandler struct {
+	authClient   *auth.Client
+	cookieDomain string
+	cookieSecure bool
+}
+
+func NewAuthHandler(authClient *auth.Client, cookieDomain string, cookieSecure bool) *AuthHandler {
+	return &AuthHandler{
+		authClient:   authClient,
+		cookieDomain: cookieDomain,
+		cookieSecure: cookieSecure,
+	}
+}
+
+type LoginRequest struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
+func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
+	var req LoginRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
+
+	loginResp, err := h.authClient.Login(req.Username, req.Password)
+	if err != nil {
+		log.Printf("Login error: %v", err)
+		http.Error(w, "Login failed", http.StatusUnauthorized)
+		return
+	}
+
+	h.setAccessTokenCookie(w, loginResp.AccessToken, loginResp.ExpiresIn)
+	h.setRefreshTokenCookie(w, loginResp.RefreshToken)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"message": "Login successful",
+	})
+}
+
+func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
+	refreshCookie, err := r.Cookie("refresh_token")
+	if err == nil && refreshCookie.Value != "" {
+		if err := h.authClient.RevokeToken(refreshCookie.Value); err != nil {
+			log.Printf("Token revocation error: %v", err)
+		}
+	}
+
+	h.clearAuthCookies(w)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"message": "Logout successful",
+	})
+}
+
+func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
+	userID := auth.GetUserID(r.Context())
+	roles := auth.GetRoles(r.Context())
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"user_id": userID,
+		"roles":   roles,
+	})
+}
+
+func (h *AuthHandler) setAccessTokenCookie(w http.ResponseWriter, token string, expiresIn int) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     "access_token",
+		Value:    token,
+		Path:     "/",
+		Domain:   h.cookieDomain,
+		MaxAge:   expiresIn,
+		Secure:   h.cookieSecure,
+		HttpOnly: true,
+		SameSite: http.SameSiteStrictMode,
+	})
+}
+
+func (h *AuthHandler) setRefreshTokenCookie(w http.ResponseWriter, token string) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     "refresh_token",
+		Value:    token,
+		Path:     "/",
+		Domain:   h.cookieDomain,
+		MaxAge:   7 * 24 * 60 * 60, // 7 days
+		Secure:   h.cookieSecure,
+		HttpOnly: true,
+		SameSite: http.SameSiteStrictMode,
+	})
+}
+
+func (h *AuthHandler) clearAuthCookies(w http.ResponseWriter) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     "access_token",
+		Value:    "",
+		Path:     "/",
+		Domain:   h.cookieDomain,
+		MaxAge:   -1,
+		Secure:   h.cookieSecure,
+		HttpOnly: true,
+		SameSite: http.SameSiteStrictMode,
+	})
+	http.SetCookie(w, &http.Cookie{
+		Name:     "refresh_token",
+		Value:    "",
+		Path:     "/",
+		Domain:   h.cookieDomain,
+		MaxAge:   -1,
+		Secure:   h.cookieSecure,
+		HttpOnly: true,
+		SameSite: http.SameSiteStrictMode,
+	})
+}

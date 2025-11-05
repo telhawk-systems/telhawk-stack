@@ -1,0 +1,8 @@
+port: 3000
+static_dir: /app/static
+auth_service_url: http://auth:8080
+query_service_url: http://query:8082
+core_service_url: http://core:8090
+cookie_domain: ""
+cookie_secure: false
+dev_mode: false
