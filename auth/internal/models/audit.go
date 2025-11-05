@@ -49,6 +49,22 @@ const (
 	ActionPasswordChange   = "password_change"
 )
 
+// ShouldForwardToIngest returns true if this action should be forwarded
+// to the ingest pipeline for analytics and correlation.
+// Excludes high-frequency operational events that would cause noise or loops.
+func ShouldForwardToIngest(action string) bool {
+	switch action {
+	case ActionTokenValidate:
+		return false // Too frequent (every API call)
+	case ActionTokenRefresh:
+		return false // Too frequent (every 15 minutes per user)
+	case ActionHECTokenValidate:
+		return false // Would cause infinite loop (validates during ingest)
+	default:
+		return true // Forward security-relevant events
+	}
+}
+
 const (
 	ResultSuccess = "success"
 	ResultFailure = "failure"

@@ -16,9 +16,10 @@ type Repository interface {
 }
 
 type Logger struct {
-	secretKey []byte
-	logs      []*models.AuditLog
-	repo      Repository
+	secretKey     []byte
+	logs          []*models.AuditLog
+	repo          Repository
+	ingestClient  *IngestClient
 }
 
 func NewLogger(secretKey string) *Logger {
@@ -33,6 +34,15 @@ func NewLoggerWithRepo(secretKey string, repo Repository) *Logger {
 		secretKey: []byte(secretKey),
 		logs:      make([]*models.AuditLog, 0),
 		repo:      repo,
+	}
+}
+
+func NewLoggerWithRepoAndIngest(secretKey string, repo Repository, ingestClient *IngestClient) *Logger {
+	return &Logger{
+		secretKey:    []byte(secretKey),
+		logs:         make([]*models.AuditLog, 0),
+		repo:         repo,
+		ingestClient: ingestClient,
 	}
 }
 
@@ -56,6 +66,7 @@ func (l *Logger) Log(actorType, actorID, actorUsername, action, resource, resour
 	log.Signature = l.sign(log)
 	l.logs = append(l.logs, log)
 
+	// Always persist to PostgreSQL
 	if l.repo != nil {
 		entry := &models.AuditLogEntry{
 			Timestamp:     log.Timestamp,
@@ -75,6 +86,19 @@ func (l *Logger) Log(actorType, actorID, actorUsername, action, resource, resour
 			// Silently ignore audit persistence errors to not block auth operations
 			_ = err
 		}
+	}
+
+	// Forward security-relevant events to ingest pipeline
+	// Skip high-frequency operational events to prevent noise and loops
+	if l.ingestClient != nil && models.ShouldForwardToIngest(action) {
+		go func() {
+			// Async send to not block auth operations
+			_ = l.ingestClient.ForwardEvent(
+				actorType, actorID, actorUsername, action,
+				resource, resourceID, ipAddress, userAgent,
+				result, reason, metadata, log.Timestamp,
+			)
+		}()
 	}
 
 	return log
