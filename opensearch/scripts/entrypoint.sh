@@ -56,13 +56,16 @@ OPENSEARCH_PID=$!
     echo "Waiting for OpenSearch to start..."
     sleep 90
     
-    until curl -fk https://localhost:9200 >/dev/null 2>&1; do
+    # Use admin cert to check readiness (no password needed)
+    until curl -fk --cert /usr/share/opensearch/config/admin.pem \
+        --key /usr/share/opensearch/config/admin-key.pem \
+        https://localhost:9200 >/dev/null 2>&1; do
         sleep 2
     done
     
     echo "OpenSearch is up. Creating/updating user: ${OPENSEARCH_ADMIN_USER}"
     
-    # Use admin cert for initial setup
+    # Update admin user password using admin cert
     curl -fk --cert /usr/share/opensearch/config/admin.pem \
         --key /usr/share/opensearch/config/admin-key.pem \
         -XPUT "https://localhost:9200/_plugins/_security/api/internalusers/${OPENSEARCH_ADMIN_USER}" \
@@ -72,7 +75,7 @@ OPENSEARCH_PID=$!
           \"backend_roles\": [\"admin\"],
           \"attributes\": {},
           \"description\": \"TelHawk admin user - NO DEMO CREDENTIALS\"
-        }" && echo "✓ User ${OPENSEARCH_ADMIN_USER} configured" || echo "⚠ User configuration pending"
+        }" && echo "✓ User ${OPENSEARCH_ADMIN_USER} configured" || echo "⚠ User configuration failed"
     
     echo "✓ Credentials configured - NO DEMO CREDENTIALS USED"
 ) &
