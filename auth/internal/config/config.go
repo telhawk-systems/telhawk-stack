@@ -13,6 +13,7 @@ type Config struct {
 	Auth     AuthConfig     `mapstructure:"auth"`
 	Database DatabaseConfig `mapstructure:"database"`
 	Logging  LoggingConfig  `mapstructure:"logging"`
+	Ingest   IngestConfig   `mapstructure:"ingest"`
 }
 
 type ServerConfig struct {
@@ -47,6 +48,12 @@ type LoggingConfig struct {
 	Format string `mapstructure:"format"`
 }
 
+type IngestConfig struct {
+	URL      string `mapstructure:"url"`
+	HECToken string `mapstructure:"hec_token"`
+	Enabled  bool   `mapstructure:"enabled"`
+}
+
 func Load(configPath string) (*Config, error) {
 	v := viper.New()
 	
@@ -61,6 +68,8 @@ func Load(configPath string) (*Config, error) {
 	v.SetDefault("database.type", "memory")
 	v.SetDefault("logging.level", "info")
 	v.SetDefault("logging.format", "json")
+	v.SetDefault("ingest.enabled", false)
+	v.SetDefault("ingest.url", "http://ingest:8082")
 	
 	// Read config file
 	if configPath != "" {

@@ -12,6 +12,7 @@ import (
 
 	"github.com/telhawk-systems/telhawk-stack/auth/internal/config"
 	"github.com/telhawk-systems/telhawk-stack/auth/internal/handlers"
+	"github.com/telhawk-systems/telhawk-stack/auth/internal/audit"
 	"github.com/telhawk-systems/telhawk-stack/auth/internal/repository"
 	"github.com/telhawk-systems/telhawk-stack/auth/internal/service"
 )
@@ -64,7 +65,13 @@ func main() {
 	}
 
 	// Initialize service layer
-	authService := service.NewAuthService(repo)
+	var ingestClient *audit.IngestClient
+	if cfg.Ingest.Enabled && cfg.Ingest.URL != "" && cfg.Ingest.HECToken != "" {
+		log.Printf("Enabling auth event forwarding to ingest service at %s", cfg.Ingest.URL)
+		ingestClient = audit.NewIngestClient(cfg.Ingest.URL, cfg.Ingest.HECToken)
+	}
+
+	authService := service.NewAuthService(repo, ingestClient)
 
 	// Initialize HTTP handlers
 	handler := handlers.NewAuthHandler(authService)
