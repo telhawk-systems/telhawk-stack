@@ -25,13 +25,8 @@ cp "${CERT_SOURCE}"/*.pem /usr/share/opensearch/config/
 chmod 644 /usr/share/opensearch/config/*.pem
 chmod 644 /usr/share/opensearch/config/*-key.pem  # Need to be readable
 
-# Configure OpenSearch
+# Configure OpenSearch SSL - append only SSL config
 cat >> /usr/share/opensearch/config/opensearch.yml << EOF
-
-# TelHawk Configuration - NO DEMO CREDS
-cluster.name: docker-cluster
-node.name: opensearch-node1
-discovery.type: single-node
 
 # TelHawk SSL Configuration - NO DEMO CERTS
 plugins.security.ssl.transport.pemcert_filepath: opensearch.pem
