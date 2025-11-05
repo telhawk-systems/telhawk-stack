@@ -32,8 +32,36 @@ func main() {
 		log.Printf("Loaded config from: %s", *configPath)
 	}
 
-	// Initialize repository (will be PostgreSQL in production)
-	repo := repository.NewInMemoryRepository()
+	// Initialize repository based on config
+	var repo repository.Repository
+	if cfg.Database.Type == "postgres" {
+		connString := fmt.Sprintf(
+			"postgres://%s:%s@%s:%d/%s?sslmode=%s",
+			cfg.Database.Postgres.User,
+			cfg.Database.Postgres.Password,
+			cfg.Database.Postgres.Host,
+			cfg.Database.Postgres.Port,
+			cfg.Database.Postgres.Database,
+			cfg.Database.Postgres.SSLMode,
+		)
+		
+		log.Printf("Connecting to PostgreSQL at %s:%d/%s",
+			cfg.Database.Postgres.Host,
+			cfg.Database.Postgres.Port,
+			cfg.Database.Postgres.Database,
+		)
+		
+		pgRepo, err := repository.NewPostgresRepository(context.Background(), connString)
+		if err != nil {
+			log.Fatalf("Failed to connect to PostgreSQL: %v", err)
+		}
+		defer pgRepo.Close()
+		repo = pgRepo
+		log.Println("Connected to PostgreSQL")
+	} else {
+		log.Println("Using in-memory repository (development only)")
+		repo = repository.NewInMemoryRepository()
+	}
 
 	// Initialize service layer
 	authService := service.NewAuthService(repo)
