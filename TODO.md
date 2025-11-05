@@ -70,7 +70,13 @@
 - [x] Implement bulk ingestion pipeline fed by normalized events
 
 ## Web
-- [ ] Bootstrap UI shell with authentication (React, NOT NextJS - avoid magic)
+- [x] Bootstrap UI shell with authentication (React, NOT NextJS - avoid magic) ✅
+  * Go backend: Auth middleware, session management, API proxy
+  * React frontend: Vite + TypeScript, protected routes, auth context
+  * JWT authentication with HTTP-only cookies
+  * Distroless Docker image
+  * Integration with auth, query, and core services
+  * Documentation: web/README.md
 - [ ] Build search console backed by query API
 - [ ] Add dashboard visualization components
 - [ ] Establish testing strategy for UI rendering validation
