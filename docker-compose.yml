@@ -111,6 +111,31 @@ services:
       start_period: 10s
     restart: unless-stopped
 
+  query:
+    build:
+      context: ./query
+      dockerfile: Dockerfile
+    container_name: telhawk-query
+    ports:
+      - "8082:8082"
+    environment:
+      - OPENSEARCH_URL=https://opensearch:9200
+      - OPENSEARCH_USERNAME=admin
+      - OPENSEARCH_PASSWORD=${OPENSEARCH_PASSWORD:-TelHawk123!}
+      - OPENSEARCH_TLS_SKIP_VERIFY=true
+    networks:
+      - telhawk
+    depends_on:
+      opensearch:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "/busybox/wget", "-q", "-O", "-", "http://localhost:8082/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
   core:
     build:
       context: ./core
@@ -189,6 +214,7 @@ services:
       - auth
       - query
       - core
+      - storage
     healthcheck:
       test: ["CMD", "/busybox/wget", "-q", "-O", "-", "http://localhost:3000/api/health"]
       interval: 30s
