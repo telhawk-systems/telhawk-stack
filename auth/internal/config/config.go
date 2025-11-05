@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/spf13/viper"
@@ -74,6 +75,7 @@ func Load(configPath string) (*Config, error) {
 	// Environment variables override
 	v.SetEnvPrefix("AUTH")
 	v.AutomaticEnv()
+	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	
 	// Read config
 	if err := v.ReadInConfig(); err != nil {

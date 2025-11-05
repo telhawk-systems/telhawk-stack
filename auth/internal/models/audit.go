@@ -19,6 +19,21 @@ type AuditLog struct {
 	Signature     string                 `json:"signature"` // HMAC signature for tamper-proof audit
 }
 
+type AuditLogEntry struct {
+	Timestamp     time.Time
+	ActorType     string
+	ActorID       string
+	ActorName     string
+	Action        string
+	ResourceType  string
+	ResourceID    string
+	IPAddress     string
+	UserAgent     string
+	Result        string
+	ErrorMessage  string
+	Metadata      map[string]interface{}
+}
+
 const (
 	ActionLogin            = "login"
 	ActionLogout           = "logout"
