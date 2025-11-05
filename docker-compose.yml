@@ -70,6 +70,10 @@ services:
       - AUTH_DATABASE_POSTGRES_USER=telhawk
       - AUTH_DATABASE_POSTGRES_PASSWORD=${AUTH_DB_PASSWORD:-telhawk-auth-dev}
       - AUTH_DATABASE_POSTGRES_SSLMODE=disable
+      # Ingest forwarding (disabled by default, enable in production)
+      - AUTH_INGEST_ENABLED=${AUTH_INGEST_ENABLED:-false}
+      - AUTH_INGEST_URL=${AUTH_INGEST_URL:-http://ingest:8082}
+      - AUTH_INGEST_HEC_TOKEN=${AUTH_INGEST_HEC_TOKEN:-}
     networks:
       - telhawk
     depends_on:

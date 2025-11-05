@@ -23,8 +23,14 @@ type AuthService struct {
 	auditLog   *audit.Logger
 }
 
-func NewAuthService(repo repository.Repository) *AuthService {
-	auditLogger := audit.NewLoggerWithRepo("audit-secret-key", repo.(audit.Repository))
+func NewAuthService(repo repository.Repository, ingestClient *audit.IngestClient) *AuthService {
+	var auditLogger *audit.Logger
+	if ingestClient != nil {
+		auditLogger = audit.NewLoggerWithRepoAndIngest("audit-secret-key", repo.(audit.Repository), ingestClient)
+	} else {
+		auditLogger = audit.NewLoggerWithRepo("audit-secret-key", repo.(audit.Repository))
+	}
+	
 	return &AuthService{
 		repo:     repo,
 		tokenGen: tokens.NewTokenGenerator("access-secret-key", "refresh-secret-key"),
