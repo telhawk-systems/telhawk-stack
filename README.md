@@ -521,7 +521,7 @@ TelHawk Stack is licensed under the **TelHawk Systems Source Available License (
 - ❌ **No distribution** - Cannot distribute binaries or create public forks
 - ❌ **No commercial hosting** - Cannot offer as a service to others
 
-For commercial licensing, distribution rights, or hosting as a service, contact: **licensing@telhawk.systems**
+For commercial licensing, distribution rights, or hosting as a service, contact: **licensing@telhawk.com**
 
 See the [LICENSE](LICENSE) file for full terms.
 
@@ -544,7 +544,7 @@ TelHawk Systems offers:
 - **Custom Development** - Integrations and custom features
 - **Training & Consulting** - Security operations best practices
 
-Contact: **sales@telhawk.systems**
+Contact: **sales@telhawk.com**
 
 ## Related Projects
 
@@ -553,6 +553,6 @@ Contact: **sales@telhawk.systems**
 ## Contact
 
 - **Issues & Bugs**: Open an issue on GitHub
-- **Commercial Licensing**: licensing@telhawk.systems
-- **Sales & Support**: sales@telhawk.systems
-- **General Inquiries**: hello@telhawk.systems
+- **Commercial Licensing**: licensing@telhawk.com
+- **Sales & Support**: sales@telhawk.com
+- **General Inquiries**: hello@telhawk.com
