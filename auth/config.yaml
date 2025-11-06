@@ -25,3 +25,8 @@ database:
 logging:
   level: info  # debug, info, warn, error
   format: json  # json or text
+
+ingest:
+  enabled: false
+  url: "http://ingest:8088"
+  hec_token: ""
