@@ -1,5 +1,16 @@
 # TelHawk Stack TODO
 
+**Last Updated:** 2025-11-06
+
+## Recent Accomplishments (Nov 6, 2025)
+- ✅ Fixed OpenSearch integration (removed duplicate write indices)
+- ✅ Enabled auth event forwarding to HEC endpoint
+- ✅ Verified OCSF 1.1.0 compliance for all events
+- ✅ Built professional search console with Tailwind CSS
+- ✅ Added event table with color-coded severity display
+- ✅ Created event detail modal for OCSF field inspection
+- ✅ Configured query service with correct index pattern
+
 ## Core Service
 - [x] Create normalizer generator (extends tools/ocsf-generator pattern) ✅
   * Generate one normalizer per OCSF class from schema
@@ -44,6 +55,13 @@
   * Prevents cascade failures
   * Documentation: docs/DLQ_AND_BACKPRESSURE.md
 - [x] Forward normalized events to storage service (✅ Complete pipeline: Ingest → Core → Storage → OpenSearch)
+- [x] Configure HEC event ingestion and OCSF normalization ✅
+  * Fixed ingest service URLs to use Docker service names
+  * HEC endpoint fully operational at /services/collector/event
+  * Events normalized to OCSF format with fallback HECNormalizer
+  * Auth events forwarded to HEC endpoint with OCSF Authentication class (3002)
+  * 12+ events successfully stored and queryable in OpenSearch
+  * Fixed query service index pattern (telhawk-events-*)
 - [ ] Implement HEC ack channel
 - [ ] Add Redis-backed rate limiting in the ingestion pipeline
 - [ ] Expose Prometheus metrics for queue depth and normalization latency
@@ -77,7 +95,13 @@
   * Distroless Docker image
   * Integration with auth, query, and core services
   * Documentation: web/README.md
-- [ ] Build search console backed by query API
+- [x] Build search console backed by query API ✅
+  * SearchConsole component with time range picker (15m, 1h, 24h, 7d, custom)
+  * EventsTable component with color-coded severity display
+  * EventDetailModal for full OCSF event inspection
+  * Tailwind CSS v3 for modern, responsive styling
+  * Query performance metrics display
+  * Time-based event filtering integrated with query API
 - [ ] Add dashboard visualization components
 - [ ] Establish testing strategy for UI rendering validation
 
