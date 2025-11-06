@@ -29,7 +29,8 @@ chmod 644 /usr/share/opensearch/config/*-key.pem
 cat >> /usr/share/opensearch/config/opensearch.yml << EOF
 
 # TelHawk Single Node Configuration
-discovery.type: single-node
+cluster.initial_cluster_manager_nodes: ["opensearch"]
+node.name: opensearch
 
 # TelHawk SSL Configuration - NO DEMO CERTS
 plugins.security.ssl.transport.pemcert_filepath: opensearch.pem
