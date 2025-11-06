@@ -162,3 +162,119 @@
   * Security patterns: cookie storage, token refresh, rate limiting
   * PostgreSQL schema with audit logging
 - [ ] Provide onboarding guide for adding new data sources
+
+## Data Management & Retention
+- [ ] Index lifecycle management (ILM)
+  * Automated index rollover
+  * Hot/warm/cold tier policies
+  * Data retention policies by index pattern
+  * Index size and age-based triggers
+- [ ] Backup and restore
+  * OpenSearch snapshot configuration
+  * Automated backup schedules
+  * Point-in-time recovery
+  * Disaster recovery procedures
+
+## Detection & Analytics
+- [ ] Saved searches and query library
+  * Save/load searches with names
+  * Query templates for common patterns
+  * Share searches between users
+  * Search history per user
+- [ ] Alerting and correlation
+  * Alert rule creation UI
+  * Schedule-based alert evaluation
+  * Threshold-based alerting
+  * Notification channels (email, webhook, Slack)
+  * Alert history and status tracking
+- [ ] Threat intelligence
+  * IOC (Indicators of Compromise) management
+  * STIX/TAXII feed integration
+  * Automatic enrichment of events with threat intel
+  * IOC matching and flagging
+
+## Investigation & Response
+- [ ] Case management
+  * Create cases from events/alerts
+  * Investigation workflow
+  * Evidence collection and tagging
+  * Case timeline reconstruction
+  * Team collaboration (notes, assignments)
+- [ ] Event correlation
+  * Link related events
+  * Investigation graph visualization
+  * Pattern detection across events
+
+## Integrations & Enrichment
+- [ ] GeoIP enrichment
+  * Automatic IP geolocation
+  * ASN and organization lookup
+  * Country/city/coordinates in events
+- [ ] Asset inventory integration
+  * Asset database
+  * Automatic asset correlation
+  * Vulnerability context
+- [ ] External integrations
+  * Webhook notifications
+  * SOAR platform connectors
+  * Ticketing system integration (Jira, ServiceNow)
+
+## Data Collection
+- [ ] Additional ingestion protocols
+  * Syslog server (RFC 5424, RFC 3164)
+  * Beats protocol (for Elastic agents)
+  * Fluentd/Fluent Bit compatible endpoint
+  * Cloud log collection (AWS CloudWatch, Azure Monitor)
+- [ ] Log forwarder agent
+  * Lightweight agent for file tailing
+  * Multi-platform support (Linux, Windows, macOS)
+  * Buffering and retry logic
+  * TLS mutual authentication
+
+## Reporting & Export
+- [ ] Report generation
+  * Scheduled reports
+  * PDF/CSV export
+  * Email delivery
+  * Custom report templates
+- [ ] Compliance reporting
+  * Pre-built compliance templates (PCI-DSS, HIPAA, SOC 2)
+  * Evidence collection for audits
+  * Automated compliance checks
+
+## Operational Monitoring
+- [ ] System health dashboard
+  * Service status indicators
+  * Ingestion rate graphs
+  * Storage capacity monitoring
+  * Query performance metrics
+- [ ] DLQ management UI
+  * View failed events
+  * Retry/replay failed events
+  * Delete or archive DLQ entries
+  * DLQ statistics and trends
+
+## Performance & Scalability
+- [ ] Query optimization
+  * Query result caching
+  * Connection pooling
+  * Query plan optimization
+- [ ] Horizontal scaling guide
+  * Multi-node OpenSearch configuration
+  * Load balancer setup
+  * Service replication strategies
+  * Performance tuning documentation
+
+## Security Hardening
+- [ ] Enhanced security features
+  * Security headers (CSP, HSTS, X-Frame-Options)
+  * Input validation and sanitization
+  * SQL injection prevention
+  * XSS protection
+- [ ] Secrets management
+  * HashiCorp Vault integration
+  * Encrypted configuration values
+  * Certificate auto-rotation
+  * Secure credential storage
+
+## Documentation
