@@ -11,10 +11,13 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/telhawk-systems/telhawk-stack/ingest/internal/config"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/telhawk-systems/telhawk-stack/ingest/internal/ack"
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/authclient"
+	"github.com/telhawk-systems/telhawk-stack/ingest/internal/config"
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/coreclient"
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/handlers"
+	"github.com/telhawk-systems/telhawk-stack/ingest/internal/ratelimit"
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/service"
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/storageclient"
 )
@@ -39,14 +42,58 @@ func main() {
 	log.Printf("Storage URL: %s", cfg.Storage.URL)
 	log.Printf("OpenSearch URL: %s", cfg.OpenSearch.URL)
 
+	// Initialize rate limiter
+	var rateLimiter ratelimit.RateLimiter
+	if cfg.Redis.Enabled && cfg.Ingestion.RateLimitEnabled {
+		log.Printf("Initializing Redis rate limiter: %s", cfg.Redis.URL)
+		limiter, err := ratelimit.NewRedisRateLimiter(
+			cfg.Redis.URL,
+			cfg.Ingestion.RateLimitRequests,
+			cfg.Ingestion.RateLimitWindow,
+			false,
+		)
+		if err != nil {
+			log.Printf("WARNING: Failed to initialize Redis rate limiter: %v", err)
+			log.Println("Continuing without rate limiting")
+			rateLimiter = &ratelimit.NoOpRateLimiter{}
+		} else {
+			rateLimiter = limiter
+			log.Printf("Rate limiting enabled: %d requests per %s", cfg.Ingestion.RateLimitRequests, cfg.Ingestion.RateLimitWindow)
+		}
+	} else {
+		rateLimiter = &ratelimit.NoOpRateLimiter{}
+		if !cfg.Redis.Enabled {
+			log.Println("Redis disabled - rate limiting not available")
+		}
+		if !cfg.Ingestion.RateLimitEnabled {
+			log.Println("Rate limiting disabled in configuration")
+		}
+	}
+	defer rateLimiter.Close()
+
+	// Initialize ack manager
+	var ackManager *ack.Manager
+	if cfg.Ack.Enabled {
+		ackManager = ack.NewManager(cfg.Ack.TTL)
+		log.Printf("HEC acknowledgement channel enabled (TTL: %s)", cfg.Ack.TTL)
+		defer ackManager.Close()
+	} else {
+		log.Println("HEC acknowledgement channel disabled")
+	}
+
 	// Initialize ingestion service
 	authClient := authclient.New(cfg.Auth.URL, 5*time.Second, cfg.Auth.TokenValidationCacheTTL)
 	coreClient := coreclient.New(cfg.Core.URL, 10*time.Second)
 	storageClient := storageclient.New(cfg.Storage.URL, 30*time.Second)
 	ingestService := service.NewIngestService(coreClient, storageClient, authClient)
 
+	// Configure ack manager if enabled
+	if ackManager != nil {
+		ingestService.SetAckManager(ackManager)
+	}
+
 	// Initialize HTTP handlers
-	handler := handlers.NewHECHandler(ingestService)
+	handler := handlers.NewHECHandler(ingestService, rateLimiter)
 
 	// Setup HTTP router
 	mux := http.NewServeMux()
@@ -60,6 +107,9 @@ func main() {
 	// Health endpoints
 	mux.HandleFunc("/healthz", handler.Health)
 	mux.HandleFunc("/readyz", handler.Ready)
+
+	// Prometheus metrics
+	mux.Handle("/metrics", promhttp.Handler())
 
 	// Create server with config values
 	srv := &http.Server{

@@ -1,24 +1,30 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
+	"github.com/telhawk-systems/telhawk-stack/ingest/internal/metrics"
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/models"
+	"github.com/telhawk-systems/telhawk-stack/ingest/internal/ratelimit"
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/service"
 	"github.com/telhawk-systems/telhawk-stack/ingest/pkg/hec"
 )
 
 type HECHandler struct {
-	service *service.IngestService
+	service     *service.IngestService
+	rateLimiter ratelimit.RateLimiter
 }
 
-func NewHECHandler(service *service.IngestService) *HECHandler {
+func NewHECHandler(service *service.IngestService, rateLimiter ratelimit.RateLimiter) *HECHandler {
 	return &HECHandler{
-		service: service,
+		service:     service,
+		rateLimiter: rateLimiter,
 	}
 }
 
@@ -26,6 +32,24 @@ func (h *HECHandler) HandleEvent(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		h.sendError(w, hec.ErrInvalidEvent, http.StatusMethodNotAllowed)
 		return
+	}
+
+	// Get client IP for rate limiting
+	sourceIP := getClientIP(r)
+
+	// Apply IP-based rate limiting BEFORE expensive operations
+	if h.rateLimiter != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+		defer cancel()
+
+		allowed, err := h.rateLimiter.Allow(ctx, "ip:"+sourceIP)
+		if err != nil {
+			log.Printf("rate limit check error: %v", err)
+		} else if !allowed {
+			metrics.EventsTotal.WithLabelValues("event", "rate_limited").Inc()
+			h.sendError(w, hec.ErrServerBusy, http.StatusTooManyRequests)
+			return
+		}
 	}
 
 	// Authenticate HEC token
@@ -42,8 +66,20 @@ func (h *HECHandler) HandleEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get client IP
-	sourceIP := getClientIP(r)
+	// Optional: Apply per-token rate limiting after authentication
+	if h.rateLimiter != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+		defer cancel()
+
+		allowed, err := h.rateLimiter.Allow(ctx, "token:"+token)
+		if err != nil {
+			log.Printf("rate limit check error: %v", err)
+		} else if !allowed {
+			metrics.EventsTotal.WithLabelValues("event", "token_rate_limited").Inc()
+			h.sendError(w, hec.ErrServerBusy, http.StatusTooManyRequests)
+			return
+		}
+	}
 
 	// Read body
 	body, err := io.ReadAll(r.Body)
@@ -100,6 +136,24 @@ func (h *HECHandler) HandleRaw(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Get client IP for rate limiting
+	sourceIP := getClientIP(r)
+
+	// Apply IP-based rate limiting BEFORE expensive operations
+	if h.rateLimiter != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+		defer cancel()
+
+		allowed, err := h.rateLimiter.Allow(ctx, "ip:"+sourceIP)
+		if err != nil {
+			log.Printf("rate limit check error: %v", err)
+		} else if !allowed {
+			metrics.EventsTotal.WithLabelValues("raw", "rate_limited").Inc()
+			h.sendError(w, hec.ErrServerBusy, http.StatusTooManyRequests)
+			return
+		}
+	}
+
 	// Authenticate HEC token
 	token := hec.ExtractToken(r.Header.Get("Authorization"))
 	if token == "" {
@@ -112,6 +166,21 @@ func (h *HECHandler) HandleRaw(w http.ResponseWriter, r *http.Request) {
 		log.Printf("HEC token validation failed: %v", err)
 		h.sendError(w, hec.ErrUnauthorized, http.StatusUnauthorized)
 		return
+	}
+
+	// Optional: Apply per-token rate limiting after authentication
+	if h.rateLimiter != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+		defer cancel()
+
+		allowed, err := h.rateLimiter.Allow(ctx, "token:"+token)
+		if err != nil {
+			log.Printf("rate limit check error: %v", err)
+		} else if !allowed {
+			metrics.EventsTotal.WithLabelValues("raw", "token_rate_limited").Inc()
+			h.sendError(w, hec.ErrServerBusy, http.StatusTooManyRequests)
+			return
+		}
 	}
 
 	// Get metadata from query params or headers
@@ -129,9 +198,6 @@ func (h *HECHandler) HandleRaw(w http.ResponseWriter, r *http.Request) {
 	if host == "" {
 		host = r.Header.Get("X-Splunk-Request-Host")
 	}
-
-	// Get client IP
-	sourceIP := getClientIP(r)
 
 	// Read raw data
 	body, err := io.ReadAll(r.Body)
@@ -173,11 +239,24 @@ func (h *HECHandler) Ready(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *HECHandler) Ack(w http.ResponseWriter, r *http.Request) {
-	// Placeholder for ack support
-	// Splunk HEC ack mechanism for guaranteed delivery
+	// Parse ack IDs from request body
+	var req struct {
+		Acks []string `json:"acks"`
+	}
+
+	if r.Method == http.MethodPost {
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			h.sendError(w, hec.ErrInvalidEvent, http.StatusBadRequest)
+			return
+		}
+	}
+
+	// Query ack status if service has ack manager
+	result := h.service.QueryAcks(req.Acks)
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"acks": map[string]bool{},
+		"acks": result,
 	})
 }
 

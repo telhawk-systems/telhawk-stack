@@ -62,9 +62,29 @@
   * Auth events forwarded to HEC endpoint with OCSF Authentication class (3002)
   * 12+ events successfully stored and queryable in OpenSearch
   * Fixed query service index pattern (telhawk-events-*)
-- [ ] Implement HEC ack channel
-- [ ] Add Redis-backed rate limiting in the ingestion pipeline
-- [ ] Expose Prometheus metrics for queue depth and normalization latency
+- [x] Implement HEC ack channel ✅
+  * In-memory ack manager with configurable TTL
+  * Per-event tracking with status (Pending, Success, Failed)
+  * Automatic cleanup of expired acks
+  * Query endpoint at /services/collector/ack
+  * Prometheus metrics: acks_pending, acks_completed_total
+  * Documentation: ingest/FEATURES.md
+- [x] Add Redis-backed rate limiting in the ingestion pipeline ✅
+  * Two-tier rate limiting: IP-based (pre-auth) and token-based (post-auth)
+  * Redis sliding window algorithm with Lua scripts
+  * Configurable limits per time window
+  * Graceful degradation if Redis unavailable
+  * Returns HTTP 429 when rate limit exceeded
+  * Prometheus metrics: rate_limit_hits_total
+  * Documentation: ingest/FEATURES.md
+- [x] Expose Prometheus metrics for queue depth and normalization latency ✅
+  * Metrics endpoint at /metrics
+  * Queue metrics: queue_depth, queue_capacity
+  * Normalization: duration histogram, error counter
+  * Storage: duration histogram, error counter
+  * Event tracking: events_total by endpoint and status
+  * Rate limiting and ack metrics included
+  * Documentation: ingest/FEATURES.md
 
 ## Query Service
 - [x] Replace stubbed search implementation with real OpenSearch queries ✅

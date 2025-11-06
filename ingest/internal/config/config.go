@@ -15,6 +15,8 @@ type Config struct {
 	OpenSearch OpenSearchConfig `mapstructure:"opensearch"`
 	Ingestion  IngestionConfig  `mapstructure:"ingestion"`
 	Logging    LoggingConfig    `mapstructure:"logging"`
+	Redis      RedisConfig      `mapstructure:"redis"`
+	Ack        AckConfig        `mapstructure:"ack"`
 }
 
 type ServerConfig struct {
@@ -59,6 +61,16 @@ type LoggingConfig struct {
 	Format string `mapstructure:"format"`
 }
 
+type RedisConfig struct {
+	URL     string `mapstructure:"url"`
+	Enabled bool   `mapstructure:"enabled"`
+}
+
+type AckConfig struct {
+	Enabled bool          `mapstructure:"enabled"`
+	TTL     time.Duration `mapstructure:"ttl"`
+}
+
 func Load(configPath string) (*Config, error) {
 	v := viper.New()
 
@@ -83,6 +95,10 @@ func Load(configPath string) (*Config, error) {
 	v.SetDefault("ingestion.rate_limit_window", "1m")
 	v.SetDefault("logging.level", "info")
 	v.SetDefault("logging.format", "json")
+	v.SetDefault("redis.url", "redis://localhost:6379/0")
+	v.SetDefault("redis.enabled", false)
+	v.SetDefault("ack.enabled", true)
+	v.SetDefault("ack.ttl", "10m")
 
 	// Read config file
 	if configPath != "" {
