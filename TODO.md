@@ -105,6 +105,32 @@
 - [ ] Add dashboard visualization components
 - [ ] Establish testing strategy for UI rendering validation
 
+## Authentication & Authorization
+- [x] Basic authentication (register, login, validate, refresh) ✅
+  * JWT-based authentication with access/refresh tokens
+  * HTTP-only secure cookies
+  * PostgreSQL-backed user storage
+  * Audit logging for auth events
+- [x] HEC token management (backend) ✅
+  * Create, validate, revoke HEC tokens
+  * Token association with users
+  * Token validation caching (5m TTL)
+- [ ] User management UI
+  * List/view users
+  * Create/edit/delete users
+  * Role assignment (admin, analyst, viewer)
+  * Password reset functionality
+- [ ] HEC token management UI
+  * View HEC tokens for current user
+  * Create new HEC tokens with names
+  * Revoke existing tokens
+  * Token usage statistics
+- [ ] Advanced authorization
+  * Role-based access control (RBAC) enforcement
+  * Per-index access controls
+  * API rate limiting per user
+  * Session management dashboard
+
 ## DevOps & Tooling
 - [x] Provide docker-compose to run full stack locally ✅
   * Full stack deployment with auth, ingest, core, storage, query services
