@@ -87,18 +87,20 @@
   * OpenSearch integration with health checks
   * CLI tool (thawk) container for administration
   * Documentation: DOCKER.md
-- [ ] **SECURITY: Enable TLS for all internal service communication**
+- [x] **SECURITY: Enable TLS for all internal service communication** ✅
   * ✅ OpenSearch: HTTPS with self-signed certificates (implemented)
   * ✅ PostgreSQL: SSL/TLS enabled with self-signed certificates (implemented)
-  * ❌ Auth service (port 8080): Currently HTTP only
-  * ❌ Ingest service (port 8088): Currently HTTP only
-  * ❌ Core service (port 8090): Currently HTTP only
-  * ❌ Storage service (port 8083): Currently HTTP only
-  * ❌ Query service (port 8082): Currently HTTP only
-  * ❌ Web service (port 3000): Currently HTTP only
-  * **Action Required:** Generate self-signed certs for all services and enable HTTPS
-  * **Action Required:** Add TLS_SKIP_VERIFY flags to control certificate validation
-  * **Reference:** See docs/SECURITY_ARCHITECTURE.md for certificate generation strategy
+  * ✅ Auth service (port 8080): TLS support with feature flag
+  * ✅ Ingest service (port 8088): TLS support with feature flag
+  * ✅ Core service (port 8090): TLS support with feature flag
+  * ✅ Storage service (port 8083): TLS support with feature flag
+  * ✅ Query service (port 8082): TLS support with feature flag
+  * ✅ Web service (port 3000): TLS support with feature flag
+  * ✅ Certificate generator for all Go services (telhawk-certs container)
+  * ✅ TLS_SKIP_VERIFY flags for self-signed certificate support
+  * ✅ Production certificate support via /certs/production/ mount
+  * **Documentation:** docs/TLS_CONFIGURATION.md, .env.example
+  * **Note:** TLS disabled by default - enable via environment variables
 - [ ] Add CI pipeline with linting, gofmt, and go test
 - [ ] Publish OpenAPI docs automatically (query/core endpoints)
 

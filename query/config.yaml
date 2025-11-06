@@ -3,6 +3,9 @@ server:
   read_timeout_seconds: 15
   write_timeout_seconds: 15
   idle_timeout_seconds: 60
+  tls_enabled: false  # Enable HTTPS with TLS certificates
+  tls_cert_file: /certs/query.pem
+  tls_key_file: /certs/query-key.pem
 
 opensearch:
   url: "https://localhost:9200"

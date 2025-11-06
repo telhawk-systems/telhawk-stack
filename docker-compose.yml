@@ -1,6 +1,18 @@
 version: '3.8'
 
 services:
+  # Certificate generator for Go services - runs once before services start
+  # NO HEALTH CHECK - one-shot init container
+  telhawk-certs:
+    build:
+      context: ./certs/generator
+      dockerfile: Dockerfile
+    container_name: telhawk-certs-generator
+    volumes:
+      - telhawk-certs:/certs
+    networks:
+      - telhawk
+
   # Certificate generator - runs once before OpenSearch
   # NO HEALTH CHECK - one-shot init container
   opensearch-certs:
@@ -83,6 +95,9 @@ services:
     environment:
       # Environment variables override config.yaml settings
       - AUTH_SERVER_PORT=8080
+      - AUTH_SERVER_TLS_ENABLED=${AUTH_TLS_ENABLED:-false}
+      - AUTH_SERVER_TLS_CERT_FILE=/certs/auth.pem
+      - AUTH_SERVER_TLS_KEY_FILE=/certs/auth-key.pem
       - AUTH_LOGGING_LEVEL=info
       - AUTH_AUTH_JWT_SECRET=${AUTH_JWT_SECRET:-change-this-in-production}
       - AUTH_DATABASE_TYPE=postgres
@@ -96,10 +111,14 @@ services:
       - AUTH_INGEST_ENABLED=false
       - AUTH_INGEST_URL=http://ingest:8088
       - AUTH_INGEST_HEC_TOKEN=${AUTH_INGEST_HEC_TOKEN:-}
+    volumes:
+      - telhawk-certs:/certs:ro
     networks:
       - telhawk-db
       - telhawk
     depends_on:
+      telhawk-certs:
+        condition: service_completed_successfully
       auth-db:
         condition: service_healthy
     healthcheck:
@@ -118,12 +137,19 @@ services:
     ports:
       - "8083:8083"
     environment:
+      - STORAGE_SERVER_TLS_ENABLED=${STORAGE_TLS_ENABLED:-false}
+      - STORAGE_SERVER_TLS_CERT_FILE=/certs/storage.pem
+      - STORAGE_SERVER_TLS_KEY_FILE=/certs/storage-key.pem
       - OPENSEARCH_URL=https://opensearch:9200
       - OPENSEARCH_USERNAME=${OPENSEARCH_ADMIN_USER:-admin}
       - OPENSEARCH_PASSWORD=${OPENSEARCH_PASSWORD:-TelHawk123!}
+    volumes:
+      - telhawk-certs:/certs:ro
     networks:
       - telhawk
     depends_on:
+      telhawk-certs:
+        condition: service_completed_successfully
       opensearch:
         condition: service_healthy
     healthcheck:
@@ -142,13 +168,20 @@ services:
     ports:
       - "8082:8082"
     environment:
+      - QUERY_SERVER_TLS_ENABLED=${QUERY_TLS_ENABLED:-false}
+      - QUERY_SERVER_TLS_CERT_FILE=/certs/query.pem
+      - QUERY_SERVER_TLS_KEY_FILE=/certs/query-key.pem
       - QUERY_OPENSEARCH_URL=https://opensearch:9200
       - QUERY_OPENSEARCH_USERNAME=${OPENSEARCH_ADMIN_USER:-admin}
       - QUERY_OPENSEARCH_PASSWORD=${OPENSEARCH_PASSWORD:-TelHawk123!}
       - QUERY_OPENSEARCH_INSECURE=true
+    volumes:
+      - telhawk-certs:/certs:ro
     networks:
       - telhawk
     depends_on:
+      telhawk-certs:
+        condition: service_completed_successfully
       opensearch:
         condition: service_healthy
     healthcheck:
@@ -168,10 +201,18 @@ services:
       - "8090:8090"
     environment:
       - CORE_SERVER_PORT=8090
+      - CORE_SERVER_TLS_ENABLED=${CORE_TLS_ENABLED:-false}
+      - CORE_SERVER_TLS_CERT_FILE=/certs/core.pem
+      - CORE_SERVER_TLS_KEY_FILE=/certs/core-key.pem
       - CORE_STORAGE_URL=http://storage:8083
+      - CORE_STORAGE_TLS_SKIP_VERIFY=${STORAGE_TLS_SKIP_VERIFY:-false}
+    volumes:
+      - telhawk-certs:/certs:ro
     networks:
       - telhawk
     depends_on:
+      telhawk-certs:
+        condition: service_completed_successfully
       storage:
         condition: service_healthy
     healthcheck:
@@ -192,17 +233,26 @@ services:
     environment:
       # Environment variables override config.yaml settings
       - INGEST_SERVER_PORT=8088
+      - INGEST_SERVER_TLS_ENABLED=${INGEST_TLS_ENABLED:-false}
+      - INGEST_SERVER_TLS_CERT_FILE=/certs/ingest.pem
+      - INGEST_SERVER_TLS_KEY_FILE=/certs/ingest-key.pem
       - INGEST_LOGGING_LEVEL=info
       - INGEST_AUTH_URL=http://auth:8080
+      - INGEST_AUTH_TLS_SKIP_VERIFY=${AUTH_TLS_SKIP_VERIFY:-false}
       - INGEST_CORE_URL=http://core:8090
+      - INGEST_CORE_TLS_SKIP_VERIFY=${CORE_TLS_SKIP_VERIFY:-false}
       - INGEST_STORAGE_URL=http://storage:8083
+      - INGEST_STORAGE_TLS_SKIP_VERIFY=${STORAGE_TLS_SKIP_VERIFY:-false}
       - INGEST_OPENSEARCH_URL=https://opensearch:9200
       - INGEST_OPENSEARCH_USERNAME=${OPENSEARCH_ADMIN_USER:-admin}
       - INGEST_OPENSEARCH_PASSWORD=${OPENSEARCH_PASSWORD:-TelHawk123!}
       - INGEST_OPENSEARCH_TLS_SKIP_VERIFY=true
+    volumes:
+      - telhawk-certs:/certs:ro
     networks:
       - telhawk
     depends_on:
+      - telhawk-certs
       - auth
       - opensearch
       - core
@@ -224,16 +274,25 @@ services:
       - "3000:3000"
     environment:
       - WEB_PORT=3000
+      - WEB_TLS_ENABLED=${WEB_TLS_ENABLED:-false}
+      - WEB_TLS_CERT_FILE=/certs/web.pem
+      - WEB_TLS_KEY_FILE=/certs/web-key.pem
       - STATIC_DIR=/app/static
       - AUTH_SERVICE_URL=http://auth:8080
+      - AUTH_TLS_SKIP_VERIFY=${AUTH_TLS_SKIP_VERIFY:-false}
       - QUERY_SERVICE_URL=http://query:8082
+      - QUERY_TLS_SKIP_VERIFY=${QUERY_TLS_SKIP_VERIFY:-false}
       - CORE_SERVICE_URL=http://core:8090
+      - CORE_TLS_SKIP_VERIFY=${CORE_TLS_SKIP_VERIFY:-false}
       - COOKIE_DOMAIN=
       - COOKIE_SECURE=false
       - DEV_MODE=false
+    volumes:
+      - telhawk-certs:/certs:ro
     networks:
       - telhawk
     depends_on:
+      - telhawk-certs
       - auth
       - query
       - core
@@ -270,5 +329,6 @@ networks:
 volumes:
   opensearch-data:
   opensearch-certs:
+  telhawk-certs:
   auth-db-data:
     driver: local

@@ -3,6 +3,9 @@ server:
   read_timeout: 15s
   write_timeout: 15s
   idle_timeout: 60s
+  tls_enabled: false  # Enable HTTPS with TLS certificates
+  tls_cert_file: /certs/auth.pem
+  tls_key_file: /certs/auth-key.pem
 
 auth:
   jwt_secret: "change-this-in-production"
