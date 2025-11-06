@@ -314,6 +314,8 @@ services:
     environment:
       - THAWK_AUTH_URL=http://auth:8080
       - THAWK_INGEST_URL=http://ingest:8088
+    volumes:
+      - thawk-config:/app/.thawk
     networks:
       - telhawk
     profiles:
@@ -331,5 +333,6 @@ volumes:
   opensearch-data:
   opensearch-certs:
   telhawk-certs:
+  thawk-config:
   auth-db-data:
     driver: local

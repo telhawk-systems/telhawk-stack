@@ -47,3 +47,13 @@ type ValidateHECTokenResponse struct {
 	TokenName string `json:"token_name,omitempty"`
 	UserID    string `json:"user_id,omitempty"`
 }
+
+type UpdateUserRequest struct {
+	Email   string   `json:"email,omitempty"`
+	Roles   []string `json:"roles,omitempty"`
+	Enabled *bool    `json:"enabled,omitempty"`
+}
+
+type ResetPasswordRequest struct {
+	NewPassword string `json:"new_password"`
+}

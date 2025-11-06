@@ -18,6 +18,8 @@ type Repository interface {
 	GetUserByUsername(username string) (*models.User, error)
 	GetUserByID(id string) (*models.User, error)
 	UpdateUser(user *models.User) error
+	ListUsers() ([]*models.User, error)
+	DeleteUser(id string) error
 
 	CreateSession(session *models.Session) error
 	GetSession(refreshToken string) (*models.Session, error)

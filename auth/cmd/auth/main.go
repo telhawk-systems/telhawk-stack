@@ -84,6 +84,14 @@ func main() {
 	mux.HandleFunc("/api/v1/auth/validate", handler.ValidateToken)
 	mux.HandleFunc("/api/v1/auth/validate-hec", handler.ValidateHECToken)
 	mux.HandleFunc("/api/v1/auth/revoke", handler.RevokeToken)
+	
+	// User management endpoints
+	mux.HandleFunc("/api/v1/users", handler.ListUsers)
+	mux.HandleFunc("/api/v1/users/get", handler.GetUser)
+	mux.HandleFunc("/api/v1/users/update", handler.UpdateUser)
+	mux.HandleFunc("/api/v1/users/delete", handler.DeleteUser)
+	mux.HandleFunc("/api/v1/users/reset-password", handler.ResetPassword)
+	
 	mux.HandleFunc("/healthz", handler.HealthCheck)
 
 	// Create server with config values
