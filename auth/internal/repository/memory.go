@@ -153,3 +153,28 @@ func (r *InMemoryRepository) LogAudit(entry *models.AuditLogEntry) error {
 	// This is for development only
 	return nil
 }
+
+func (r *InMemoryRepository) ListUsers() ([]*models.User, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	var users []*models.User
+	for _, user := range r.users {
+		users = append(users, user)
+	}
+	return users, nil
+}
+
+func (r *InMemoryRepository) DeleteUser(id string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	user, exists := r.users[id]
+	if !exists {
+		return ErrUserNotFound
+	}
+
+	delete(r.users, id)
+	delete(r.usersByName, user.Username)
+	return nil
+}

@@ -3,6 +3,15 @@ export interface User {
   roles: string[];
 }
 
+export interface UserDetails extends User {
+  id: string;
+  username: string;
+  email: string;
+  enabled: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface LoginRequest {
   username: string;
   password: string;

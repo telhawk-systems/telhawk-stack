@@ -266,3 +266,123 @@ func (s *AuthService) ValidateHECToken(token, ipAddress, userAgent string) (*mod
 
 	return hecToken, nil
 }
+
+func (s *AuthService) ListUsers() ([]*models.User, error) {
+	return s.repo.ListUsers()
+}
+
+func (s *AuthService) GetUser(userID string) (*models.User, error) {
+	return s.repo.GetUserByID(userID)
+}
+
+func (s *AuthService) UpdateUserDetails(userID string, req *models.UpdateUserRequest, actorID, ipAddress, userAgent string) (*models.User, error) {
+	user, err := s.repo.GetUserByID(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	if req.Email != "" {
+		user.Email = req.Email
+	}
+	if req.Roles != nil {
+		user.Roles = req.Roles
+	}
+	if req.Enabled != nil {
+		user.Enabled = *req.Enabled
+	}
+
+	user.UpdatedAt = time.Now()
+
+	if err := s.repo.UpdateUser(user); err != nil {
+		s.auditLog.Log(
+			models.ActorTypeUser, actorID, "",
+			models.ActionUpdate, "user", userID,
+			ipAddress, userAgent,
+			models.ResultFailure, err.Error(),
+			map[string]interface{}{"changes": req},
+		)
+		return nil, err
+	}
+
+	s.auditLog.Log(
+		models.ActorTypeUser, actorID, "",
+		models.ActionUpdate, "user", userID,
+		ipAddress, userAgent,
+		models.ResultSuccess, "",
+		map[string]interface{}{"changes": req},
+	)
+
+	return user, nil
+}
+
+func (s *AuthService) DeleteUser(userID, actorID, ipAddress, userAgent string) error {
+	user, err := s.repo.GetUserByID(userID)
+	if err != nil {
+		return err
+	}
+
+	if err := s.repo.DeleteUser(userID); err != nil {
+		s.auditLog.Log(
+			models.ActorTypeUser, actorID, "",
+			models.ActionDelete, "user", userID,
+			ipAddress, userAgent,
+			models.ResultFailure, err.Error(),
+			map[string]interface{}{"username": user.Username},
+		)
+		return err
+	}
+
+	s.auditLog.Log(
+		models.ActorTypeUser, actorID, "",
+		models.ActionDelete, "user", userID,
+		ipAddress, userAgent,
+		models.ResultSuccess, "",
+		map[string]interface{}{"username": user.Username},
+	)
+
+	return nil
+}
+
+func (s *AuthService) ResetPassword(userID string, newPassword, actorID, ipAddress, userAgent string) error {
+	user, err := s.repo.GetUserByID(userID)
+	if err != nil {
+		return err
+	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		s.auditLog.Log(
+			models.ActorTypeUser, actorID, "",
+			models.ActionPasswordReset, "user", userID,
+			ipAddress, userAgent,
+			models.ResultFailure, "password hashing failed",
+			nil,
+		)
+		return err
+	}
+
+	user.PasswordHash = string(hashedPassword)
+	user.UpdatedAt = time.Now()
+
+	if err := s.repo.UpdateUser(user); err != nil {
+		s.auditLog.Log(
+			models.ActorTypeUser, actorID, "",
+			models.ActionPasswordReset, "user", userID,
+			ipAddress, userAgent,
+			models.ResultFailure, err.Error(),
+			nil,
+		)
+		return err
+	}
+
+	s.auditLog.Log(
+		models.ActorTypeUser, actorID, "",
+		models.ActionPasswordReset, "user", userID,
+		ipAddress, userAgent,
+		models.ResultSuccess, "",
+		nil,
+	)
+
+	return nil
+}
+

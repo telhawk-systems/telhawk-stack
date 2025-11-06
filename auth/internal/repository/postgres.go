@@ -348,3 +348,57 @@ func (r *PostgresRepository) LogAudit(entry *models.AuditLogEntry) error {
 
 	return nil
 }
+
+func (r *PostgresRepository) ListUsers() ([]*models.User, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	query := `
+		SELECT id, username, email, password_hash, roles, enabled, created_at, updated_at
+		FROM users
+		ORDER BY created_at DESC
+	`
+
+	rows, err := r.pool.Query(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list users: %w", err)
+	}
+	defer rows.Close()
+
+	var users []*models.User
+	for rows.Next() {
+		var user models.User
+		err := rows.Scan(
+			&user.ID, &user.Username, &user.Email, &user.PasswordHash,
+			&user.Roles, &user.Enabled, &user.CreatedAt, &user.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan user: %w", err)
+		}
+		users = append(users, &user)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating users: %w", err)
+	}
+
+	return users, nil
+}
+
+func (r *PostgresRepository) DeleteUser(id string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	query := `DELETE FROM users WHERE id = $1`
+
+	result, err := r.pool.Exec(ctx, query, id)
+	if err != nil {
+		return fmt.Errorf("failed to delete user: %w", err)
+	}
+
+	if result.RowsAffected() == 0 {
+		return ErrUserNotFound
+	}
+
+	return nil
+}
