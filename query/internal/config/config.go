@@ -1,34 +1,35 @@
 package config
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"strconv"
 	"time"
+
+	"gopkg.in/yaml.v3"
 )
 
 // Config contains runtime configuration for the query service.
 type Config struct {
-	Server      ServerConfig      `json:"server"`
-	OpenSearch  OpenSearchConfig  `json:"opensearch"`
+	Server      ServerConfig      `yaml:"server"`
+	OpenSearch  OpenSearchConfig  `yaml:"opensearch"`
 }
 
 // OpenSearchConfig captures OpenSearch connection settings.
 type OpenSearchConfig struct {
-	URL      string `json:"url"`
-	Username string `json:"username"`
-	Password string `json:"password"`
-	Insecure bool   `json:"insecure"`
-	Index    string `json:"index"`
+	URL      string `yaml:"url"`
+	Username string `yaml:"username"`
+	Password string `yaml:"password"`
+	Insecure bool   `yaml:"insecure"`
+	Index    string `yaml:"index"`
 }
 
 // ServerConfig captures HTTP server settings.
 type ServerConfig struct {
-	Port                int `json:"port"`
-	ReadTimeoutSeconds  int `json:"read_timeout_seconds"`
-	WriteTimeoutSeconds int `json:"write_timeout_seconds"`
-	IdleTimeoutSeconds  int `json:"idle_timeout_seconds"`
+	Port                int `yaml:"port"`
+	ReadTimeoutSeconds  int `yaml:"read_timeout_seconds"`
+	WriteTimeoutSeconds int `yaml:"write_timeout_seconds"`
+	IdleTimeoutSeconds  int `yaml:"idle_timeout_seconds"`
 }
 
 // ReadTimeout returns the configured read timeout as a duration.
@@ -82,7 +83,7 @@ func hydrateFromFile(path string, cfg *Config) error {
 	if err != nil {
 		return fmt.Errorf("read config: %w", err)
 	}
-	if err := json.Unmarshal(data, cfg); err != nil {
+	if err := yaml.Unmarshal(data, cfg); err != nil {
 		return fmt.Errorf("parse config: %w", err)
 	}
 	return nil

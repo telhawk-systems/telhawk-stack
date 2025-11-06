@@ -163,7 +163,7 @@ func (m *IndexManager) createISMPolicy(ctx context.Context) error {
 						{
 							"rollover": map[string]interface{}{
 								"min_size":        fmt.Sprintf("%dGB", m.config.RolloverSizeGB),
-								"min_index_age":   m.config.RolloverAge.String(),
+								"min_index_age":   formatDurationForOpenSearch(m.config.RolloverAge),
 							},
 						},
 					},
@@ -193,11 +193,38 @@ func (m *IndexManager) createISMPolicy(ctx context.Context) error {
 		return err
 	}
 
+	policyName := m.config.IndexPrefix + "-policy"
+	
+	// Check if policy exists
 	req := m.client.Client().Transport.Perform
+	checkReq, err := http.NewRequestWithContext(
+		ctx,
+		"GET",
+		"/_plugins/_ism/policies/"+policyName,
+		nil,
+	)
+	if err != nil {
+		return err
+	}
+	
+	checkRes, err := req(checkReq)
+	if err != nil {
+		return err
+	}
+	checkRes.Body.Close()
+	
+	// If policy exists (200), update it. Otherwise create it (404)
+	method := "PUT"
+	url := "/_plugins/_ism/policies/" + policyName
+	if checkRes.StatusCode == 200 {
+		// Policy exists, update with sequence number
+		url += "?if_seq_no=1&if_primary_term=1"
+	}
+
 	httpReq, err := http.NewRequestWithContext(
 		ctx,
-		"PUT",
-		"/_plugins/_ism/policies/"+m.config.IndexPrefix+"-policy",
+		method,
+		url,
 		bytes.NewReader(body),
 	)
 	if err != nil {
@@ -211,7 +238,8 @@ func (m *IndexManager) createISMPolicy(ctx context.Context) error {
 	}
 	defer res.Body.Close()
 
-	if res.StatusCode >= 400 && res.StatusCode != 404 {
+	// Accept 200 (updated), 201 (created), or 409 (already exists with same content)
+	if res.StatusCode >= 400 && res.StatusCode != 409 {
 		bodyBytes, _ := io.ReadAll(res.Body)
 		return fmt.Errorf("failed to create ISM policy: %d - %s", res.StatusCode, string(bodyBytes))
 	}
@@ -273,4 +301,15 @@ func (m *IndexManager) GetWriteAlias() string {
 
 func (m *IndexManager) ResolveIndexPattern(classUID int) string {
 	return m.config.IndexPrefix + "-*"
+}
+
+// formatDurationForOpenSearch converts Go duration to OpenSearch-compatible format
+// OpenSearch expects simple durations like "24h", "7d", not Go's "24h0m0s" format
+func formatDurationForOpenSearch(d time.Duration) string {
+	hours := int(d.Hours())
+	if hours%24 == 0 {
+		days := hours / 24
+		return fmt.Sprintf("%dd", days)
+	}
+	return fmt.Sprintf("%dh", hours)
 }

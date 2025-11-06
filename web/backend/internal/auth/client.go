@@ -85,14 +85,17 @@ func (c *Client) Login(username, password string) (*LoginResponse, error) {
 }
 
 func (c *Client) ValidateToken(token string) (*ValidateResponse, error) {
-	req, err := http.NewRequest("POST", c.baseURL+"/api/v1/auth/validate", nil)
+	reqBody := map[string]string{"token": token}
+	body, err := json.Marshal(reqBody)
 	if err != nil {
 		return nil, err
 	}
 
-	req.Header.Set("Authorization", "Bearer "+token)
-
-	resp, err := c.httpClient.Do(req)
+	resp, err := c.httpClient.Post(
+		c.baseURL+"/api/v1/auth/validate",
+		"application/json",
+		bytes.NewReader(body),
+	)
 	if err != nil {
 		return nil, err
 	}

@@ -19,7 +19,6 @@ services:
       dockerfile: Dockerfile
     container_name: telhawk-opensearch
     environment:
-      - discovery.type=single-node
       - bootstrap.memory_lock=true
       - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
       - OPENSEARCH_ADMIN_USER=${OPENSEARCH_ADMIN_USER:-admin}
@@ -36,23 +35,26 @@ services:
       - opensearch-data:/usr/share/opensearch/data
       - opensearch-certs:/certs:ro
     ports:
-      - "9200:9200"
-      - "9600:9600"
+      - "127.0.0.1:9200:9200"
+      - "127.0.0.1:9600:9600"
     networks:
       - telhawk
     depends_on:
       opensearch-certs:
         condition: service_completed_successfully
     healthcheck:
-      test: ["CMD-SHELL", "curl -fk -u $${OPENSEARCH_ADMIN_USER}:$${OPENSEARCH_INITIAL_ADMIN_PASSWORD} https://localhost:9200/_cluster/health | grep -q 'yellow\\|green'"]
+      test: ["CMD-SHELL", "curl -fk --cert /usr/share/opensearch/config/admin.pem --key /usr/share/opensearch/config/admin-key.pem https://localhost:9200/_cluster/health | grep -q 'yellow\\|green'"]
       interval: 15s
       timeout: 10s
       retries: 20
       start_period: 90s
 
   auth-db:
-    image: postgres:16-alpine
+    build:
+      context: ./auth-db
+      dockerfile: Dockerfile
     container_name: telhawk-auth-db
+    command: postgres -c ssl=on -c ssl_cert_file=/var/lib/postgresql/server.crt -c ssl_key_file=/var/lib/postgresql/server.key
     environment:
       - POSTGRES_DB=telhawk_auth
       - POSTGRES_USER=telhawk
@@ -61,6 +63,7 @@ services:
       - auth-db-data:/var/lib/postgresql/data
       - ./auth/migrations:/docker-entrypoint-initdb.d
     networks:
+      - telhawk-db
       - telhawk
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U telhawk -d telhawk_auth"]
@@ -88,12 +91,13 @@ services:
       - AUTH_DATABASE_POSTGRES_DATABASE=telhawk_auth
       - AUTH_DATABASE_POSTGRES_USER=telhawk
       - AUTH_DATABASE_POSTGRES_PASSWORD=${AUTH_DB_PASSWORD:-telhawk-auth-dev}
-      - AUTH_DATABASE_POSTGRES_SSLMODE=disable
-      # Ingest forwarding (disabled by default, enable in production)
-      - AUTH_INGEST_ENABLED=${AUTH_INGEST_ENABLED:-false}
-      - AUTH_INGEST_URL=${AUTH_INGEST_URL:-http://ingest:8082}
+      - AUTH_DATABASE_POSTGRES_SSLMODE=require
+      # Ingest forwarding (disabled - requires HEC token implementation)
+      - AUTH_INGEST_ENABLED=false
+      - AUTH_INGEST_URL=http://ingest:8088
       - AUTH_INGEST_HEC_TOKEN=${AUTH_INGEST_HEC_TOKEN:-}
     networks:
+      - telhawk-db
       - telhawk
     depends_on:
       auth-db:
@@ -123,7 +127,7 @@ services:
       opensearch:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "/busybox/wget", "-q", "-O", "-", "http://localhost:8083/readyz"]
+      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:8083/readyz"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -138,10 +142,10 @@ services:
     ports:
       - "8082:8082"
     environment:
-      - OPENSEARCH_URL=https://opensearch:9200
-      - OPENSEARCH_USERNAME=${OPENSEARCH_ADMIN_USER:-admin}
-      - OPENSEARCH_PASSWORD=${OPENSEARCH_PASSWORD:-TelHawk123!}
-      - OPENSEARCH_TLS_SKIP_VERIFY=true
+      - QUERY_OPENSEARCH_URL=https://opensearch:9200
+      - QUERY_OPENSEARCH_USERNAME=${OPENSEARCH_ADMIN_USER:-admin}
+      - QUERY_OPENSEARCH_PASSWORD=${OPENSEARCH_PASSWORD:-TelHawk123!}
+      - QUERY_OPENSEARCH_INSECURE=true
     networks:
       - telhawk
     depends_on:
@@ -259,6 +263,9 @@ services:
 networks:
   telhawk:
     driver: bridge
+  telhawk-db:
+    driver: bridge
+    internal: false
 
 volumes:
   opensearch-data:
