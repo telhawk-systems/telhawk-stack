@@ -512,11 +512,39 @@ See [TODO.md](TODO.md) for the detailed backlog.
 
 ## License
 
-Licensed under the Apache License, Version 2.0. See the `LICENSE` file for details.
+TelHawk Stack is licensed under the **TelHawk Systems Source Available License (TSSAL) v1.0**.
+
+**What this means:**
+- ✅ **Free to use** - Run TelHawk in your own environment at no cost
+- ✅ **Source available** - View and study the code
+- ✅ **Modify for yourself** - Customize for your internal needs
+- ❌ **No distribution** - Cannot distribute binaries or create public forks
+- ❌ **No commercial hosting** - Cannot offer as a service to others
+
+For commercial licensing, distribution rights, or hosting as a service, contact: **licensing@telhawk.systems**
+
+See the [LICENSE](LICENSE) file for full terms.
 
 ## Contributing
 
-Contributions welcome! Please read CONTRIBUTING.md for guidelines.
+We welcome contributions! By submitting a pull request, you grant TelHawk Systems 
+the right to use your contribution under any terms, including commercial licensing.
+
+Guidelines:
+- Open an issue first for major changes
+- Follow Go best practices and existing code style
+- Include tests for new features
+- Update documentation as needed
+
+## Commercial Support & Services
+
+TelHawk Systems offers:
+- **Enterprise Support** - SLA-backed support and maintenance
+- **Managed Hosting** - Fully managed SIEM in your cloud or ours
+- **Custom Development** - Integrations and custom features
+- **Training & Consulting** - Security operations best practices
+
+Contact: **sales@telhawk.systems**
 
 ## Related Projects
 
@@ -524,4 +552,7 @@ Contributions welcome! Please read CONTRIBUTING.md for guidelines.
 
 ## Contact
 
-For questions or support, open an issue on GitHub.
+- **Issues & Bugs**: Open an issue on GitHub
+- **Commercial Licensing**: licensing@telhawk.systems
+- **Sales & Support**: sales@telhawk.systems
+- **General Inquiries**: hello@telhawk.systems
