@@ -87,6 +87,18 @@
   * OpenSearch integration with health checks
   * CLI tool (thawk) container for administration
   * Documentation: DOCKER.md
+- [ ] **SECURITY: Enable TLS for all internal service communication**
+  * ✅ OpenSearch: HTTPS with self-signed certificates (implemented)
+  * ✅ PostgreSQL: SSL/TLS enabled with self-signed certificates (implemented)
+  * ❌ Auth service (port 8080): Currently HTTP only
+  * ❌ Ingest service (port 8088): Currently HTTP only
+  * ❌ Core service (port 8090): Currently HTTP only
+  * ❌ Storage service (port 8083): Currently HTTP only
+  * ❌ Query service (port 8082): Currently HTTP only
+  * ❌ Web service (port 3000): Currently HTTP only
+  * **Action Required:** Generate self-signed certs for all services and enable HTTPS
+  * **Action Required:** Add TLS_SKIP_VERIFY flags to control certificate validation
+  * **Reference:** See docs/SECURITY_ARCHITECTURE.md for certificate generation strategy
 - [ ] Add CI pipeline with linting, gofmt, and go test
 - [ ] Publish OpenAPI docs automatically (query/core endpoints)
 
