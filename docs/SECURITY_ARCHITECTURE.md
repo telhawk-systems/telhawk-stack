@@ -11,34 +11,48 @@
 - Default credentials are strong and documented
 
 ### 2. SSL/TLS Everywhere
-**Policy:** All internal service communication uses TLS with proper certificates.
+**Policy:** All internal service communication can use TLS with proper certificates.
 
 **Current Status (as of 2025-11-06):**
 - ✅ **OpenSearch (9200, 9600):** HTTPS enabled with self-signed certificates
 - ✅ **PostgreSQL (5432):** SSL/TLS enabled with self-signed certificates
-- ❌ **Auth (8080):** HTTP only - needs TLS
-- ❌ **Ingest (8088):** HTTP only - needs TLS
-- ❌ **Core (8090):** HTTP only - needs TLS
-- ❌ **Storage (8083):** HTTP only - needs TLS
-- ❌ **Query (8082):** HTTP only - needs TLS
-- ❌ **Web (3000):** HTTP only - needs TLS
+- ✅ **Auth (8080):** TLS support with feature flag (`AUTH_TLS_ENABLED`)
+- ✅ **Ingest (8088):** TLS support with feature flag (`INGEST_TLS_ENABLED`)
+- ✅ **Core (8090):** TLS support with feature flag (`CORE_TLS_ENABLED`)
+- ✅ **Storage (8083):** TLS support with feature flag (`STORAGE_TLS_ENABLED`)
+- ✅ **Query (8082):** TLS support with feature flag (`QUERY_TLS_ENABLED`)
+- ✅ **Web (3000):** TLS support with feature flag (`WEB_TLS_ENABLED`)
 
-**TODO:** Generate self-signed certificates and enable HTTPS for all Go services.
+**Implementation:** TLS is disabled by default but can be enabled via environment variables. See `docs/TLS_CONFIGURATION.md` for details.
 
 #### Certificate Generation Strategy
-OpenSearch requires SSL certificates before it can start. We use a two-stage approach:
+TelHawk Stack uses automated certificate generation for both OpenSearch and Go services:
 
-1. **cert-generator** - Sidecar container that runs ONCE before OpenSearch
+**OpenSearch Certificates:**
+1. **opensearch-certs** - Sidecar container for OpenSearch
    - Checks if certificates already exist in volume
    - If not, generates self-signed certificates with proper SANs
-   - Stores certificates in shared volume
+   - Stores certificates in `opensearch-certs` volume
    - Exits after generation (no health check needed - it's a one-shot job)
 
 2. **opensearch** - Main database container
-   - Depends on cert-generator completion
+   - Depends on opensearch-certs completion
    - Uses certificates from shared volume
    - Updates admin credentials from env vars on EVERY boot
    - Credentials are rotatable without regenerating certs
+
+**Go Service Certificates:**
+1. **telhawk-certs** - Certificate generator for all Go services
+   - Generates certificates for: auth, ingest, core, storage, query, web
+   - Creates self-signed CA and service certificates
+   - Stores certificates in `telhawk-certs` volume
+   - Each certificate includes proper Subject Alternative Names (SANs)
+   - Certificates valid for 10 years
+
+2. **Services** - All Go services can use certificates
+   - Mount `telhawk-certs` volume as read-only
+   - TLS disabled by default (enable with `{SERVICE}_TLS_ENABLED=true`)
+   - Support for TLS_SKIP_VERIFY flag (development only)
 
 #### Certificate Priority
 1. **Production certs** (mounted at `/certs/production/`) - Use if provided

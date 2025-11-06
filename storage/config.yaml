@@ -3,6 +3,9 @@ server:
   read_timeout: 15s
   write_timeout: 15s
   idle_timeout: 60s
+  tls_enabled: false  # Enable HTTPS with TLS certificates
+  tls_cert_file: /certs/storage.pem
+  tls_key_file: /certs/storage-key.pem
 
 opensearch:
   url: https://opensearch:9200

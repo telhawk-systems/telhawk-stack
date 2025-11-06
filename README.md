@@ -316,6 +316,7 @@ docker-compose down -v
 Comprehensive guides for configuration, deployment, and usage:
 
 - **[Configuration Guide](docs/CONFIGURATION.md)** - Complete service configuration reference (YAML + environment variables)
+- **[TLS Configuration](docs/TLS_CONFIGURATION.md)** - Enable HTTPS/TLS with self-signed or production certificates
 - **[CLI Configuration](docs/CLI_CONFIGURATION.md)** - TelHawk CLI (`thawk`) configuration and usage
 - **[Docker Quick Reference](DOCKER.md)** - Docker and docker-compose commands, troubleshooting
 
@@ -485,7 +486,7 @@ docker-compose up -d
 
 ### Production Considerations
 - Change default OpenSearch password in docker-compose.yml
-- Enable TLS/SSL for production traffic
+- **Enable TLS/SSL for all services** - See [TLS Configuration Guide](docs/TLS_CONFIGURATION.md)
 - Configure proper resource limits
 - Set up external volumes for data persistence
 - Implement backup strategy for OpenSearch data
