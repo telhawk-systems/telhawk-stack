@@ -18,7 +18,7 @@ import (
 )
 
 func main() {
-	configPath := flag.String("config", "", "path to JSON config file")
+	configPath := flag.String("config", "", "path to YAML config file")
 	addr := flag.String("addr", "", "override listen address")
 	flag.Parse()
 

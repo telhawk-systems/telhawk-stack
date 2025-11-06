@@ -41,15 +41,16 @@ class ApiClient {
     return response.json();
   }
 
-  async search(query: string, from = 0, size = 50): Promise<any> {
-    const params = new URLSearchParams({
-      query,
-      from: from.toString(),
-      size: size.toString(),
-    });
-
-    const response = await fetch(`${this.baseUrl}/query/v1/search?${params}`, {
+  async search(query: string, size = 50): Promise<any> {
+    const response = await fetch(`${this.baseUrl}/query/api/v1/search`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
+      body: JSON.stringify({
+        query,
+        limit: size,
+        sort: { field: 'time', order: 'desc' }
+      }),
     });
 
     if (!response.ok) {
