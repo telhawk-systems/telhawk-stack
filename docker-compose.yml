@@ -107,10 +107,10 @@ services:
       - AUTH_DATABASE_POSTGRES_USER=telhawk
       - AUTH_DATABASE_POSTGRES_PASSWORD=${AUTH_DB_PASSWORD:-telhawk-auth-dev}
       - AUTH_DATABASE_POSTGRES_SSLMODE=require
-      # Ingest forwarding (disabled - requires HEC token implementation)
-      - AUTH_INGEST_ENABLED=false
+      # Ingest forwarding (enabled with HEC token)
+      - AUTH_INGEST_ENABLED=true
       - AUTH_INGEST_URL=http://ingest:8088
-      - AUTH_INGEST_HEC_TOKEN=${AUTH_INGEST_HEC_TOKEN:-}
+      - AUTH_INGEST_HEC_TOKEN=test-hec-abc123xyz
     volumes:
       - telhawk-certs:/certs:ro
     networks:
@@ -175,6 +175,7 @@ services:
       - QUERY_OPENSEARCH_USERNAME=${OPENSEARCH_ADMIN_USER:-admin}
       - QUERY_OPENSEARCH_PASSWORD=${OPENSEARCH_PASSWORD:-TelHawk123!}
       - QUERY_OPENSEARCH_INSECURE=true
+      - QUERY_OPENSEARCH_INDEX=telhawk-events-*
     volumes:
       - telhawk-certs:/certs:ro
     networks:
