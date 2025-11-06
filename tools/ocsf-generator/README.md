@@ -192,4 +192,4 @@ OCSF types are mapped to Go types:
 
 ## License
 
-Same as TelHawk Stack (Apache 2.0)
+Same as TelHawk Stack (TSSAL v1.0 - TelHawk Systems Source Available License)
