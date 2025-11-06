@@ -167,7 +167,7 @@ func (c *IngestClient) ForwardEvent(actorType, actorID, actorName, action, resou
 	hecEvent := HECEvent{
 		Time:       timestamp.Unix(),
 		Source:     "telhawk:auth",
-		Sourcetype: "telhawk:auth:audit",
+		Sourcetype: "hec",
 		Host:       "auth-service",
 		Event:      ocsfEvent,
 	}
@@ -178,7 +178,7 @@ func (c *IngestClient) ForwardEvent(actorType, actorID, actorName, action, resou
 		return fmt.Errorf("failed to marshal event: %w", err)
 	}
 
-	req, err := http.NewRequest("POST", c.ingestURL+"/services/collector", bytes.NewReader(body))
+	req, err := http.NewRequest("POST", c.ingestURL+"/services/collector/event", bytes.NewReader(body))
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
 	}

@@ -8,20 +8,20 @@ server:
   tls_key_file: /certs/ingest-key.pem
 
 auth:
-  url: http://localhost:8080
+  url: http://auth:8080
   token_validation_cache_ttl: 5m
   tls_skip_verify: false  # Skip TLS certificate verification (dev only)
 
 core:
-  url: http://localhost:8090
+  url: http://core:8090
   tls_skip_verify: false  # Skip TLS certificate verification (dev only)
 
 storage:
-  url: http://localhost:8083
+  url: http://storage:8083
   tls_skip_verify: false  # Skip TLS certificate verification (dev only)
 
 opensearch:
-  url: https://localhost:9200
+  url: https://opensearch:9200
   username: admin
   password: ""
   tls_skip_verify: true
