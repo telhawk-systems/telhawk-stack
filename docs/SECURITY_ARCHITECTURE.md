@@ -13,6 +13,18 @@
 ### 2. SSL/TLS Everywhere
 **Policy:** All internal service communication uses TLS with proper certificates.
 
+**Current Status (as of 2025-11-06):**
+- ✅ **OpenSearch (9200, 9600):** HTTPS enabled with self-signed certificates
+- ✅ **PostgreSQL (5432):** SSL/TLS enabled with self-signed certificates
+- ❌ **Auth (8080):** HTTP only - needs TLS
+- ❌ **Ingest (8088):** HTTP only - needs TLS
+- ❌ **Core (8090):** HTTP only - needs TLS
+- ❌ **Storage (8083):** HTTP only - needs TLS
+- ❌ **Query (8082):** HTTP only - needs TLS
+- ❌ **Web (3000):** HTTP only - needs TLS
+
+**TODO:** Generate self-signed certificates and enable HTTPS for all Go services.
+
 #### Certificate Generation Strategy
 OpenSearch requires SSL certificates before it can start. We use a two-stage approach:
 
