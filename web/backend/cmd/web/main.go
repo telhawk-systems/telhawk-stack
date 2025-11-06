@@ -61,6 +61,7 @@ func main() {
 
 	queryProxy := proxy.NewProxy(cfg.QueryServiceURL, authClient)
 	coreProxy := proxy.NewProxy(cfg.CoreServiceURL, authClient)
+	authProxy := proxy.NewProxy(cfg.AuthServiceURL, authClient)
 
 	mux := http.NewServeMux()
 
@@ -69,6 +70,11 @@ func main() {
 	mux.HandleFunc("POST /api/auth/login", authHandler.Login)
 	mux.HandleFunc("POST /api/auth/logout", authHandler.Logout)
 	mux.Handle("GET /api/auth/me", authMiddleware.Protect(http.HandlerFunc(authHandler.Me)))
+
+	// User management endpoints (protected)
+	mux.Handle("/api/auth/", authMiddleware.Protect(
+		http.StripPrefix("/api/auth", authProxy.Handler()),
+	))
 
 	// Query service proxy (protected)
 	mux.Handle("/api/query/", authMiddleware.Protect(
