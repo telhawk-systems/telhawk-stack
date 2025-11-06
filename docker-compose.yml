@@ -85,6 +85,24 @@ services:
       start_period: 10s
     restart: unless-stopped
 
+  redis:
+    image: redis:7-alpine
+    container_name: telhawk-redis
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - telhawk
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    restart: unless-stopped
+
   auth:
     build:
       context: ./auth
@@ -248,6 +266,13 @@ services:
       - INGEST_OPENSEARCH_USERNAME=${OPENSEARCH_ADMIN_USER:-admin}
       - INGEST_OPENSEARCH_PASSWORD=${OPENSEARCH_PASSWORD:-TelHawk123!}
       - INGEST_OPENSEARCH_TLS_SKIP_VERIFY=true
+      - INGEST_REDIS_URL=redis://redis:6379/0
+      - INGEST_REDIS_ENABLED=${INGEST_REDIS_ENABLED:-true}
+      - INGEST_INGESTION_RATE_LIMIT_ENABLED=${INGEST_RATE_LIMIT_ENABLED:-true}
+      - INGEST_INGESTION_RATE_LIMIT_REQUESTS=${INGEST_RATE_LIMIT_REQUESTS:-10000}
+      - INGEST_INGESTION_RATE_LIMIT_WINDOW=${INGEST_RATE_LIMIT_WINDOW:-1m}
+      - INGEST_ACK_ENABLED=${INGEST_ACK_ENABLED:-true}
+      - INGEST_ACK_TTL=${INGEST_ACK_TTL:-10m}
     volumes:
       - telhawk-certs:/certs:ro
     networks:
@@ -258,6 +283,7 @@ services:
       - opensearch
       - core
       - storage
+      - redis
     healthcheck:
       test: ["CMD", "/busybox/wget", "-q", "-O", "-", "http://localhost:8088/readyz"]
       interval: 30s
@@ -336,3 +362,4 @@ volumes:
   thawk-config:
   auth-db-data:
     driver: local
+  redis-data:
