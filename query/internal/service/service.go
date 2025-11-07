@@ -376,6 +376,20 @@ func (s *QueryService) PatchAlert(ctx context.Context, id string, req *models.Al
 	return &alert, nil
 }
 
+// UpdateLastTriggered updates the last triggered timestamp for an alert.
+func (s *QueryService) UpdateLastTriggered(ctx context.Context, alertID string, timestamp time.Time) error {
+	_ = ctx
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	alert, ok := s.alerts[alertID]
+	if !ok {
+		return ErrAlertNotFound
+	}
+	alert.LastTriggeredAt = &timestamp
+	s.alerts[alertID] = alert
+	return nil
+}
+
 // ListDashboards returns predefined dashboards.
 func (s *QueryService) ListDashboards(ctx context.Context) (*models.DashboardListResponse, error) {
 	_ = ctx

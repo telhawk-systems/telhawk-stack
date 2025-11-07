@@ -41,7 +41,7 @@ class ApiClient {
     return response.json();
   }
 
-  async search(query: string, size = 50): Promise<any> {
+  async search(query: string, size = 50, aggregations?: any): Promise<any> {
     const response = await fetch(`${this.baseUrl}/query/api/v1/search`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -49,12 +49,61 @@ class ApiClient {
       body: JSON.stringify({
         query,
         limit: size,
-        sort: { field: 'time', order: 'desc' }
+        sort: { field: 'time', order: 'desc' },
+        ...(aggregations && { aggregations })
       }),
     });
 
     if (!response.ok) {
       throw new Error('Search failed');
+    }
+
+    return response.json();
+  }
+
+  async getDashboardMetrics(timeRange?: { start: string; end: string }): Promise<any> {
+    let query = '*';
+    if (timeRange) {
+      query = `time:[${timeRange.start} TO ${timeRange.end}]`;
+    }
+
+    const response = await fetch(`${this.baseUrl}/query/api/v1/search`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({
+        query,
+        limit: 0,
+        aggregations: {
+          severity_count: {
+            type: 'terms',
+            field: 'severity',
+            size: 10
+          },
+          events_by_class: {
+            type: 'terms',
+            field: 'class_name',
+            size: 10
+          },
+          timeline: {
+            type: 'date_histogram',
+            field: 'time',
+            opts: { interval: '1h' }
+          },
+          unique_users: {
+            type: 'cardinality',
+            field: 'actor.user.name'
+          },
+          unique_ips: {
+            type: 'cardinality',
+            field: 'src_endpoint.ip'
+          }
+        }
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch dashboard metrics');
     }
 
     return response.json();

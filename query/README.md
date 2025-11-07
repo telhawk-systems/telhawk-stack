@@ -10,6 +10,7 @@ The Query service provides a RESTful API for searching and analyzing security da
 - **Field projection** - Return only specific fields to reduce bandwidth
 - **Pagination** - Configurable result limits (up to 10,000 events)
 - **Sorting** - Sort results by any field
+- **Alert scheduling** - Automated alert execution and notification delivery
 - **Alert management** - Create, update, and manage security alerts
 - **Dashboard definitions** - Pre-built security dashboards
 
@@ -90,6 +91,13 @@ opensearch:
   password: "TelHawk123!"
   insecure: false
   index: "ocsf-events"
+
+alerting:
+  enabled: true
+  check_interval_seconds: 30
+  webhook_url: "https://your-webhook.example.com/alerts"
+  slack_webhook_url: "https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK"
+  notification_timeout_seconds: 10
 ```
 
 Environment variables override config file settings:
@@ -99,6 +107,40 @@ Environment variables override config file settings:
 - `QUERY_OPENSEARCH_PASSWORD`
 - `QUERY_OPENSEARCH_INSECURE`
 - `QUERY_OPENSEARCH_INDEX`
+- `QUERY_ALERTING_ENABLED`
+- `QUERY_ALERTING_CHECK_INTERVAL_SECONDS`
+- `QUERY_ALERTING_WEBHOOK_URL`
+- `QUERY_ALERTING_SLACK_WEBHOOK_URL`
+- `QUERY_ALERTING_NOTIFICATION_TIMEOUT_SECONDS`
+
+## Alert Scheduling
+
+The query service includes a built-in alert scheduler that executes saved queries on a schedule and delivers notifications when results are found. See [ALERT_SCHEDULING.md](../docs/ALERT_SCHEDULING.md) for detailed documentation.
+
+Quick start:
+
+```bash
+# Enable alerting
+export QUERY_ALERTING_ENABLED=true
+export QUERY_ALERTING_SLACK_WEBHOOK_URL=https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK
+
+# Start query service
+go run cmd/query/main.go
+
+# Create an alert
+curl -X POST http://localhost:8082/api/v1/alerts \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Failed SSH Logins",
+    "query": "class_name:\"Authentication\" AND status:\"Failure\"",
+    "severity": "medium",
+    "schedule": {
+      "interval_minutes": 5,
+      "lookback_minutes": 15
+    },
+    "status": "active"
+  }'
+```
 
 ## Running
 
