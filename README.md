@@ -263,10 +263,13 @@ docker-compose run --rm thawk token create --name my-first-token
 # Output will show:
 # ✓ HEC token created: abc123xyz...
 # Use this token with:
-#   curl -H 'Authorization: Splunk abc123xyz...' ...
+#   curl -H 'Authorization: Telhawk abc123xyz...' ...
 ```
 
 #### 5. Send Your First Event
+
+> **Note:** The Authorization header accepts either `Splunk` or `Telhawk` before the token for compatibility.
+
 ```bash
 # Using thawk CLI
 docker-compose run --rm thawk ingest send \
@@ -277,7 +280,7 @@ docker-compose run --rm thawk ingest send \
 
 # Or using curl directly
 curl -X POST http://localhost:8088/services/collector/event \
-  -H "Authorization: Splunk <your-hec-token>" \
+  -H "Authorization: Telhawk <your-hec-token>" \
   -H "Content-Type: application/json" \
   -d '{
     "event": {
