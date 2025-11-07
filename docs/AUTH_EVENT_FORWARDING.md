@@ -272,7 +272,7 @@ curl -X GET "http://localhost:9200/telhawk-*/_search?q=metadata.product.name:Tel
 3. Verify HEC token is valid:
    ```bash
    curl -X POST http://localhost:8082/services/collector \
-     -H "Authorization: Splunk <token>" \
+     -H "Authorization: Telhawk <token>" \
      -d '{"event":"test"}'
    ```
 

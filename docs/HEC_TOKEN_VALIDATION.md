@@ -107,7 +107,7 @@ Expected invalid response:
 
 ```bash
 curl -X POST http://localhost:8088/services/collector/event \
-  -H "Authorization: Splunk YOUR-HEC-TOKEN-HERE" \
+  -H "Authorization: Telhawk YOUR-HEC-TOKEN-HERE" \
   -H "Content-Type: application/json" \
   -d '{
     "event": {
@@ -136,7 +136,7 @@ docker-compose logs ingest | grep -A2 "HEC token validated"
 
 ```bash
 curl -X POST http://localhost:8088/services/collector/event \
-  -H "Authorization: Splunk invalid-token-12345" \
+  -H "Authorization: Telhawk invalid-token-12345" \
   -H "Content-Type: application/json" \
   -d '{
     "event": {"message": "This should fail"}
@@ -186,12 +186,12 @@ Test caching:
 ```bash
 # First request - hits auth service
 time curl -X POST http://localhost:8088/services/collector/event \
-  -H "Authorization: Splunk YOUR-TOKEN" \
+  -H "Authorization: Telhawk YOUR-TOKEN" \
   -d '{"event": {"test": 1}}'
 
 # Subsequent requests - served from cache (faster)
 time curl -X POST http://localhost:8088/services/collector/event \
-  -H "Authorization: Splunk YOUR-TOKEN" \
+  -H "Authorization: Telhawk YOUR-TOKEN" \
   -d '{"event": {"test": 2}}'
 ```
 
@@ -282,7 +282,7 @@ Test with load:
 # Send 100 events with same token (tests caching)
 for i in {1..100}; do
   curl -s -X POST http://localhost:8088/services/collector/event \
-    -H "Authorization: Splunk YOUR-TOKEN" \
+    -H "Authorization: Telhawk YOUR-TOKEN" \
     -d '{"event": {"test": '$i'}}'
 done
 

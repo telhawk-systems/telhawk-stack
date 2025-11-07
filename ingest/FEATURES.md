@@ -74,7 +74,7 @@ INGEST_ACK_TTL=10m
 1. **Client sends event with ack request:**
 ```bash
 curl -X POST http://localhost:8088/services/collector/event \
-  -H "Authorization: Splunk <token>" \
+  -H "Authorization: Telhawk <token>" \
   -H "X-Splunk-Request-Channel: <channel-id>" \
   -d '{"event": "test"}'
 ```
@@ -164,7 +164,7 @@ rate(telhawk_ingest_normalization_errors_total[5m]) + rate(telhawk_ingest_storag
 # Spam requests to trigger rate limit
 for i in {1..100}; do
   curl -X POST http://localhost:8088/services/collector/event \
-    -H "Authorization: Splunk test-token" \
+    -H "Authorization: Telhawk test-token" \
     -d '{"event": "test"}' &
 done
 wait
@@ -177,7 +177,7 @@ curl http://localhost:8088/metrics | grep rate_limit_hits
 ```bash
 # Send event
 response=$(curl -X POST http://localhost:8088/services/collector/event \
-  -H "Authorization: Splunk test-token" \
+  -H "Authorization: Telhawk test-token" \
   -d '{"event": "test"}' -s)
 
 # Extract ack ID (if returned in response)

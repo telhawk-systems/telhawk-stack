@@ -149,4 +149,4 @@ Content-Type: application/json
 }
 ```
 
-These tokens are used with the `Authorization: Splunk <hec-token>` header in ingestion requests.
+These tokens are used with the `Authorization: Telhawk <hec-token>` header in ingestion requests.
