@@ -198,17 +198,21 @@
   * **Note:** TLS disabled by default - enable via environment variables
 - [x] Build OCSF event seeder for development and testing ✅
   * Generate realistic fake events for 7 major OCSF classes
-  * Authentication (3002): login attempts, MFA, logouts with 85% success rate
-  * Network Activity (4001): TCP/UDP/ICMP connections, firewall events
-  * Process Activity (1007): process starts with command lines and parent processes
-  * File Activity (4006): file create/read/update/delete/rename operations
-  * DNS Activity (4003): DNS queries and responses with various record types
-  * HTTP Activity (4002): HTTP requests with realistic status codes and paths
-  * Detection Finding (2004): security alerts with MITRE ATT&CK tactics
+  * Authentication (3002): login attempts, MFA, logouts with 85% success rate ✓
+  * Network Activity (4001): TCP/UDP/ICMP connections, firewall events ✓
+  * Process Activity (1007): process starts with command lines and parent processes ✓
+  * File Activity (4006): file create/read/update/delete/rename operations ✓
+  * DNS Activity (4003): DNS queries and responses with various record types ✓
+  * HTTP Activity (4002): HTTP requests with realistic status codes and paths ✓
+  * Detection Finding (2004): security alerts with MITRE ATT&CK tactics ✓
   * Configurable event volume, timing, time-spread, and batch size
   * Direct ingestion via HEC endpoint with proper token authentication
   * **Tool:** tools/event-seeder/
   * **Documentation:** tools/event-seeder/README.md
+  * **Fixes Applied:**
+    - Updated OpenSearch mappings for complex nested OCSF objects
+    - Created OCSF passthrough normalizer for pre-formatted events
+    - All 7 event types verified and working
 - [x] Fix HEC token creation in CLI ✅
   * Implemented real API calls to auth service endpoints
   * HEC token management: create, list, revoke via /api/v1/hec/tokens
