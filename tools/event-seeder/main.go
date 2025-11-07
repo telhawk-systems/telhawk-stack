@@ -157,7 +157,13 @@ func generateAuthEvent() map[string]interface{} {
 	actions := []string{"login", "logout", "mfa_verify", "password_change"}
 	action := actions[rand.Intn(len(actions))]
 	
-	success := rand.Float32() > 0.15 // 85% success rate
+	// Only logins should have significant failure rate; others mostly succeed
+	var success bool
+	if action == "login" {
+		success = rand.Float32() > 0.15 // 85% success rate for logins
+	} else {
+		success = rand.Float32() > 0.02 // 98% success rate for logout/mfa/password_change
+	}
 	
 	event := map[string]interface{}{
 		"class_uid":  3002,
@@ -205,7 +211,11 @@ func generateAuthEvent() map[string]interface{} {
 	}
 
 	if !success {
-		event["status_detail"] = []string{"Invalid credentials", "Account locked", "Expired password"}[rand.Intn(3)]
+		if action == "login" {
+			event["status_detail"] = []string{"Invalid credentials", "Account locked", "Expired password"}[rand.Intn(3)]
+		} else {
+			event["status_detail"] = []string{"Session timeout", "Token expired", "Network error"}[rand.Intn(3)]
+		}
 	}
 
 	return event

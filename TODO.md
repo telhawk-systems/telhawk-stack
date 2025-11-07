@@ -198,7 +198,7 @@
   * **Note:** TLS disabled by default - enable via environment variables
 - [x] Build OCSF event seeder for development and testing ✅
   * Generate realistic fake events for 7 major OCSF classes
-  * Authentication (3002): login attempts, MFA, logouts with 85% success rate ✓
+  * Authentication (3002): login attempts (85% success), logout/MFA/password change (98% success) ✓
   * Network Activity (4001): TCP/UDP/ICMP connections, firewall events ✓
   * Process Activity (1007): process starts with command lines and parent processes ✓
   * File Activity (4006): file create/read/update/delete/rename operations ✓
@@ -207,11 +207,13 @@
   * Detection Finding (2004): security alerts with MITRE ATT&CK tactics ✓
   * Configurable event volume, timing, time-spread, and batch size
   * Direct ingestion via HEC endpoint with proper token authentication
+  * Comprehensive test suite with 10 test cases covering all event types
   * **Tool:** tools/event-seeder/
   * **Documentation:** tools/event-seeder/README.md
   * **Fixes Applied:**
     - Updated OpenSearch mappings for complex nested OCSF objects
     - Created OCSF passthrough normalizer for pre-formatted events
+    - Fixed authentication event logic: realistic failure rates per action type
     - All 7 event types verified and working
 - [x] Fix HEC token creation in CLI ✅
   * Implemented real API calls to auth service endpoints
