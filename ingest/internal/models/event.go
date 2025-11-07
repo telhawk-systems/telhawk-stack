@@ -20,10 +20,10 @@ type HECBatchRequest struct {
 
 // HEC response matching Splunk format
 type HECResponse struct {
-	Text     string `json:"text"`
-	Code     int    `json:"code"`
-	AckID    int64  `json:"ackId,omitempty"`
-	InvalidEventNumber int `json:"invalid-event-number,omitempty"`
+	Text               string `json:"text"`
+	Code               int    `json:"code"`
+	AckID              string `json:"ackId,omitempty"`
+	InvalidEventNumber int    `json:"invalid-event-number,omitempty"`
 }
 
 // Internal event representation
@@ -40,6 +40,7 @@ type Event struct {
 	Raw        []byte                 `json:"raw"`
 	HECTokenID string                 `json:"hec_token_id"`
 	Signature  string                 `json:"signature"`
+	AckID      string                 `json:"ack_id,omitempty"` // Track ack ID for completion
 }
 
 type IngestionStats struct {

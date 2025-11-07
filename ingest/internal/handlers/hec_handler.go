@@ -12,16 +12,23 @@ import (
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/metrics"
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/models"
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/ratelimit"
-	"github.com/telhawk-systems/telhawk-stack/ingest/internal/service"
 	"github.com/telhawk-systems/telhawk-stack/ingest/pkg/hec"
 )
 
+type IngestServiceInterface interface {
+	IngestEvent(event *models.HECEvent, sourceIP, hecTokenID string) (string, error)
+	IngestRaw(data []byte, sourceIP, hecTokenID, source, sourceType, host string) (string, error)
+	ValidateHECToken(token string) error
+	GetStats() models.IngestionStats
+	QueryAcks(ackIDs []string) map[string]bool
+}
+
 type HECHandler struct {
-	service     *service.IngestService
+	service     IngestServiceInterface
 	rateLimiter ratelimit.RateLimiter
 }
 
-func NewHECHandler(service *service.IngestService, rateLimiter ratelimit.RateLimiter) *HECHandler {
+func NewHECHandler(service IngestServiceInterface, rateLimiter ratelimit.RateLimiter) *HECHandler {
 	return &HECHandler{
 		service:     service,
 		rateLimiter: rateLimiter,
@@ -119,15 +126,28 @@ func (h *HECHandler) HandleEvent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Ingest events
+	var ackID string
 	for _, event := range events {
-		if err := h.service.IngestEvent(&event, sourceIP, token); err != nil {
+		eventAckID, err := h.service.IngestEvent(&event, sourceIP, token)
+		if err != nil {
 			h.sendError(w, hec.ErrServerBusy, http.StatusServiceUnavailable)
 			return
 		}
+		// Use the first ackID for the response (in batch, all share same ack)
+		if ackID == "" {
+			ackID = eventAckID
+		}
 	}
 
-	// Send success response
-	h.sendSuccess(w)
+	// Check if client requested acknowledgement
+	channelID := r.Header.Get("X-Splunk-Request-Channel")
+	if channelID != "" && ackID != "" {
+		// Return ackID in response
+		h.sendSuccessWithAck(w, ackID)
+	} else {
+		// Send standard success response
+		h.sendSuccess(w)
+	}
 }
 
 func (h *HECHandler) HandleRaw(w http.ResponseWriter, r *http.Request) {
@@ -213,12 +233,20 @@ func (h *HECHandler) HandleRaw(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Ingest raw event
-	if err := h.service.IngestRaw(body, sourceIP, token, source, sourceType, host); err != nil {
+	ackID, err := h.service.IngestRaw(body, sourceIP, token, source, sourceType, host)
+	if err != nil {
 		h.sendError(w, hec.ErrServerBusy, http.StatusServiceUnavailable)
 		return
 	}
 
-	h.sendSuccess(w)
+	// Check if client requested acknowledgement
+	channelID := r.Header.Get("X-Splunk-Request-Channel")
+	if channelID != "" && ackID != "" {
+		// Return ackID in response
+		h.sendSuccessWithAck(w, ackID)
+	} else {
+		h.sendSuccess(w)
+	}
 }
 
 func (h *HECHandler) Health(w http.ResponseWriter, r *http.Request) {
@@ -266,6 +294,16 @@ func (h *HECHandler) sendSuccess(w http.ResponseWriter) {
 	json.NewEncoder(w).Encode(models.HECResponse{
 		Text: "Success",
 		Code: 0,
+	})
+}
+
+func (h *HECHandler) sendSuccessWithAck(w http.ResponseWriter, ackID string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(models.HECResponse{
+		Text:  "Success",
+		Code:  0,
+		AckID: ackID,
 	})
 }
 

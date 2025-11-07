@@ -45,7 +45,7 @@ INGEST_INGESTION_RATE_LIMIT_WINDOW=1m
 **Metrics:**
 - `telhawk_ingest_rate_limit_hits_total{token}` - Counter of rate limit violations per token
 
-### 2. HEC Acknowledgement Channel
+### 2. HEC Acknowledgement Channel ✅ IMPLEMENTED
 
 **Purpose:** Provide guaranteed delivery semantics compatible with Splunk HEC ack protocol.
 
@@ -54,6 +54,15 @@ INGEST_INGESTION_RATE_LIMIT_WINDOW=1m
 - **Per-event tracking:** Each event gets a unique ack ID
 - **Automatic cleanup:** Expired acks removed after TTL
 - **Status tracking:** Pending, Success, Failed
+- **Batch support:** Single ackId returned for batch requests
+
+**How it works:**
+1. When client sends `X-Splunk-Request-Channel` header, ACK is enabled for that request
+2. Service creates an ack ID immediately upon accepting the event
+3. Event is queued for processing (normalization + storage)
+4. If processing succeeds, ack is marked as complete
+5. If processing fails, ack is marked as failed
+6. Client can query ack status at any time within TTL
 
 **Configuration:**
 ```yaml
