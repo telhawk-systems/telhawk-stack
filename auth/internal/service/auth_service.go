@@ -386,3 +386,75 @@ func (s *AuthService) ResetPassword(userID string, newPassword, actorID, ipAddre
 	return nil
 }
 
+func (s *AuthService) CreateHECToken(userID, name, expiresIn, ipAddress, userAgent string) (*models.HECToken, error) {
+	token := uuid.New().String()
+
+	hecToken := &models.HECToken{
+		ID:        uuid.New().String(),
+		UserID:    userID,
+		Token:     token,
+		Name:      name,
+		Enabled:   true,
+		CreatedAt: time.Now(),
+	}
+
+	if err := s.repo.CreateHECToken(hecToken); err != nil {
+		s.auditLog.Log(
+			models.ActorTypeUser, userID, "",
+			models.ActionHECTokenCreate, "hec_token", hecToken.ID,
+			ipAddress, userAgent,
+			models.ResultFailure, err.Error(),
+			nil,
+		)
+		return nil, err
+	}
+
+	s.auditLog.Log(
+		models.ActorTypeUser, userID, "",
+		models.ActionHECTokenCreate, "hec_token", hecToken.ID,
+		ipAddress, userAgent,
+		models.ResultSuccess, "",
+		map[string]interface{}{
+			"token_name": name,
+		},
+	)
+
+	return hecToken, nil
+}
+
+func (s *AuthService) ListHECTokensByUser(userID string) ([]*models.HECToken, error) {
+	return s.repo.ListHECTokensByUser(userID)
+}
+
+func (s *AuthService) RevokeHECTokenByUser(token, userID, ipAddress, userAgent string) error {
+	hecToken, err := s.repo.GetHECToken(token)
+	if err != nil {
+		return err
+	}
+
+	if hecToken.UserID != userID {
+		return errors.New("unauthorized")
+	}
+
+	if err := s.repo.RevokeHECToken(token); err != nil {
+		s.auditLog.Log(
+			models.ActorTypeUser, userID, "",
+			models.ActionHECTokenRevoke, "hec_token", hecToken.ID,
+			ipAddress, userAgent,
+			models.ResultFailure, err.Error(),
+			nil,
+		)
+		return err
+	}
+
+	s.auditLog.Log(
+		models.ActorTypeUser, userID, "",
+		models.ActionHECTokenRevoke, "hec_token", hecToken.ID,
+		ipAddress, userAgent,
+		models.ResultSuccess, "",
+		nil,
+	)
+
+	return nil
+}
+

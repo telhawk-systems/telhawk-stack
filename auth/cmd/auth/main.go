@@ -92,6 +92,18 @@ func main() {
 	mux.HandleFunc("/api/v1/users/delete", handler.DeleteUser)
 	mux.HandleFunc("/api/v1/users/reset-password", handler.ResetPassword)
 	
+	// HEC token management endpoints
+	mux.HandleFunc("/api/v1/hec/tokens", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			handler.CreateHECToken(w, r)
+		} else if r.Method == http.MethodGet {
+			handler.ListHECTokens(w, r)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+	mux.HandleFunc("/api/v1/hec/tokens/revoke", handler.RevokeHECTokenHandler)
+	
 	mux.HandleFunc("/healthz", handler.HealthCheck)
 
 	// Create server with config values
