@@ -16,7 +16,7 @@ Splunk HTTP Event Collector (HEC) compatible ingestion service for TelHawk Stack
 ### Event Endpoint
 ```bash
 POST /services/collector/event
-Authorization: Splunk <hec-token>
+Authorization: Telhawk <hec-token>
 Content-Type: application/json
 
 {
@@ -36,7 +36,7 @@ Content-Type: application/json
 ### Raw Endpoint
 ```bash
 POST /services/collector/raw?source=firewall&sourcetype=cisco_asa
-Authorization: Splunk <hec-token>
+Authorization: Telhawk <hec-token>
 Content-Type: text/plain
 
 Apr 30 14:39:21 firewall %ASA-6-302013: Built inbound TCP connection
@@ -45,7 +45,7 @@ Apr 30 14:39:21 firewall %ASA-6-302013: Built inbound TCP connection
 ### Batch Ingestion (NDJSON)
 ```bash
 POST /services/collector/event
-Authorization: Splunk <hec-token>
+Authorization: Telhawk <hec-token>
 Content-Type: application/json
 
 {"event": {"message": "Event 1"}}
@@ -86,7 +86,7 @@ thawk token create --name production-ingester
 
 # Use token in requests
 curl -X POST http://localhost:8088/services/collector/event \
-  -H "Authorization: Splunk abc123..." \
+  -H "Authorization: Telhawk abc123..." \
   -d '{"event": {"message": "Test"}}'
 ```
 
@@ -168,7 +168,7 @@ go build -o ../bin/ingest ./cmd/ingest
 ### Send test event
 ```bash
 curl -X POST http://localhost:8088/services/collector/event \
-  -H "Authorization: Splunk test-token" \
+  -H "Authorization: Telhawk test-token" \
   -d '{
     "event": {
       "message": "Test security event",
@@ -183,7 +183,7 @@ curl -X POST http://localhost:8088/services/collector/event \
 ```bash
 echo "Security alert detected at 12:34:56" | \
   curl -X POST http://localhost:8088/services/collector/raw \
-    -H "Authorization: Splunk test-token" \
+    -H "Authorization: Telhawk test-token" \
     -H "Content-Type: text/plain" \
     --data-binary @-
 ```
@@ -191,7 +191,7 @@ echo "Security alert detected at 12:34:56" | \
 ### Batch ingestion
 ```bash
 curl -X POST http://localhost:8088/services/collector/event \
-  -H "Authorization: Splunk test-token" \
+  -H "Authorization: Telhawk test-token" \
   -d '{"event": {"msg": "Event 1"}}
 {"event": {"msg": "Event 2"}}
 {"event": {"msg": "Event 3"}}'

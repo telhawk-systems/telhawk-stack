@@ -84,7 +84,7 @@ Content-Type: application/json
 Data Source                   Ingest Service            Auth Service
      |                             |                           |
      |--- POST /services/collector ->|                          |
-     |    Authorization: Splunk token|                          |
+     |    Authorization: Telhawk token|                          |
      |    {event: "..."}            |                           |
      |                             |--- POST /api/v1/auth/hec-tokens/validate ->|
      |                             |    (token)                |

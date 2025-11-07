@@ -179,7 +179,7 @@ Alert on:
    # Extract and replay via HEC
    jq -r '.events[].envelope' failed_events.json | while read envelope; do
      curl -X POST http://localhost:8088/services/collector/event \
-       -H "Authorization: Splunk $TOKEN" \
+       -H "Authorization: Telhawk $TOKEN" \
        -d "$envelope"
    done
    ```
@@ -356,7 +356,7 @@ docker-compose stop core
 
 # Send event via ingest
 curl -X POST http://localhost:8088/services/collector/event \
-  -H "Authorization: Splunk $TOKEN" \
+  -H "Authorization: Telhawk $TOKEN" \
   -d '{"event": "test"}'
 
 # Restart core service (during retry window)
@@ -371,7 +371,7 @@ docker-compose start core
 # Send burst of events
 for i in {1..1000}; do
   curl -X POST http://localhost:8088/services/collector/event \
-    -H "Authorization: Splunk $TOKEN" \
+    -H "Authorization: Telhawk $TOKEN" \
     -d "{\"event\": \"test-$i\"}" &
 done
 

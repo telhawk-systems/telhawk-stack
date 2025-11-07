@@ -203,7 +203,7 @@ Created comprehensive documentation:
    ```bash
    # Test rate limiting under load
    hey -n 10000 -c 100 -m POST \
-     -H "Authorization: Splunk test-token" \
+     -H "Authorization: Telhawk test-token" \
      -d '{"event":"test"}' \
      http://localhost:8088/services/collector/event
    ```

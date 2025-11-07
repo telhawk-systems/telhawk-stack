@@ -48,7 +48,7 @@ docker-compose run --rm thawk token create --name test-token
 ```bash
 # Replace <TOKEN> with actual token from Step 1
 curl -X POST http://localhost:8088/services/collector/event \
-  -H "Authorization: Splunk <TOKEN>" \
+  -H "Authorization: Telhawk <TOKEN>" \
   -H "Content-Type: application/json" \
   -d '{
     "event": {
@@ -123,7 +123,7 @@ Expected: Should return 1+ hits with your test event.
 
 ```bash
 curl -X POST http://localhost:8088/services/collector/event \
-  -H "Authorization: Splunk <TOKEN>" \
+  -H "Authorization: Telhawk <TOKEN>" \
   -H "Content-Type: application/json" \
   -d '{"event": {"message": "Event 1"}, "source": "batch_test"}
 {"event": {"message": "Event 2"}, "source": "batch_test"}
@@ -193,7 +193,7 @@ Expected: Count should show 3 events.
 # Send 100 events rapidly
 for i in {1..100}; do
   curl -s -X POST http://localhost:8088/services/collector/event \
-    -H "Authorization: Splunk <TOKEN>" \
+    -H "Authorization: Telhawk <TOKEN>" \
     -H "Content-Type: application/json" \
     -d "{\"event\": {\"message\": \"Load test event $i\"}, \"source\": \"loadtest\"}"
 done
