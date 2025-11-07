@@ -69,7 +69,7 @@ func (s *IngestService) SetAckManager(manager *ack.Manager) {
 	s.ackManager = manager
 }
 
-func (s *IngestService) IngestEvent(event *models.HECEvent, sourceIP, hecTokenID string) error {
+func (s *IngestService) IngestEvent(event *models.HECEvent, sourceIP, hecTokenID string) (string, error) {
 	// Convert HEC event to internal event
 	internalEvent := &models.Event{
 		ID:         uuid.New().String(),
@@ -87,12 +87,19 @@ func (s *IngestService) IngestEvent(event *models.HECEvent, sourceIP, hecTokenID
 	// Serialize raw event
 	raw, err := json.Marshal(event)
 	if err != nil {
-		return err
+		return "", err
 	}
 	internalEvent.Raw = raw
 
 	// Sign event for nonrepudiation
 	internalEvent.Signature = s.signEvent(internalEvent)
+
+	// Create ack if manager is configured (before queueing)
+	var ackID string
+	if s.ackManager != nil {
+		ackID = s.ackManager.Create([]string{internalEvent.ID})
+		internalEvent.AckID = ackID
+	}
 
 	// Queue for processing
 	select {
@@ -101,15 +108,19 @@ func (s *IngestService) IngestEvent(event *models.HECEvent, sourceIP, hecTokenID
 		metrics.EventsTotal.WithLabelValues("event", "accepted").Inc()
 		metrics.EventBytesTotal.Add(float64(len(raw)))
 		metrics.QueueDepth.Set(float64(len(s.eventQueue)))
-		return nil
+		return ackID, nil
 	default:
+		// If queue is full, fail the ack
+		if s.ackManager != nil && ackID != "" {
+			s.ackManager.Fail(ackID)
+		}
 		s.updateStats(0, false)
 		metrics.EventsTotal.WithLabelValues("event", "queue_full").Inc()
-		return fmt.Errorf("event queue full")
+		return "", fmt.Errorf("event queue full")
 	}
 }
 
-func (s *IngestService) IngestRaw(data []byte, sourceIP, hecTokenID, source, sourceType, host string) error {
+func (s *IngestService) IngestRaw(data []byte, sourceIP, hecTokenID, source, sourceType, host string) (string, error) {
 	event := &models.Event{
 		ID:         uuid.New().String(),
 		Timestamp:  time.Now(),
@@ -125,17 +136,28 @@ func (s *IngestService) IngestRaw(data []byte, sourceIP, hecTokenID, source, sou
 
 	event.Signature = s.signEvent(event)
 
+	// Create ack if manager is configured (before queueing)
+	var ackID string
+	if s.ackManager != nil {
+		ackID = s.ackManager.Create([]string{event.ID})
+		event.AckID = ackID
+	}
+
 	select {
 	case s.eventQueue <- event:
 		s.updateStats(len(data), true)
 		metrics.EventsTotal.WithLabelValues("raw", "accepted").Inc()
 		metrics.EventBytesTotal.Add(float64(len(data)))
 		metrics.QueueDepth.Set(float64(len(s.eventQueue)))
-		return nil
+		return ackID, nil
 	default:
+		// If queue is full, fail the ack
+		if s.ackManager != nil && ackID != "" {
+			s.ackManager.Fail(ackID)
+		}
 		s.updateStats(0, false)
 		metrics.EventsTotal.WithLabelValues("raw", "queue_full").Inc()
-		return fmt.Errorf("event queue full")
+		return "", fmt.Errorf("event queue full")
 	}
 }
 
@@ -146,12 +168,6 @@ func (s *IngestService) processEvents() {
 			metrics.QueueDepth.Set(float64(len(s.eventQueue)))
 			log.Printf("Processing event: id=%s source=%s", event.ID, event.Source)
 			
-			// Create ack if manager is configured
-			var ackID string
-			if s.ackManager != nil {
-				ackID = s.ackManager.Create([]string{event.ID})
-			}
-			
 			// Normalize event via Core service
 			startTime := time.Now()
 			normalizedEvent, err := s.normalizeEvent(event)
@@ -160,8 +176,8 @@ func (s *IngestService) processEvents() {
 			if err != nil {
 				log.Printf("failed to normalize event %s: %v", event.ID, err)
 				metrics.NormalizationErrors.Inc()
-				if s.ackManager != nil && ackID != "" {
-					s.ackManager.Fail(ackID)
+				if s.ackManager != nil && event.AckID != "" {
+					s.ackManager.Fail(event.AckID)
 				}
 				continue
 			}
@@ -174,8 +190,8 @@ func (s *IngestService) processEvents() {
 			if err != nil {
 				log.Printf("failed to forward event %s to storage: %v", event.ID, err)
 				metrics.StorageErrors.Inc()
-				if s.ackManager != nil && ackID != "" {
-					s.ackManager.Fail(ackID)
+				if s.ackManager != nil && event.AckID != "" {
+					s.ackManager.Fail(event.AckID)
 				}
 				continue
 			}
@@ -183,8 +199,8 @@ func (s *IngestService) processEvents() {
 			log.Printf("event %s successfully stored", event.ID)
 			
 			// Complete ack if manager is configured
-			if s.ackManager != nil && ackID != "" {
-				s.ackManager.Complete(ackID)
+			if s.ackManager != nil && event.AckID != "" {
+				s.ackManager.Complete(event.AckID)
 			}
 
 		case <-s.stopChan:
