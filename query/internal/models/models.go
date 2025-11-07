@@ -125,7 +125,8 @@ type ErrorResponse struct {
 
 // HealthResponse is emitted for liveness probes.
 type HealthResponse struct {
-	Status        string `json:"status"`
-	Version       string `json:"version"`
-	UptimeSeconds int64  `json:"uptime_seconds"`
+	Status        string                 `json:"status"`
+	Version       string                 `json:"version"`
+	UptimeSeconds int64                  `json:"uptime_seconds"`
+	Scheduler     map[string]interface{} `json:"scheduler,omitempty"`
 }

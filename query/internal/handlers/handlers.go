@@ -13,12 +13,21 @@ import (
 
 // Handler wires HTTP routes to the query service.
 type Handler struct {
-	svc *service.QueryService
+	svc       *service.QueryService
+	scheduler interface {
+		GetMetrics() map[string]interface{}
+	}
 }
 
 // New creates a Handler instance.
 func New(svc *service.QueryService) *Handler {
-	return &Handler{svc: svc}
+	return &Handler{svc: svc, scheduler: nil}
+}
+
+// WithScheduler sets the scheduler for metrics reporting.
+func (h *Handler) WithScheduler(scheduler interface{ GetMetrics() map[string]interface{} }) *Handler {
+	h.scheduler = scheduler
+	return h
 }
 
 // Search handles POST /api/v1/search requests.
@@ -189,7 +198,11 @@ func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
 		h.methodNotAllowed(w, http.MethodGet)
 		return
 	}
-	h.writeJSON(w, http.StatusOK, h.svc.Health(r.Context()))
+	health := h.svc.Health(r.Context())
+	if h.scheduler != nil {
+		health.Scheduler = h.scheduler.GetMetrics()
+	}
+	h.writeJSON(w, http.StatusOK, health)
 }
 
 func (h *Handler) writeJSON(w http.ResponseWriter, status int, data interface{}) {

@@ -13,6 +13,7 @@ import (
 type Config struct {
 	Server      ServerConfig      `yaml:"server"`
 	OpenSearch  OpenSearchConfig  `yaml:"opensearch"`
+	Alerting    AlertingConfig    `yaml:"alerting"`
 }
 
 // OpenSearchConfig captures OpenSearch connection settings.
@@ -30,6 +31,15 @@ type ServerConfig struct {
 	ReadTimeoutSeconds  int `yaml:"read_timeout_seconds"`
 	WriteTimeoutSeconds int `yaml:"write_timeout_seconds"`
 	IdleTimeoutSeconds  int `yaml:"idle_timeout_seconds"`
+}
+
+// AlertingConfig captures alert scheduler and notification settings.
+type AlertingConfig struct {
+	Enabled              bool   `yaml:"enabled"`
+	CheckIntervalSeconds int    `yaml:"check_interval_seconds"`
+	WebhookURL           string `yaml:"webhook_url"`
+	SlackWebhookURL      string `yaml:"slack_webhook_url"`
+	NotificationTimeout  int    `yaml:"notification_timeout_seconds"`
 }
 
 // ReadTimeout returns the configured read timeout as a duration.
@@ -62,6 +72,11 @@ func Default() Config {
 			Password: "admin",
 			Insecure: true,
 			Index:    "ocsf-events",
+		},
+		Alerting: AlertingConfig{
+			Enabled:              false,
+			CheckIntervalSeconds: 30,
+			NotificationTimeout:  10,
 		},
 	}
 }
@@ -124,5 +139,24 @@ func applyEnvOverrides(cfg *Config) {
 	}
 	if v := os.Getenv("QUERY_OPENSEARCH_INDEX"); v != "" {
 		cfg.OpenSearch.Index = v
+	}
+	if v := os.Getenv("QUERY_ALERTING_ENABLED"); v != "" {
+		cfg.Alerting.Enabled = v == "true"
+	}
+	if v := os.Getenv("QUERY_ALERTING_CHECK_INTERVAL_SECONDS"); v != "" {
+		if parsed, err := strconv.Atoi(v); err == nil {
+			cfg.Alerting.CheckIntervalSeconds = parsed
+		}
+	}
+	if v := os.Getenv("QUERY_ALERTING_WEBHOOK_URL"); v != "" {
+		cfg.Alerting.WebhookURL = v
+	}
+	if v := os.Getenv("QUERY_ALERTING_SLACK_WEBHOOK_URL"); v != "" {
+		cfg.Alerting.SlackWebhookURL = v
+	}
+	if v := os.Getenv("QUERY_ALERTING_NOTIFICATION_TIMEOUT_SECONDS"); v != "" {
+		if parsed, err := strconv.Atoi(v); err == nil {
+			cfg.Alerting.NotificationTimeout = parsed
+		}
 	}
 }

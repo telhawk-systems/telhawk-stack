@@ -13,3 +13,10 @@ opensearch:
   password: "admin"
   insecure: true
   index: "ocsf-events"
+
+alerting:
+  enabled: false  # Enable alert scheduling
+  check_interval_seconds: 30
+  webhook_url: ""  # Optional: Generic webhook URL
+  slack_webhook_url: ""  # Optional: Slack webhook URL
+  notification_timeout_seconds: 10
