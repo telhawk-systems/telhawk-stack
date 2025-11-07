@@ -37,8 +37,11 @@ func main() {
 		listenAddr = *addr
 	}
 
-	// Initialize all generated normalizers (77 total)
+	// Initialize all normalizers with OCSF passthrough first
 	registry := normalizer.NewRegistry(
+		// OCSF Passthrough (for events already in OCSF format)
+		normalizer.OCSFPassthroughNormalizer{},
+		
 		// Application (8)
 		generated.NewApiActivityNormalizer(),
 		generated.NewApplicationErrorNormalizer(),
