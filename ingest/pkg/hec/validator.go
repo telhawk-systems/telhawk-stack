@@ -7,6 +7,7 @@ import (
 // Token extracts HEC token from Authorization header
 // Supports formats:
 // - "Splunk <token>"
+// - "Telhawk <token>"
 // - "Bearer <token>"
 func ExtractToken(authHeader string) string {
 	if authHeader == "" {
@@ -18,9 +19,9 @@ func ExtractToken(authHeader string) string {
 		return ""
 	}
 
-	// Accept both "Splunk" and "Bearer" prefixes
+	// Accept "Splunk", "Telhawk", and "Bearer" prefixes
 	scheme := strings.ToLower(parts[0])
-	if scheme == "splunk" || scheme == "bearer" {
+	if scheme == "splunk" || scheme == "telhawk" || scheme == "bearer" {
 		return parts[1]
 	}
 
