@@ -80,8 +80,28 @@ func (m *IndexManager) createIndexTemplate(ctx context.Context) error {
 
 func (m *IndexManager) getOCSFMappings() map[string]interface{} {
 	return map[string]interface{}{
+		"dynamic": true,
+		"dynamic_templates": []map[string]interface{}{
+			{
+				"strings_as_keywords": map[string]interface{}{
+					"match_mapping_type": "string",
+					"mapping": map[string]interface{}{
+						"type": "text",
+						"fields": map[string]interface{}{
+							"keyword": map[string]interface{}{
+								"type":         "keyword",
+								"ignore_above": 256,
+							},
+						},
+					},
+				},
+			},
+		},
 		"properties": map[string]interface{}{
 			"time": map[string]interface{}{
+				"type": "date",
+			},
+			"@timestamp": map[string]interface{}{
 				"type": "date",
 			},
 			"metadata": map[string]interface{}{
@@ -95,6 +115,9 @@ func (m *IndexManager) getOCSFMappings() map[string]interface{} {
 								"type": "keyword",
 							},
 							"vendor_name": map[string]interface{}{
+								"type": "keyword",
+							},
+							"version": map[string]interface{}{
 								"type": "keyword",
 							},
 						},
@@ -140,8 +163,190 @@ func (m *IndexManager) getOCSFMappings() map[string]interface{} {
 			"status_id": map[string]interface{}{
 				"type": "integer",
 			},
+			"status_detail": map[string]interface{}{
+				"type": "text",
+			},
 			"message": map[string]interface{}{
 				"type": "text",
+			},
+			// User object (used in auth, process, file events)
+			"user": map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"name": map[string]interface{}{
+						"type": "keyword",
+					},
+					"uid": map[string]interface{}{
+						"type": "keyword",
+					},
+					"email": map[string]interface{}{
+						"type": "keyword",
+					},
+					"domain": map[string]interface{}{
+						"type": "keyword",
+					},
+				},
+			},
+			// Actor object (used in process, file events)
+			"actor": map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"user": map[string]interface{}{
+						"type": "object",
+					},
+					"process": map[string]interface{}{
+						"type": "object",
+					},
+				},
+			},
+			// Process object
+			"process": map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"pid": map[string]interface{}{
+						"type": "integer",
+					},
+					"name": map[string]interface{}{
+						"type": "keyword",
+					},
+					"cmd_line": map[string]interface{}{
+						"type": "text",
+					},
+					"uid": map[string]interface{}{
+						"type": "keyword",
+					},
+					"parent_process": map[string]interface{}{
+						"type": "object",
+					},
+				},
+			},
+			// File object
+			"file": map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"path": map[string]interface{}{
+						"type": "keyword",
+					},
+					"name": map[string]interface{}{
+						"type": "keyword",
+					},
+					"type": map[string]interface{}{
+						"type": "keyword",
+					},
+					"size": map[string]interface{}{
+						"type": "long",
+					},
+					"modified_time": map[string]interface{}{
+						"type": "date",
+						"format": "epoch_second||strict_date_optional_time||yyyy-MM-dd HH:mm:ss",
+					},
+				},
+			},
+			// Endpoint objects (for network, auth)
+			"src_endpoint": map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"ip": map[string]interface{}{
+						"type": "ip",
+					},
+					"port": map[string]interface{}{
+						"type": "integer",
+					},
+					"hostname": map[string]interface{}{
+						"type": "keyword",
+					},
+				},
+			},
+			"dst_endpoint": map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"ip": map[string]interface{}{
+						"type": "ip",
+					},
+					"port": map[string]interface{}{
+						"type": "integer",
+					},
+					"hostname": map[string]interface{}{
+						"type": "keyword",
+					},
+				},
+			},
+			// Network connection info
+			"connection_info": map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"protocol_name": map[string]interface{}{
+						"type": "keyword",
+					},
+					"direction": map[string]interface{}{
+						"type": "keyword",
+					},
+					"boundary": map[string]interface{}{
+						"type": "keyword",
+					},
+				},
+			},
+			"traffic": map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"bytes": map[string]interface{}{
+						"type": "long",
+					},
+					"packets": map[string]interface{}{
+						"type": "long",
+					},
+				},
+			},
+			// DNS objects
+			"query": map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"hostname": map[string]interface{}{
+						"type": "keyword",
+					},
+					"type": map[string]interface{}{
+						"type": "keyword",
+					},
+					"class": map[string]interface{}{
+						"type": "keyword",
+					},
+				},
+			},
+			"answers": map[string]interface{}{
+				"type": "nested",
+			},
+			"response_code": map[string]interface{}{
+				"type": "keyword",
+			},
+			// HTTP objects
+			"http_request": map[string]interface{}{
+				"type": "object",
+			},
+			"http_response": map[string]interface{}{
+				"type": "object",
+			},
+			// Detection objects
+			"finding": map[string]interface{}{
+				"type": "object",
+			},
+			"attacks": map[string]interface{}{
+				"type": "nested",
+			},
+			"resources": map[string]interface{}{
+				"type": "nested",
+			},
+			// Auth protocol
+			"auth_protocol": map[string]interface{}{
+				"type": "keyword",
+			},
+			// Properties (source_type, etc)
+			"properties": map[string]interface{}{
+				"type": "object",
+			},
+			// Raw data
+			"raw": map[string]interface{}{
+				"type":    "object",
+				"enabled": false,
 			},
 			"raw_data": map[string]interface{}{
 				"type":  "text",
