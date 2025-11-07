@@ -1,6 +1,6 @@
 # TelHawk Stack TODO
 
-**Last Updated:** 2025-11-06
+**Last Updated:** 2025-11-07
 
 ## Recent Accomplishments (Nov 6, 2025)
 - ✅ Fixed OpenSearch integration (removed duplicate write indices)
@@ -99,7 +99,14 @@
   * Combined queries with both results and aggregations
   * Total matches tracking in responses
   * Documentation: docs/QUERY_PAGINATION_AGGREGATIONS.md
-- [ ] Implement alert scheduling and notification delivery
+- [x] Implement alert scheduling and notification delivery ✅
+  * Alert scheduler with configurable check intervals
+  * Multiple notification channels: webhook, Slack, log
+  * Alert execution with time-based lookback windows
+  * Alert state tracking (last triggered time)
+  * Metrics for alert executions, triggers, and notifications
+  * Graceful shutdown with timer cleanup
+  * Documentation: docs/ALERT_SCHEDULING.md
 - [ ] Connect dashboards to saved query definitions
 
 ## Storage Service
@@ -122,7 +129,25 @@
   * Tailwind CSS v3 for modern, responsive styling
   * Query performance metrics display
   * Time-based event filtering integrated with query API
-- [ ] Add dashboard visualization components
+- [x] Add dashboard visualization components ✅
+  * DashboardOverview with time range selector and auto-refresh
+  * MetricCard components for key statistics (total events, critical events, unique users/IPs)
+  * SeverityChart (pie chart) for event distribution by severity
+  * EventClassChart (bar chart) for top event classes
+  * TimelineChart (line chart) for events over time
+  * Integration with OpenSearch aggregation API
+  * Tab navigation between Overview and Search
+  * Documentation: docs/DASHBOARD_VISUALIZATION.md
+- [ ] Create event type-specific views for major OCSF classes
+  * Authentication events (3002): Login attempts, user context, session details
+  * Network Activity (4001): Source/dest IPs, ports, protocols, connection status
+  * Process Activity (1007): Command lines, parent/child processes, user context
+  * File Activity (4006): File paths, operations, hashes, permissions
+  * DNS Activity (4003): Query/response, domain names, record types
+  * HTTP Activity (4002): URLs, methods, status codes, user agents
+  * Detection Finding (2004): Rule names, severity, tactics/techniques
+  * Custom table columns and detail views per event type
+  * Type-aware filtering and search
 - [ ] Establish testing strategy for UI rendering validation
 
 ## Authentication & Authorization
