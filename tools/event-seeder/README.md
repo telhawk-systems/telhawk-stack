@@ -92,13 +92,25 @@ Point to a different HEC endpoint:
 
 Available event types for the `-types` flag:
 
-- `auth` - Authentication events
-- `network` - Network activity
-- `process` - Process activity
-- `file` - File operations
-- `dns` - DNS queries
-- `http` - HTTP requests
-- `detection` - Security detections
+- `auth` - Authentication events (login, logout, MFA, password change)
+  - Logins: 85% success rate with realistic failure reasons
+  - Logout/MFA/Password changes: 98% success rate (rare failures only)
+- `network` - Network activity (TCP/UDP/ICMP connections, firewall events)
+- `process` - Process activity (launches with command lines and parent processes)
+- `file` - File operations (create, read, update, delete, rename)
+- `dns` - DNS queries (A, AAAA, CNAME, MX records with responses)
+- `http` - HTTP requests (GET/POST/PUT/DELETE with realistic status codes)
+- `detection` - Security detections (MITRE ATT&CK tactics, medium-high severity)
+
+### Event Characteristics
+
+All generated events include:
+- Realistic fake data using gofakeit library
+- Proper OCSF schema compliance (class_uid, activity_id, severity_id)
+- Nested objects (user, actor, endpoints, process hierarchy)
+- Appropriate severity levels based on event type and outcome
+- Metadata identifying source as "Event Seeder"
+- Configurable timestamps (real-time or historical with time-spread)
 
 ## Examples
 
