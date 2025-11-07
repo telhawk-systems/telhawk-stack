@@ -2,10 +2,12 @@ package client
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -117,23 +119,121 @@ func (c *AuthClient) ValidateToken(token string) (*ValidateResponse, error) {
 }
 
 func (c *AuthClient) CreateHECToken(accessToken, name, expires string) (*HECToken, error) {
-	// Placeholder - will be implemented when HEC token endpoint is added to auth service
-	return &HECToken{
-		Token:     "mock-hec-token-" + name,
-		Name:      name,
-		Enabled:   true,
-		CreatedAt: time.Now(),
-	}, nil
+	reqBody := map[string]string{
+		"name": name,
+	}
+	if expires != "" {
+		reqBody["expires_in"] = expires
+	}
+
+	body, err := json.Marshal(reqBody)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", c.baseURL+"/api/v1/hec/tokens", bytes.NewBuffer(body))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-User-ID", extractUserIDFromToken(accessToken))
+
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusCreated {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("failed to create token: %s", string(body))
+	}
+
+	var token HECToken
+	if err := json.NewDecoder(resp.Body).Decode(&token); err != nil {
+		return nil, err
+	}
+
+	return &token, nil
 }
 
 func (c *AuthClient) ListHECTokens(accessToken string) ([]*HECToken, error) {
-	// Placeholder - will be implemented when HEC token endpoint is added to auth service
-	return []*HECToken{}, nil
+	req, err := http.NewRequest("GET", c.baseURL+"/api/v1/hec/tokens", nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+	req.Header.Set("X-User-ID", extractUserIDFromToken(accessToken))
+
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to list tokens: status %d", resp.StatusCode)
+	}
+
+	var tokens []*HECToken
+	if err := json.NewDecoder(resp.Body).Decode(&tokens); err != nil {
+		return nil, err
+	}
+
+	return tokens, nil
 }
 
 func (c *AuthClient) RevokeHECToken(accessToken, token string) error {
-	// Placeholder - will be implemented when HEC token endpoint is added to auth service
+	reqBody := map[string]string{"token": token}
+	body, err := json.Marshal(reqBody)
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequest("POST", c.baseURL+"/api/v1/hec/tokens/revoke", bytes.NewBuffer(body))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-User-ID", extractUserIDFromToken(accessToken))
+
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusNoContent {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("failed to revoke token: %s", string(body))
+	}
+
 	return nil
+}
+
+func extractUserIDFromToken(token string) string {
+	parts := strings.Split(token, ".")
+	if len(parts) != 3 {
+		return ""
+	}
+
+	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		return ""
+	}
+
+	var claims map[string]interface{}
+	if err := json.Unmarshal(payload, &claims); err != nil {
+		return ""
+	}
+
+	if userID, ok := claims["user_id"].(string); ok {
+		return userID
+	}
+
+	return ""
 }
 
 func (c *AuthClient) ListUsers(accessToken string) ([]*User, error) {
