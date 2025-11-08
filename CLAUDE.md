@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Important Instructions
+
+**Git Commits:** When creating git commits, DO NOT add the "Co-Authored-By: Claude" signature or the "Generated with Claude Code" footer. Keep commit messages clean and professional without AI attribution.
+
 ## Project Overview
 
 TelHawk Stack is a lightweight, OCSF-compliant SIEM (Security Information and Event Management) platform built in Go. It provides Splunk-compatible event collection with OpenSearch as the backend storage engine. The system is designed as a microservices architecture where events flow through multiple services: ingestion → normalization → storage → query/web.
