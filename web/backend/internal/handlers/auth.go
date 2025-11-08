@@ -30,7 +30,11 @@ type LoginRequest struct {
 
 func (h *AuthHandler) GetCSRFToken(w http.ResponseWriter, r *http.Request) {
 	token := csrf.Token(r)
-	log.Printf("Generated CSRF token for request from %s: %s...", r.RemoteAddr, token[:20])
+	tokenPreview := token
+	if len(tokenPreview) > 20 {
+		tokenPreview = tokenPreview[:20] + "..."
+	}
+	log.Printf("Generated CSRF token for request from %s: %s", r.RemoteAddr, tokenPreview)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"csrf_token": token,
@@ -38,7 +42,11 @@ func (h *AuthHandler) GetCSRFToken(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
-	log.Printf("Login attempt from %s with CSRF header: %s...", r.RemoteAddr, r.Header.Get("X-CSRF-Token")[:20])
+	csrfToken := r.Header.Get("X-CSRF-Token")
+	if len(csrfToken) > 20 {
+		csrfToken = csrfToken[:20] + "..."
+	}
+	log.Printf("Login attempt from %s with CSRF header: %s", r.RemoteAddr, csrfToken)
 	
 	var req LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {

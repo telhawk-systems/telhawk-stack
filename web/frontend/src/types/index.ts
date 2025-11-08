@@ -36,3 +36,13 @@ export interface SearchResult {
     _source: Record<string, any>;
   }>;
 }
+
+export interface HECToken {
+  id: string;
+  token: string;
+  name: string;
+  user_id: string;
+  enabled: boolean;
+  created_at: string;
+  expires_at?: string;
+}

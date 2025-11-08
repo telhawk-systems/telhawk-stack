@@ -51,16 +51,28 @@ export function Layout({ children }: LayoutProps) {
                   Search
                 </Link>
                 {isAdmin && (
-                  <Link
-                    to="/users"
-                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                      location.pathname === '/users'
-                        ? 'bg-blue-600 text-white shadow-md'
-                        : 'text-gray-300 hover:bg-gray-700 hover:text-white'
-                    }`}
-                  >
-                    Users
-                  </Link>
+                  <>
+                    <Link
+                      to="/users"
+                      className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                        location.pathname === '/users'
+                          ? 'bg-blue-600 text-white shadow-md'
+                          : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                      }`}
+                    >
+                      Users
+                    </Link>
+                    <Link
+                      to="/tokens"
+                      className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                        location.pathname === '/tokens'
+                          ? 'bg-blue-600 text-white shadow-md'
+                          : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                      }`}
+                    >
+                      Tokens
+                    </Link>
+                  </>
                 )}
               </nav>
 

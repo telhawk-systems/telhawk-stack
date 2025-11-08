@@ -81,6 +81,57 @@ migrate -database "postgres://telhawk:password@localhost:5432/telhawk_auth?sslmo
 migrate -database "postgres://telhawk:password@localhost:5432/telhawk_auth?sslmode=disable" -path migrations down 1
 ```
 
+### Generating Test Data (Event Seeder)
+
+The event seeder generates realistic OCSF events for development and testing:
+
+```bash
+# 1. Create a HEC token (via web UI at http://localhost:3000/tokens or via API):
+curl -X POST http://localhost:3000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"admin123"}' \
+  -c /tmp/cookies.txt
+
+curl -b /tmp/cookies.txt -X POST http://localhost:3000/api/auth/api/v1/hec/tokens \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Event Seeder"}'
+
+# Note the token value from the response
+
+# 2. Build and run the seeder:
+cd tools/event-seeder
+go build
+./event-seeder -token YOUR_HEC_TOKEN -count 1000 -time-spread 1h -interval 0
+
+# Common seeder use cases:
+
+# Quick development dataset (100 events):
+./event-seeder -token YOUR_TOKEN
+
+# Dashboard population (1000 events over last hour):
+./event-seeder -token YOUR_TOKEN -count 1000 -time-spread 1h -interval 0
+
+# Load testing (50k events, fast as possible):
+./event-seeder -token YOUR_TOKEN -count 50000 -interval 0 -batch-size 100
+
+# Specific event types only:
+./event-seeder -token YOUR_TOKEN -types auth,detection -count 500
+
+# Historical data (week of events):
+./event-seeder -token YOUR_TOKEN -count 10000 -time-spread 168h -interval 0
+```
+
+**Event Types Generated:**
+- Authentication (3002): Login attempts, MFA, logout, password changes
+- Network Activity (4001): TCP/UDP/ICMP connections, firewall events
+- Process Activity (1007): Process launches with command lines
+- File Activity (4006): File operations (create, read, update, delete)
+- DNS Activity (4003): DNS queries with various record types
+- HTTP Activity (4002): HTTP requests with realistic status codes
+- Detection Finding (2004): Security alerts with MITRE ATT&CK tactics
+
+See `tools/event-seeder/README.md` for full documentation.
+
 ## Architecture
 
 ### Service Communication Flow
