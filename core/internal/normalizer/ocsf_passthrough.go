@@ -31,6 +31,13 @@ func (OCSFPassthroughNormalizer) Normalize(ctx context.Context, envelope *model.
 	var ocsfData map[string]interface{}
 	if eventData, ok := payload["event"].(map[string]interface{}); ok {
 		ocsfData = eventData
+		
+		// If time is missing in the event but present in the wrapper, copy it
+		if _, hasTime := ocsfData["time"]; !hasTime {
+			if wrapperTime, ok := payload["time"].(float64); ok {
+				ocsfData["time"] = wrapperTime
+			}
+		}
 	} else {
 		ocsfData = payload
 	}
@@ -69,6 +76,28 @@ func (OCSFPassthroughNormalizer) Normalize(ctx context.Context, envelope *model.
 	}
 	event.Properties["source"] = envelope.Source
 	event.Properties["source_type"] = envelope.SourceType
+
+	// Populate human-readable fields from UIDs
+	if event.Category == "" && event.CategoryUID != 0 {
+		event.Category = ocsf.CategoryName(event.CategoryUID)
+	}
+	if event.Class == "" && event.ClassUID != 0 {
+		event.Class = ocsf.ClassName(event.ClassUID)
+	}
+	if event.Activity == "" && event.ClassUID != 0 && event.ActivityID != 0 {
+		event.Activity = ocsf.ActivityName(event.ClassUID, event.ActivityID)
+	}
+	if event.Severity == "" && event.SeverityID != 0 {
+		event.Severity = ocsf.SeverityName(event.SeverityID)
+	}
+	if event.Status == "" && event.StatusID != 0 {
+		event.Status = ocsf.StatusName(event.StatusID)
+	}
+
+	// Ensure metadata.version is set (OCSF schema version)
+	if event.Metadata.Version == "" {
+		event.Metadata.Version = "1.1.0"
+	}
 
 	return &event, nil
 }
