@@ -50,13 +50,10 @@ export function DashboardOverview() {
 
   const loadMetrics = async () => {
     if (!user) return;
-    
+
     try {
       setError('');
-      const data = await apiClient.getDashboardMetrics({
-        start: timeRange.start,
-        end: timeRange.end
-      });
+      const data = await apiClient.getDashboardMetrics();
       setMetrics(data);
     } catch (err) {
       setError('Failed to load dashboard metrics');

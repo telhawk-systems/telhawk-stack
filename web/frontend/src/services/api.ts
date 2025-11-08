@@ -1,4 +1,4 @@
-import { User, UserDetails, LoginRequest, LoginResponse } from '../types';
+import { User, UserDetails, LoginRequest, LoginResponse, HECToken } from '../types';
 
 class ApiClient {
   private baseUrl = '/api';
@@ -103,53 +103,11 @@ class ApiClient {
     return response.json();
   }
 
-  async getDashboardMetrics(timeRange?: { start: string; end: string }): Promise<any> {
-    // Get CSRF token if not already set
-    if (!this.csrfToken) {
-      await this.getCSRFToken();
-    }
-
-    let query = '*';
-    if (timeRange) {
-      query = `time:[${timeRange.start} TO ${timeRange.end}]`;
-    }
-
-    const response = await fetch(`${this.baseUrl}/query/api/v1/search`, {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        'X-CSRF-Token': this.csrfToken!,
-      },
+  async getDashboardMetrics(): Promise<any> {
+    // Cached endpoint - no CSRF token needed for GET
+    const response = await fetch(`${this.baseUrl}/dashboard/metrics`, {
+      method: 'GET',
       credentials: 'include',
-      body: JSON.stringify({
-        query,
-        limit: 0,
-        aggregations: {
-          severity_count: {
-            type: 'terms',
-            field: 'severity',
-            size: 10
-          },
-          events_by_class: {
-            type: 'terms',
-            field: 'class_name',
-            size: 10
-          },
-          timeline: {
-            type: 'date_histogram',
-            field: 'time',
-            opts: { interval: '1h' }
-          },
-          unique_users: {
-            type: 'cardinality',
-            field: 'actor.user.name'
-          },
-          unique_ips: {
-            type: 'cardinality',
-            field: 'src_endpoint.ip'
-          }
-        }
-      }),
     });
 
     if (!response.ok) {
@@ -234,7 +192,7 @@ class ApiClient {
 
     const response = await fetch(`${this.baseUrl}/auth/api/v1/users/reset-password?id=${id}`, {
       method: 'POST',
-      headers: { 
+      headers: {
         'Content-Type': 'application/json',
         'X-CSRF-Token': this.csrfToken!,
       },
@@ -244,6 +202,84 @@ class ApiClient {
 
     if (!response.ok) {
       throw new Error('Failed to reset password');
+    }
+  }
+
+  async createUser(username: string, email: string, password: string, roles: string[]): Promise<UserDetails> {
+    // Get CSRF token if not already set
+    if (!this.csrfToken) {
+      await this.getCSRFToken();
+    }
+
+    const response = await fetch(`${this.baseUrl}/auth/api/v1/auth/register`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': this.csrfToken!,
+      },
+      credentials: 'include',
+      body: JSON.stringify({ username, email, password, roles }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to create user');
+    }
+
+    return response.json();
+  }
+
+  // HEC Token Management API
+  async createHECToken(name: string): Promise<HECToken> {
+    // Get CSRF token if not already set
+    if (!this.csrfToken) {
+      await this.getCSRFToken();
+    }
+
+    const response = await fetch(`${this.baseUrl}/auth/api/v1/hec/tokens`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': this.csrfToken!,
+      },
+      credentials: 'include',
+      body: JSON.stringify({ name }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to create HEC token');
+    }
+
+    return response.json();
+  }
+
+  async listHECTokens(): Promise<HECToken[]> {
+    const response = await fetch(`${this.baseUrl}/auth/api/v1/hec/tokens`, {
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to list HEC tokens');
+    }
+
+    return response.json();
+  }
+
+  async revokeHECToken(id: string): Promise<void> {
+    // Get CSRF token if not already set
+    if (!this.csrfToken) {
+      await this.getCSRFToken();
+    }
+
+    const response = await fetch(`${this.baseUrl}/auth/api/v1/hec/tokens/${id}/revoke`, {
+      method: 'DELETE',
+      headers: {
+        'X-CSRF-Token': this.csrfToken!,
+      },
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to revoke HEC token');
     }
   }
 }

@@ -312,6 +312,7 @@ services:
       - CORE_TLS_SKIP_VERIFY=${CORE_TLS_SKIP_VERIFY:-false}
       - COOKIE_DOMAIN=
       - COOKIE_SECURE=false
+      - DASHBOARD_CACHE_SECONDS=${DASHBOARD_CACHE_SECONDS:-300}
       - DEV_MODE=false
     volumes:
       - telhawk-certs:/certs:ro

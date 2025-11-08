@@ -47,7 +47,7 @@ export function SearchConsole({ onSearch, loading }: SearchConsoleProps) {
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label htmlFor="query" className="block text-sm font-medium text-gray-700 mb-2">
-            Search Query (SPL-like syntax)
+            Search Query (OpenSearch query_string syntax)
           </label>
           <input
             id="query"
