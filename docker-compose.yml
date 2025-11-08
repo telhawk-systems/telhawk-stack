@@ -73,7 +73,6 @@ services:
       - POSTGRES_PASSWORD=${AUTH_DB_PASSWORD:-telhawk-auth-dev}
     volumes:
       - auth-db-data:/var/lib/postgresql/data
-      - ./auth/migrations:/docker-entrypoint-initdb.d
     networks:
       - telhawk-db
       - telhawk
