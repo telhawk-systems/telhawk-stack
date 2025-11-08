@@ -166,8 +166,9 @@ func generateAuthEvent() map[string]interface{} {
 	}
 	
 	event := map[string]interface{}{
-		"class_uid":  3002,
-		"class_name": "Authentication",
+		"class_uid":    3002,
+		"class_name":   "Authentication",
+		"category_uid": 3,
 		"activity_id": func() int {
 			if action == "login" {
 				return 1
@@ -232,6 +233,7 @@ func generateNetworkEvent() map[string]interface{} {
 	return map[string]interface{}{
 		"class_uid":     4001,
 		"class_name":    "Network Activity",
+		"category_uid":  4,
 		"activity_id":   action,
 		"activity_name": actionNames[action],
 		"severity_id":   1,
@@ -274,6 +276,7 @@ func generateProcessEvent() map[string]interface{} {
 	return map[string]interface{}{
 		"class_uid":     1007,
 		"class_name":    "Process Activity",
+		"category_uid":  1,
 		"activity_id":   1, // Launch
 		"activity_name": "Launch",
 		"severity_id":   1,
@@ -318,6 +321,7 @@ func generateFileEvent() map[string]interface{} {
 	return map[string]interface{}{
 		"class_uid":     4006,
 		"class_name":    "File Activity",
+		"category_uid":  4,
 		"activity_id":   action,
 		"activity_name": actionNames[action],
 		"severity_id":   1,
@@ -358,6 +362,7 @@ func generateDNSEvent() map[string]interface{} {
 	return map[string]interface{}{
 		"class_uid":     4003,
 		"class_name":    "DNS Activity",
+		"category_uid":  4,
 		"activity_id":   1, // Query
 		"activity_name": "Query",
 		"severity_id":   1,
@@ -404,6 +409,7 @@ func generateHTTPEvent() map[string]interface{} {
 	return map[string]interface{}{
 		"class_uid":     4002,
 		"class_name":    "HTTP Activity",
+		"category_uid":  4,
 		"activity_id":   1,
 		"activity_name": "HTTP Request",
 		"severity_id": func() int {
@@ -459,6 +465,7 @@ func generateDetectionEvent() map[string]interface{} {
 	return map[string]interface{}{
 		"class_uid":     2004,
 		"class_name":    "Detection Finding",
+		"category_uid":  2,
 		"activity_id":   1, // Create
 		"activity_name": "Create",
 		"severity_id":   finding.severity,
