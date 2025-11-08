@@ -75,7 +75,7 @@ class ApiClient {
     return response.json();
   }
 
-  async search(query: string, size = 50, aggregations?: any): Promise<any> {
+  async search(query: string, size = 50, aggregations?: any, searchAfter?: any[]): Promise<any> {
     // Get CSRF token if not already set
     if (!this.csrfToken) {
       await this.getCSRFToken();
@@ -83,7 +83,7 @@ class ApiClient {
 
     const response = await fetch(`${this.baseUrl}/query/api/v1/search`, {
       method: 'POST',
-      headers: { 
+      headers: {
         'Content-Type': 'application/json',
         'X-CSRF-Token': this.csrfToken!,
       },
@@ -92,7 +92,8 @@ class ApiClient {
         query,
         limit: size,
         sort: { field: 'time', order: 'desc' },
-        ...(aggregations && { aggregations })
+        ...(aggregations && { aggregations }),
+        ...(searchAfter && { search_after: searchAfter })
       }),
     });
 
