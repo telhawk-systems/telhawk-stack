@@ -11,6 +11,7 @@ import (
 	"github.com/rs/cors"
 	"github.com/telhawk/web/internal/auth"
 	"github.com/telhawk/web/internal/handlers"
+	"github.com/telhawk/web/internal/middleware"
 	"github.com/telhawk/web/internal/proxy"
 )
 
@@ -67,6 +68,7 @@ func main() {
 
 	// Auth endpoints
 	authHandler := handlers.NewAuthHandler(authClient, cfg.CookieDomain, cfg.CookieSecure)
+	mux.HandleFunc("GET /api/auth/csrf-token", authHandler.GetCSRFToken)
 	mux.HandleFunc("POST /api/auth/login", authHandler.Login)
 	mux.HandleFunc("POST /api/auth/logout", authHandler.Logout)
 	mux.Handle("GET /api/auth/me", authMiddleware.Protect(http.HandlerFunc(authHandler.Me)))
@@ -101,13 +103,22 @@ func main() {
 	corsHandler := cors.New(cors.Options{
 		AllowedOrigins:   []string{"http://localhost:5173"}, // Vite dev server
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowedHeaders:   []string{"Content-Type", "Authorization"},
+		AllowedHeaders:   []string{"Content-Type", "Authorization", "X-CSRF-Token"},
 		AllowCredentials: true,
 		MaxAge:           300,
 		Debug:            cfg.DevMode,
 	})
 
+	// Apply security middleware
+	securityConfig := middleware.SecurityConfig{
+		CookieSecure: cfg.CookieSecure,
+	}
+	
+	// Chain middleware: CORS -> Security Headers -> CSRF -> Routes
 	handler := corsHandler.Handler(mux)
+	handler = middleware.SecurityHeaders(securityConfig)(handler)
+	csrfMiddleware := middleware.CSRF(cfg.CookieSecure)
+	handler = csrfMiddleware(handler)
 
 	server := &http.Server{
 		Addr:         ":" + cfg.Port,
