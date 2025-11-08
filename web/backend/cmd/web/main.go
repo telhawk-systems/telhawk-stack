@@ -73,6 +73,10 @@ func main() {
 	mux.HandleFunc("POST /api/auth/logout", authHandler.Logout)
 	mux.Handle("GET /api/auth/me", authMiddleware.Protect(http.HandlerFunc(authHandler.Me)))
 
+	// Dashboard metrics endpoint with caching (protected)
+	dashboardHandler := handlers.NewDashboardHandler(cfg.QueryServiceURL)
+	mux.Handle("GET /api/dashboard/metrics", authMiddleware.Protect(http.HandlerFunc(dashboardHandler.GetMetrics)))
+
 	// User management endpoints (protected)
 	mux.Handle("/api/auth/", authMiddleware.Protect(
 		http.StripPrefix("/api/auth", authProxy.Handler()),

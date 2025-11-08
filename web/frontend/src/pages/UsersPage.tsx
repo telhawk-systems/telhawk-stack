@@ -10,6 +10,13 @@ export function UsersPage() {
   const [editingUser, setEditingUser] = useState<UserDetails | null>(null);
   const [showResetPassword, setShowResetPassword] = useState<string | null>(null);
   const [newPassword, setNewPassword] = useState('');
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [newUser, setNewUser] = useState({
+    username: '',
+    email: '',
+    password: '',
+    roles: ['viewer'] as string[],
+  });
 
   useEffect(() => {
     loadUsers();
@@ -75,6 +82,33 @@ export function UsersPage() {
     }
   };
 
+  const handleCreateUser = async () => {
+    if (!newUser.username || !newUser.email || !newUser.password) {
+      setError('Username, email, and password are required');
+      return;
+    }
+
+    if (newUser.password.length < 8) {
+      setError('Password must be at least 8 characters');
+      return;
+    }
+
+    if (newUser.roles.length === 0) {
+      setError('At least one role is required');
+      return;
+    }
+
+    try {
+      await apiClient.createUser(newUser.username, newUser.email, newUser.password, newUser.roles);
+      await loadUsers();
+      setShowCreateForm(false);
+      setNewUser({ username: '', email: '', password: '', roles: ['viewer'] });
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create user');
+    }
+  };
+
   const roleOptions = ['admin', 'analyst', 'viewer', 'ingester'];
 
   if (loading) {
@@ -89,14 +123,100 @@ export function UsersPage() {
 
   return (
     <Layout>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
-        <p className="text-gray-600 mt-1">Manage system users and their permissions</p>
+      <div className="mb-6 flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
+          <p className="text-gray-600 mt-1">Manage system users and their permissions</p>
+        </div>
+        <button
+          onClick={() => setShowCreateForm(true)}
+          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium transition-colors"
+        >
+          Create New User
+        </button>
       </div>
 
       {error && (
         <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
           <p className="text-red-800">{error}</p>
+        </div>
+      )}
+
+      {showCreateForm && (
+        <div className="mb-6 bg-white shadow-md rounded-lg p-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Create New User</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
+              <input
+                type="text"
+                value={newUser.username}
+                onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Enter username"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <input
+                type="email"
+                value={newUser.email}
+                onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Enter email"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+              <input
+                type="password"
+                value={newUser.password}
+                onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Enter password (min 8 characters)"
+                minLength={8}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Roles</label>
+              <div className="flex gap-3 flex-wrap items-center mt-2">
+                {roleOptions.map((role) => (
+                  <label key={role} className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={newUser.roles.includes(role)}
+                      onChange={(e) => {
+                        const newRoles = e.target.checked
+                          ? [...newUser.roles, role]
+                          : newUser.roles.filter((r) => r !== role);
+                        setNewUser({ ...newUser, roles: newRoles });
+                      }}
+                      className="mr-2"
+                    />
+                    <span className="text-sm">{role}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div className="mt-4 flex gap-2 justify-end">
+            <button
+              onClick={() => {
+                setShowCreateForm(false);
+                setNewUser({ username: '', email: '', password: '', roles: ['viewer'] });
+                setError(null);
+              }}
+              className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 font-medium transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleCreateUser}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium transition-colors"
+            >
+              Create User
+            </button>
+          </div>
         </div>
       )}
 
