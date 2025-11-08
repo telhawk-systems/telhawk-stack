@@ -454,6 +454,7 @@ func (m *IndexManager) createISMPolicy(ctx context.Context) error {
 
 func (m *IndexManager) createInitialIndex(ctx context.Context) error {
 	indexName := m.GetCurrentWriteIndex()
+	writeAlias := m.config.IndexPrefix + "-write"
 
 	exists, err := m.client.Client().Indices.Exists([]string{indexName})
 	if err != nil {
@@ -465,23 +466,8 @@ func (m *IndexManager) createInitialIndex(ctx context.Context) error {
 		return nil
 	}
 
-	settings := map[string]interface{}{
-		"aliases": map[string]interface{}{
-			m.config.IndexPrefix + "-write": map[string]interface{}{
-				"is_write_index": true,
-			},
-		},
-	}
-
-	body, err := json.Marshal(settings)
-	if err != nil {
-		return err
-	}
-
-	res, err := m.client.Client().Indices.Create(
-		indexName,
-		m.client.Client().Indices.Create.WithBody(bytes.NewReader(body)),
-	)
+	// Create the index first without the write alias
+	res, err := m.client.Client().Indices.Create(indexName)
 	if err != nil {
 		return err
 	}
@@ -490,6 +476,52 @@ func (m *IndexManager) createInitialIndex(ctx context.Context) error {
 	if res.IsError() {
 		bodyBytes, _ := io.ReadAll(res.Body)
 		return fmt.Errorf("failed to create initial index: %s - %s", res.Status(), string(bodyBytes))
+	}
+
+	// Update alias atomically - remove is_write_index from all indices, then add to new one
+	aliasActions := map[string]interface{}{
+		"actions": []map[string]interface{}{
+			{
+				"remove": map[string]interface{}{
+					"index": m.config.IndexPrefix + "-*",
+					"alias": writeAlias,
+				},
+			},
+			{
+				"add": map[string]interface{}{
+					"index":          indexName,
+					"alias":          writeAlias,
+					"is_write_index": true,
+				},
+			},
+		},
+	}
+
+	body, err := json.Marshal(aliasActions)
+	if err != nil {
+		return err
+	}
+
+	aliasReq, err := http.NewRequestWithContext(
+		ctx,
+		"POST",
+		"/_aliases",
+		bytes.NewReader(body),
+	)
+	if err != nil {
+		return err
+	}
+	aliasReq.Header.Set("Content-Type", "application/json")
+
+	aliasRes, err := m.client.Client().Transport.Perform(aliasReq)
+	if err != nil {
+		return err
+	}
+	defer aliasRes.Body.Close()
+
+	if aliasRes.StatusCode >= 400 {
+		bodyBytes, _ := io.ReadAll(aliasRes.Body)
+		return fmt.Errorf("failed to update write alias: %d - %s", aliasRes.StatusCode, string(bodyBytes))
 	}
 
 	return nil
