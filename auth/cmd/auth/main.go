@@ -98,7 +98,8 @@ func main() {
 
 	// Setup HTTP router
 	mux := http.NewServeMux()
-	mux.HandleFunc("/api/v1/auth/register", handler.Register)
+	// SECURITY: Public registration disabled - use admin-created users only
+	// mux.HandleFunc("/api/v1/auth/register", handler.Register)
 	mux.HandleFunc("/api/v1/auth/login", handler.Login)
 	mux.HandleFunc("/api/v1/auth/refresh", handler.RefreshToken)
 	mux.HandleFunc("/api/v1/auth/validate", handler.ValidateToken)
