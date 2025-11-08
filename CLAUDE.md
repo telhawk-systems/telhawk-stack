@@ -1,0 +1,453 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Project Overview
+
+TelHawk Stack is a lightweight, OCSF-compliant SIEM (Security Information and Event Management) platform built in Go. It provides Splunk-compatible event collection with OpenSearch as the backend storage engine. The system is designed as a microservices architecture where events flow through multiple services: ingestion → normalization → storage → query/web.
+
+## Development Commands
+
+### Building and Testing
+
+```bash
+# Build all services
+cd <service-name> && go build -o ../bin/<service-name> ./cmd/<service-name>
+
+# Examples:
+cd auth && go build -o ../bin/auth ./cmd/auth
+cd ingest && go build -o ../bin/ingest ./cmd/ingest
+cd cli && go build -o ../bin/thawk .
+
+# Test all modules
+go test ./...
+
+# Test specific module
+cd core && go test ./...
+
+# Run tests with coverage
+go test -cover ./...
+```
+
+### Docker Operations
+
+```bash
+# Start the full stack (default development mode)
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Rebuild all services
+docker-compose build
+
+# Rebuild specific service
+docker-compose build <service-name>
+
+# Rebuild and restart
+docker-compose up -d --build
+
+# Stop all services
+docker-compose down
+
+# Stop and remove volumes (deletes all data)
+docker-compose down -v
+
+# Check service health
+docker-compose ps
+
+# Run CLI tool
+docker-compose run --rm thawk <command>
+# Example: docker-compose run --rm thawk auth login -u admin -p admin123
+```
+
+### Database Migrations
+
+The auth service uses golang-migrate for database schema management:
+
+```bash
+# Migrations are automatically run on auth service startup
+# Migration files: auth/migrations/*.sql
+
+# To manually run migrations:
+cd auth
+# View migration status
+migrate -database "postgres://telhawk:password@localhost:5432/telhawk_auth?sslmode=disable" -path migrations version
+
+# Apply migrations
+migrate -database "postgres://telhawk:password@localhost:5432/telhawk_auth?sslmode=disable" -path migrations up
+
+# Rollback last migration
+migrate -database "postgres://telhawk:password@localhost:5432/telhawk_auth?sslmode=disable" -path migrations down 1
+```
+
+## Architecture
+
+### Service Communication Flow
+
+```
+External Sources → Ingest (8088) → Core (8090) → Storage (8083) → OpenSearch (9200)
+                       ↓                                                    ↑
+                   Auth (8080)                                              |
+                                                                             |
+                                    Query (8082) ←---------------------------+
+                                        ↓
+                                    Web (3000)
+```
+
+### Service Descriptions
+
+- **auth (port 8080)**: JWT-based authentication, user management, HEC token generation/validation, RBAC. Uses PostgreSQL for persistence.
+- **ingest (port 8088)**: Splunk HEC-compatible ingestion endpoint. Validates tokens via auth service, forwards raw events to core for normalization.
+- **core (port 8090)**: OCSF normalization engine. Converts raw events to OCSF-compliant format using auto-generated normalizers (77 OCSF classes). Implements validation, DLQ for failed events, and forwards to storage.
+- **storage (port 8083)**: OpenSearch abstraction layer. Handles bulk indexing, index lifecycle management, and data persistence.
+- **query (port 8082)**: Query API with OpenSearch integration. Supports SPL-subset, time-based filtering, aggregations, cursor-based pagination.
+- **web (port 3000)**: React-based frontend with search console, event table, OCSF field inspection.
+- **cli (thawk)**: Cobra-based CLI for authentication, HEC token management, event ingestion, and search queries.
+
+### Supporting Services
+
+- **opensearch (9200, 9600)**: Primary datastore with TLS/mTLS security
+- **auth-db (PostgreSQL)**: Stores users, sessions, HEC tokens, audit logs
+- **redis (6379)**: Rate limiting (sliding window algorithm), future caching
+
+## Code Architecture
+
+### Event Pipeline (Ingest → Core → Storage)
+
+1. **Ingest Service** receives raw events via HEC endpoint (`/services/collector/event`)
+   - Validates HEC token via auth service (with 5-min caching)
+   - IP-based and token-based rate limiting (Redis-backed)
+   - Forwards to core service for normalization
+   - Implements retry with exponential backoff (3 attempts, ~700ms total)
+   - Supports HEC ack channel for event tracking
+
+2. **Core Service** normalizes events to OCSF format
+   - Registry pattern matches raw event format/source_type to normalizer
+   - 77 auto-generated normalizers (one per OCSF class) in `core/internal/normalizer/generated/`
+   - HECNormalizer as fallback for generic HEC events
+   - Validation chain ensures OCSF compliance
+   - Failed events → Dead Letter Queue (file-based at `/var/lib/telhawk/dlq`)
+   - Successful events → forwarded to storage service
+
+3. **Storage Service** persists to OpenSearch
+   - Bulk indexing with automatic retry (3 attempts, exponential backoff)
+   - Index pattern: `telhawk-events-YYYY.MM.DD`
+   - OCSF-optimized field mappings
+
+**Key Files:**
+- `core/internal/pipeline/pipeline.go`: Orchestrates normalization and validation
+- `core/internal/normalizer/normalizer.go`: Registry and interface definitions
+- `ingest/internal/handlers/hec.go`: HEC endpoint implementation
+- `storage/internal/client/opensearch.go`: OpenSearch bulk operations
+
+### Authentication Flow
+
+1. User login (`POST /api/v1/auth/login`) → returns JWT access token + refresh token
+2. Access token used in `Authorization: Bearer <token>` header
+3. Token validation endpoint (`POST /api/v1/auth/validate`) called by other services
+4. Refresh tokens stored in PostgreSQL sessions table with revocation support
+5. HEC tokens stored separately with user association
+6. All auth events forwarded to ingest service as OCSF Authentication events (class_uid: 3002)
+
+**Key Files:**
+- `auth/internal/repository/postgres.go`: Database operations
+- `auth/pkg/tokens/jwt.go`: JWT generation and validation
+- `auth/migrations/001_init.up.sql`: Database schema
+
+### OCSF Normalization
+
+The system uses a code generator approach for OCSF compliance:
+
+1. **OCSF Schema** (`ocsf-schema/`): Git submodule tracking OCSF 1.1.0 schema
+2. **Generator** (`tools/normalizer-generator/`): Reads OCSF schema, generates Go normalizers
+3. **Generated Code** (`core/internal/normalizer/generated/`): One file per OCSF class (77 total)
+4. **Runtime**: Registry matches events to normalizers based on source_type patterns
+
+Each normalizer implements:
+- Field mapping (common variants → OCSF standard fields)
+- Event classification (category_uid, class_uid, activity_id, type_uid)
+- Metadata enrichment (product info, timestamps, severity)
+
+**Key Files:**
+- `tools/normalizer-generator/main.go`: Code generator
+- `core/internal/normalizer/registry.go`: Normalizer registration
+- `core/pkg/ocsf/event.go`: Base OCSF event structure
+
+### Configuration Management
+
+All services follow a consistent pattern:
+- **YAML config file** embedded in Docker images at `/etc/telhawk/<service>/config.yaml`
+- **Environment variables** override YAML settings (12-factor app compliant)
+- **Viper** library for config loading
+- **No CLI arguments** for configuration
+
+Environment variable naming: `<SERVICE>_<SECTION>_<KEY>`
+Examples:
+- `AUTH_SERVER_PORT=8080`
+- `INGEST_AUTH_URL=http://auth:8080`
+- `QUERY_OPENSEARCH_PASSWORD=secret`
+
+**Key Files:**
+- `auth/config.yaml`, `ingest/config.yaml`, etc.: Default configurations
+- `docker-compose.yml`: Shows environment variable overrides
+- `.env.example`: Template for local overrides
+
+## TLS/Certificate Management
+
+The stack uses mutual TLS (mTLS) for service-to-service communication:
+
+1. **Certificate Generation**: Two init containers create certificates before services start
+   - `telhawk-certs`: Generates certs for Go services (auth, ingest, core, storage, query, web)
+   - `opensearch-certs`: Generates certs for OpenSearch
+
+2. **Certificate Storage**: Shared Docker volumes
+   - `telhawk-certs:/certs` - mounted read-only to all Go services
+   - `opensearch-certs:/certs` - mounted read-only to OpenSearch
+
+3. **TLS Configuration**: Controlled via environment variables
+   - `<SERVICE>_TLS_ENABLED=true/false`: Enable TLS for each service
+   - `<SERVICE>_TLS_SKIP_VERIFY=true/false`: Skip cert verification (dev only)
+
+**Key Files:**
+- `certs/generator/Dockerfile`: Go service certificate generator
+- `opensearch/cert-generator/Dockerfile`: OpenSearch certificate generator
+- `docs/TLS_CONFIGURATION.md`: Detailed TLS setup guide
+
+## Important Implementation Details
+
+### Database Schema Patterns
+
+**PostgreSQL (auth service)**:
+- All tables use UUID primary keys
+- Timestamps tracked with `created_at`, `updated_at` columns
+- Trigger-based `updated_at` automation
+- Foreign keys with CASCADE delete
+- Comprehensive indexes on lookup fields
+- JSONB for flexible metadata storage (audit_log.metadata)
+
+**OpenSearch**:
+- Daily time-based indices: `telhawk-events-YYYY.MM.DD`
+- OCSF-optimized mappings (nested objects for actors, devices, etc.)
+- Retention managed via index lifecycle policies
+- Query pattern: `telhawk-events-*` for searches across all indices
+
+### Error Handling and Reliability
+
+**Dead Letter Queue (DLQ)**:
+- File-based storage at `/var/lib/telhawk/dlq`
+- Captures normalization and storage failures
+- Preserves full event context for debugging/replay
+- API endpoints: `GET /dlq/list`, `POST /dlq/purge`
+- Metrics exposed via health endpoint
+
+**Retry Strategy**:
+- Ingest → Core: 3 attempts, exponential backoff (~700ms total)
+- Core → Storage: 3 attempts, exponential backoff
+- Retries on 5xx, 429, network errors
+- No retry on 4xx client errors (except 429)
+
+**Rate Limiting**:
+- Redis-backed sliding window algorithm
+- IP-based (pre-auth) and token-based (post-auth)
+- Returns HTTP 429 when exceeded
+- Graceful degradation if Redis unavailable
+
+### Observability
+
+**Health Checks**:
+- All services expose `/healthz` or `/readyz` endpoints
+- Docker health checks with configurable retries
+- Dependencies managed via `depends_on` with health conditions
+
+**Metrics** (Prometheus format at `/metrics`):
+- Event processing: `events_total`, `normalization_duration`, `storage_duration`
+- Queue depth: `queue_depth`, `queue_capacity`
+- Rate limiting: `rate_limit_hits_total`
+- Acks: `acks_pending`, `acks_completed_total`
+
+## Testing
+
+### Test Organization
+
+- Unit tests alongside source files: `*_test.go`
+- Integration tests in dedicated files: `*_integration_test.go`
+- Test data and fixtures in `testdata/` directories
+
+### Key Test Files
+
+- `core/internal/pipeline/integration_test.go`: End-to-end normalization pipeline
+- `ingest/internal/handlers/hec_handler_test.go`: HEC endpoint tests
+- `query/internal/service/service_test.go`: Query API tests
+
+### Running Tests
+
+```bash
+# Run all tests
+go test ./...
+
+# Run with verbose output
+go test -v ./...
+
+# Run specific test
+go test -v ./core/internal/pipeline -run TestNormalization
+
+# Run with race detection
+go test -race ./...
+
+# Generate coverage report
+go test -coverprofile=coverage.out ./...
+go tool cover -html=coverage.out
+```
+
+## CLI Tool (thawk)
+
+The CLI uses Cobra for command structure:
+
+```bash
+# Authentication
+thawk auth login -u <username> -p <password>
+thawk auth whoami
+thawk auth logout
+
+# HEC token management
+thawk token create --name <token-name>
+thawk token list
+thawk token revoke <token-id>
+
+# Event ingestion
+thawk ingest send --message "event text" --token <hec-token>
+
+# Search queries
+thawk search --query "severity:high" --from 1h
+```
+
+**Key Files:**
+- `cli/cmd/root.go`: Root command and global flags
+- `cli/cmd/auth.go`, `cli/cmd/token.go`, etc.: Subcommands
+- `cli/internal/config/config.go`: CLI configuration (~/.thawk/config.yaml)
+
+## Code Generation
+
+### OCSF Normalizer Generator
+
+Location: `tools/normalizer-generator/`
+
+Regenerate normalizers after OCSF schema updates:
+
+```bash
+cd tools/normalizer-generator
+go run main.go
+
+# Output: core/internal/normalizer/generated/*.go (77 files)
+```
+
+The generator:
+- Reads OCSF schema from `ocsf-schema/` directory
+- Generates one normalizer per event class
+- Creates intelligent field mappings
+- Outputs registration code for the normalizer registry
+
+## Common Development Patterns
+
+### Adding a New Service
+
+1. Create service directory with standard structure:
+   ```
+   newservice/
+   ├── cmd/newservice/main.go
+   ├── internal/
+   │   ├── config/config.go
+   │   ├── handlers/handlers.go
+   │   └── ...
+   ├── Dockerfile
+   ├── config.yaml
+   └── go.mod
+   ```
+
+2. Add to `docker-compose.yml` with health checks and dependencies
+3. Add TLS certificate generation if needed
+4. Follow environment variable naming: `NEWSERVICE_SECTION_KEY`
+
+### Adding Database Migrations
+
+1. Create numbered migration files in `auth/migrations/`:
+   - `NNN_description.up.sql`
+   - `NNN_description.down.sql`
+
+2. Migrations run automatically on auth service startup
+3. Use PostgreSQL best practices: indexes, constraints, comments
+
+### Adding a New OCSF Normalizer (Custom)
+
+If you need custom normalization logic beyond the generated code:
+
+1. Create file in `core/internal/normalizer/` (not in `generated/`)
+2. Implement the `Normalizer` interface
+3. Register in `core/internal/normalizer/registry.go`
+
+Example:
+```go
+type CustomNormalizer struct{}
+
+func (n *CustomNormalizer) Normalize(ctx context.Context, envelope *model.RawEventEnvelope) (*ocsf.Event, error) {
+    // Custom logic
+}
+
+func (n *CustomNormalizer) Matches(envelope *model.RawEventEnvelope) bool {
+    // Match condition
+}
+```
+
+## Security Considerations
+
+- Default passwords in `docker-compose.yml` MUST be changed for production
+- JWT secrets MUST be set via `AUTH_JWT_SECRET` environment variable
+- TLS MUST be enabled in production (`*_TLS_ENABLED=true`)
+- PostgreSQL uses SSL/TLS in production (`sslmode=require`)
+- OpenSearch uses TLS with client certificates
+- HEC tokens are random UUIDs, stored hashed in database
+- All auth events forwarded to SIEM for audit trail
+- Audit log table captures all authentication/authorization events
+- Rate limiting prevents abuse of ingestion endpoints
+
+## Documentation
+
+Key documentation files:
+- `README.md`: Overview, quick start, architecture
+- `docs/CONFIGURATION.md`: Complete configuration reference
+- `docs/TLS_CONFIGURATION.md`: TLS/certificate setup
+- `docs/CLI_CONFIGURATION.md`: CLI usage guide
+- `DOCKER.md`: Docker commands and troubleshooting
+- `TODO.md`: Development roadmap and recent accomplishments
+- Individual service READMEs in service directories
+
+## Web Frontend
+
+The web UI is a React application with:
+- **Backend**: Go server in `web/backend/` (port 3000)
+- **Frontend**: React app in `web/frontend/`
+- **Build**: Frontend built and served as static files by backend
+- **Features**: Search console, event table, OCSF field inspection, severity color-coding
+
+Frontend development:
+```bash
+cd web/frontend
+npm install
+npm start  # Development server
+npm run build  # Production build
+```
+
+## Default Credentials
+
+**Database (development)**:
+- PostgreSQL: `telhawk:telhawk-auth-dev@auth-db:5432/telhawk_auth`
+- OpenSearch: `admin:TelHawk123!`
+
+**Default User (created by migration)**:
+- Username: `admin`
+- Password: `admin123`
+- Email: `admin@telhawk.local`
+- Roles: `[admin]`
+
+**IMPORTANT**: Change all default passwords before production deployment.
