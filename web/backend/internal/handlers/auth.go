@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/gorilla/csrf"
 	"github.com/telhawk/web/internal/auth"
 )
 
@@ -27,7 +28,18 @@ type LoginRequest struct {
 	Password string `json:"password"`
 }
 
+func (h *AuthHandler) GetCSRFToken(w http.ResponseWriter, r *http.Request) {
+	token := csrf.Token(r)
+	log.Printf("Generated CSRF token for request from %s: %s...", r.RemoteAddr, token[:20])
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"csrf_token": token,
+	})
+}
+
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
+	log.Printf("Login attempt from %s with CSRF header: %s...", r.RemoteAddr, r.Header.Get("X-CSRF-Token")[:20])
+	
 	var req LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid request", http.StatusBadRequest)

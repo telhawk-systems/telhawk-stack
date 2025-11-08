@@ -2,11 +2,34 @@ import { User, UserDetails, LoginRequest, LoginResponse } from '../types';
 
 class ApiClient {
   private baseUrl = '/api';
+  private csrfToken: string | null = null;
+
+  async getCSRFToken(): Promise<string> {
+    const response = await fetch(`${this.baseUrl}/auth/csrf-token`, {
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to get CSRF token');
+    }
+
+    const data = await response.json();
+    this.csrfToken = data.csrf_token;
+    return data.csrf_token;
+  }
 
   async login(credentials: LoginRequest): Promise<LoginResponse> {
+    // Get CSRF token before login
+    if (!this.csrfToken) {
+      await this.getCSRFToken();
+    }
+
     const response = await fetch(`${this.baseUrl}/auth/login`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': this.csrfToken!,
+      },
       credentials: 'include',
       body: JSON.stringify(credentials),
     });
@@ -19,14 +42,25 @@ class ApiClient {
   }
 
   async logout(): Promise<void> {
+    // Get CSRF token if not already set
+    if (!this.csrfToken) {
+      await this.getCSRFToken();
+    }
+
     const response = await fetch(`${this.baseUrl}/auth/logout`, {
       method: 'POST',
+      headers: {
+        'X-CSRF-Token': this.csrfToken!,
+      },
       credentials: 'include',
     });
 
     if (!response.ok) {
       throw new Error('Logout failed');
     }
+
+    // Clear the CSRF token after logout
+    this.csrfToken = null;
   }
 
   async getCurrentUser(): Promise<User> {
@@ -42,9 +76,17 @@ class ApiClient {
   }
 
   async search(query: string, size = 50, aggregations?: any): Promise<any> {
+    // Get CSRF token if not already set
+    if (!this.csrfToken) {
+      await this.getCSRFToken();
+    }
+
     const response = await fetch(`${this.baseUrl}/query/api/v1/search`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': this.csrfToken!,
+      },
       credentials: 'include',
       body: JSON.stringify({
         query,
@@ -62,6 +104,11 @@ class ApiClient {
   }
 
   async getDashboardMetrics(timeRange?: { start: string; end: string }): Promise<any> {
+    // Get CSRF token if not already set
+    if (!this.csrfToken) {
+      await this.getCSRFToken();
+    }
+
     let query = '*';
     if (timeRange) {
       query = `time:[${timeRange.start} TO ${timeRange.end}]`;
@@ -69,7 +116,10 @@ class ApiClient {
 
     const response = await fetch(`${this.baseUrl}/query/api/v1/search`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': this.csrfToken!,
+      },
       credentials: 'include',
       body: JSON.stringify({
         query,
@@ -135,9 +185,17 @@ class ApiClient {
   }
 
   async updateUser(id: string, updates: Partial<UserDetails>): Promise<UserDetails> {
+    // Get CSRF token if not already set
+    if (!this.csrfToken) {
+      await this.getCSRFToken();
+    }
+
     const response = await fetch(`${this.baseUrl}/auth/api/v1/users/update?id=${id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': this.csrfToken!,
+      },
       credentials: 'include',
       body: JSON.stringify(updates),
     });
@@ -150,8 +208,16 @@ class ApiClient {
   }
 
   async deleteUser(id: string): Promise<void> {
+    // Get CSRF token if not already set
+    if (!this.csrfToken) {
+      await this.getCSRFToken();
+    }
+
     const response = await fetch(`${this.baseUrl}/auth/api/v1/users/delete?id=${id}`, {
       method: 'DELETE',
+      headers: {
+        'X-CSRF-Token': this.csrfToken!,
+      },
       credentials: 'include',
     });
 
@@ -161,9 +227,17 @@ class ApiClient {
   }
 
   async resetPassword(id: string, newPassword: string): Promise<void> {
+    // Get CSRF token if not already set
+    if (!this.csrfToken) {
+      await this.getCSRFToken();
+    }
+
     const response = await fetch(`${this.baseUrl}/auth/api/v1/users/reset-password?id=${id}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': this.csrfToken!,
+      },
       credentials: 'include',
       body: JSON.stringify({ new_password: newPassword }),
     });
