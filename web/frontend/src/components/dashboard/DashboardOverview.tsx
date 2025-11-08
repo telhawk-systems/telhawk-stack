@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { apiClient } from '../../services/api';
+import { useAuth } from '../AuthProvider';
 import { MetricCard } from './MetricCard';
 import { SeverityChart } from './SeverityChart';
 import { TimelineChart } from './TimelineChart';
@@ -40,6 +41,7 @@ const TIME_RANGES: TimeRange[] = [
 ];
 
 export function DashboardOverview() {
+  const { user } = useAuth();
   const [timeRange, setTimeRange] = useState<TimeRange>(TIME_RANGES[2]); // 24h default
   const [metrics, setMetrics] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -47,6 +49,8 @@ export function DashboardOverview() {
   const [autoRefresh, setAutoRefresh] = useState(false);
 
   const loadMetrics = async () => {
+    if (!user) return;
+    
     try {
       setError('');
       const data = await apiClient.getDashboardMetrics({
@@ -63,15 +67,17 @@ export function DashboardOverview() {
   };
 
   useEffect(() => {
-    loadMetrics();
-  }, [timeRange]);
+    if (user) {
+      loadMetrics();
+    }
+  }, [timeRange, user]);
 
   useEffect(() => {
-    if (autoRefresh) {
+    if (autoRefresh && user) {
       const interval = setInterval(loadMetrics, 30000); // Refresh every 30s
       return () => clearInterval(interval);
     }
-  }, [autoRefresh, timeRange]);
+  }, [autoRefresh, timeRange, user]);
 
   if (loading) {
     return (
