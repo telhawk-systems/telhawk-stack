@@ -10,6 +10,9 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/telhawk-systems/telhawk-stack/auth/internal/config"
 	"github.com/telhawk-systems/telhawk-stack/auth/internal/handlers"
 	"github.com/telhawk-systems/telhawk-stack/auth/internal/audit"
@@ -59,6 +62,23 @@ func main() {
 		defer pgRepo.Close()
 		repo = pgRepo
 		log.Println("Connected to PostgreSQL")
+		
+		// Run database migrations
+		log.Println("Running database migrations...")
+		m, err := migrate.New(
+			"file://migrations",
+			connString,
+		)
+		if err != nil {
+			log.Fatalf("Failed to initialize migrations: %v", err)
+		}
+		
+		if err := m.Up(); err != nil && err != migrate.ErrNoChange {
+			log.Fatalf("Failed to run migrations: %v", err)
+		}
+		
+		version, dirty, _ := m.Version()
+		log.Printf("Database migration complete (version: %d, dirty: %v)", version, dirty)
 	} else {
 		log.Println("Using in-memory repository (development only)")
 		repo = repository.NewInMemoryRepository()
