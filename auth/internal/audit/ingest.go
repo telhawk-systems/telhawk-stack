@@ -167,7 +167,7 @@ func (c *IngestClient) ForwardEvent(actorType, actorID, actorName, action, resou
 	hecEvent := HECEvent{
 		Time:       timestamp.Unix(),
 		Source:     "telhawk:auth",
-		Sourcetype: "hec",
+		Sourcetype: "ocsf:authentication",
 		Host:       "auth-service",
 		Event:      ocsfEvent,
 	}

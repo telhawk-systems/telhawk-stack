@@ -44,8 +44,15 @@ func (OCSFPassthroughNormalizer) Normalize(ctx context.Context, envelope *model.
 
 	// Handle time field - convert Unix timestamp to RFC3339 string if needed
 	if timeVal, ok := ocsfData["time"].(float64); ok {
-		// Convert Unix timestamp to time.Time
-		eventTime := time.Unix(int64(timeVal), int64((timeVal-float64(int64(timeVal)))*1e9))
+		// OCSF time is in milliseconds since epoch
+		var eventTime time.Time
+		if timeVal > 1e12 {
+			// Timestamp is in milliseconds
+			eventTime = time.UnixMilli(int64(timeVal))
+		} else {
+			// Timestamp is in seconds (for backwards compatibility)
+			eventTime = time.Unix(int64(timeVal), int64((timeVal-float64(int64(timeVal)))*1e9))
+		}
 		ocsfData["time"] = eventTime.Format(time.RFC3339Nano)
 	}
 
