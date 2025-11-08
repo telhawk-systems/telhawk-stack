@@ -12,13 +12,17 @@ export function DashboardPage() {
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [results, setResults] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState('');
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
+  const [currentQuery, setCurrentQuery] = useState<string>('');
+  const [allEvents, setAllEvents] = useState<any[]>([]);
 
   const handleSearch = async (query: string, timeRange?: { start: string; end: string }) => {
     setError('');
     setLoading(true);
     setResults(null);
+    setAllEvents([]);
 
     try {
       // Build query with time range if provided
@@ -26,14 +30,43 @@ export function DashboardPage() {
       if (timeRange) {
         searchQuery = `${query} time:[${timeRange.start} TO ${timeRange.end}]`;
       }
-      
+
+      setCurrentQuery(searchQuery);
       const data = await apiClient.search(searchQuery);
       setResults(data);
+      setAllEvents(data.results || []);
     } catch (err) {
       setError('Search failed. Please try again.');
       console.error('Search error:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleLoadMore = async () => {
+    if (!results?.search_after || loadingMore) return;
+
+    setLoadingMore(true);
+    setError('');
+
+    try {
+      const data = await apiClient.search(currentQuery, 50, undefined, results.search_after);
+
+      // Append new results to existing events
+      const newEvents = [...allEvents, ...(data.results || [])];
+      setAllEvents(newEvents);
+
+      // Update results with new search_after cursor and counts
+      setResults({
+        ...data,
+        results: newEvents,
+        result_count: newEvents.length,
+      });
+    } catch (err) {
+      setError('Failed to load more results. Please try again.');
+      console.error('Load more error:', err);
+    } finally {
+      setLoadingMore(false);
     }
   };
 
@@ -108,10 +141,12 @@ export function DashboardPage() {
                 </div>
               </div>
 
-              <EventsTable 
-                events={results.results || []} 
+              <EventsTable
+                events={allEvents}
                 totalMatches={results.total_matches}
                 onEventClick={setSelectedEvent}
+                onLoadMore={results.search_after ? handleLoadMore : undefined}
+                loadingMore={loadingMore}
               />
             </>
           )}

@@ -11,9 +11,11 @@ interface EventsTableProps {
   events: Event[];
   totalMatches?: number;
   onEventClick: (event: Event) => void;
+  onLoadMore?: () => void;
+  loadingMore?: boolean;
 }
 
-export function EventsTable({ events, totalMatches, onEventClick }: EventsTableProps) {
+export function EventsTable({ events, totalMatches, onEventClick, onLoadMore, loadingMore }: EventsTableProps) {
   if (!events || events.length === 0) {
     return (
       <div className="bg-white rounded-lg shadow-md p-8 text-center">
@@ -112,6 +114,24 @@ export function EventsTable({ events, totalMatches, onEventClick }: EventsTableP
           </tbody>
         </table>
       </div>
+
+      {/* Pagination Controls */}
+      {onLoadMore && (
+        <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-gray-600">
+              Showing {events.length} {totalMatches && `of ${totalMatches} total events`}
+            </p>
+            <button
+              onClick={onLoadMore}
+              disabled={loadingMore}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {loadingMore ? 'Loading...' : 'Load More'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
