@@ -252,6 +252,24 @@
   * API rate limiting per user
   * Session management dashboard
 
+## Multi-Tenancy & Organization Management
+- [ ] Multi-tenant architecture
+  * Organization/tenant data model
+  * Data isolation per tenant (events, users, configs)
+  * Tenant-specific OpenSearch indices/aliases
+  * Cross-tenant query prevention
+- [ ] Organization management
+  * Create/update/delete organizations
+  * Organization admin role with limited scope
+  * Per-org branding (logos, colors, custom domains)
+  * Organization switching in UI for multi-org users
+- [ ] Tenant quotas & limits
+  * Per-tenant ingestion rate limits
+  * Per-tenant storage quotas
+  * Per-tenant user/token limits
+  * Quota enforcement and alerting
+  * Billing/usage tracking per tenant
+
 ## DevOps & Tooling
 - [x] Provide docker-compose to run full stack locally ✅
   * Full stack deployment with auth, ingest, core, storage, query services
@@ -330,6 +348,14 @@
   * Automated backup schedules
   * Point-in-time recovery
   * Disaster recovery procedures
+- [ ] Data governance workflows
+  * Legal hold management (per-tenant, per-event)
+  * Right-to-be-forgotten/deletion workflows
+  * Per-tenant retention policies
+  * Data classification and tagging
+  * Rehydration/restore workflows for archived data
+  * Data residency controls (region/zone restrictions)
+  * Compliance certification tracking
 
 ## Detection & Analytics
 - [ ] Saved searches and query library
@@ -350,16 +376,41 @@
   * IOC matching and flagging
 
 ## Investigation & Response
-- [ ] Case management
+- [ ] Incident/Case management (full lifecycle)
   * Create cases from events/alerts
-  * Investigation workflow
+  * Case state tracking (open, acknowledged, in-progress, resolved, closed)
+  * Case ownership and assignment
+  * Due dates and SLA tracking
+  * Investigation workflow with status updates
   * Evidence collection and tagging
   * Case timeline reconstruction
-  * Team collaboration (notes, assignments)
-- [ ] Event correlation
-  * Link related events
+  * Team collaboration (notes, comments, assignments)
+  * Analyst notes with rich text/markdown
+  * Case templates for common scenarios
+  * Incident metrics (MTTA, MTTR, volume by type)
+  * Case reporting and export
+- [ ] Entity & relationship modeling
+  * First-class entity types (users, hosts, IPs, services, applications)
+  * Entity profiling and baselining
+  * Session/identity stitching across event types
+  * Relationship graph (entity-to-entity connections)
+  * Graph visualization for lateral movement
+  * Kill chain progression tracking
+  * Blast radius analysis
+  * Entity timeline (all activity for an entity)
+  * Anomaly detection per entity
+- [ ] Event correlation & analysis
+  * Link related events across classes
   * Investigation graph visualization
   * Pattern detection across events
+  * Automatic event grouping/clustering
+  * Cross-event threat scoring
+- [ ] Guided investigation workflows
+  * Investigation playbooks/templates
+  * Automated triage checklists
+  * Default investigation paths per event type
+  * Contextual investigation suggestions
+  * Investigation progress tracking
 
 ## Integrations & Enrichment
 - [ ] GeoIP enrichment
@@ -370,10 +421,25 @@
   * Asset database
   * Automatic asset correlation
   * Vulnerability context
-- [ ] External integrations
-  * Webhook notifications
-  * SOAR platform connectors
-  * Ticketing system integration (Jira, ServiceNow)
+- [ ] SOAR & automation framework
+  * Generic outbound action framework ("when X, do Y")
+  * Action types: webhook, API call, script execution
+  * Ticketing system integration (Jira, ServiceNow, PagerDuty)
+  * ChatOps integration (Slack, Teams, Discord)
+  * Network actions (firewall block, route null)
+  * Identity provider actions (disable user, revoke tokens, MFA reset)
+  * Endpoint actions (isolate host, kill process, quarantine file)
+  * Playbook engine (multi-step automated response)
+  * Runbook integration (human + automated steps)
+  * Action audit trail
+  * Dry-run/approval workflows for sensitive actions
+  * Action templates library
+- [ ] Detection content packs
+  * Shipped detection rules mapped to MITRE ATT&CK
+  * OCSF-native detection content
+  * Use case packages (ransomware, data exfil, insider threat)
+  * Community detection sharing
+  * Detection effectiveness tracking
 
 ## Data Collection
 - [ ] Additional ingestion protocols
@@ -393,12 +459,39 @@
   * PDF/CSV export
   * Email delivery
   * Custom report templates
-- [ ] Compliance reporting
-  * Pre-built compliance templates (PCI-DSS, HIPAA, SOC 2)
+- [ ] Compliance reporting & audit trail
+  * Pre-built compliance templates (PCI-DSS, HIPAA, SOC 2, GDPR)
   * Evidence collection for audits
   * Automated compliance checks
+  * Exportable audit packages
+  * Policy violation reporting
+  * Access reviews and certifications
+- [ ] Comprehensive audit logging
+  * End-to-end audit log of all user actions
+  * Query audit trail (who ran which queries, when)
+  * Alert/rule modification audit trail
+  * User/token management audit trail
+  * Configuration change audit trail
+  * Schema change tracking
+  * Queryable audit domain (audit logs as OCSF events)
+  * Audit log retention and immutability
+  * HMAC/signature verification for audit logs
+  * Audit log export for compliance
 
 ## Operational Monitoring
+- [ ] Central ops & admin control plane
+  * Unified admin console for all services
+  * Service health dashboard (all services in one view)
+  * Real-time metrics aggregation
+  * Cross-service dependency visualization
+  * Service topology map
+  * Centralized configuration management
+  * DLQ monitoring across all services
+  * Rate limit monitoring and adjustment
+  * Ingestion failure tracking and alerting
+  * OpenSearch cluster health integration
+  * Resource utilization tracking (CPU, memory, disk)
+  * Ops console as first-class TelHawk component
 - [ ] System health dashboard
   * Service status indicators
   * Ingestion rate graphs
@@ -427,10 +520,27 @@
   * Input validation and sanitization
   * SQL injection prevention
   * XSS protection
-- [ ] Secrets management
-  * HashiCorp Vault integration
-  * Encrypted configuration values
-  * Certificate auto-rotation
-  * Secure credential storage
+- [ ] Secrets management & supply chain security
+  * HashiCorp Vault integration for secret storage
+  * AWS Secrets Manager / Azure Key Vault integration
+  * KMS integration for encryption keys
+  * Secure HEC token storage (encrypted at rest)
+  * Secure database credential management
+  * TLS certificate auto-rotation
+  * Secure credential storage patterns
+  * SBOM (Software Bill of Materials) generation
+  * Container image signing and verification
+  * Release attestation (SLSA compliance)
+  * Dependency vulnerability scanning
+  * Supply chain security documentation
+- [ ] Container hardening
+  * Opinionated seccomp profiles
+  * AppArmor/SELinux policies
+  * BPF-based security policies
+  * Minimal base images (distroless)
+  * Non-root user execution
+  * Read-only filesystems
+  * Capability dropping
+  * Network policy definitions
 
 ## Documentation
