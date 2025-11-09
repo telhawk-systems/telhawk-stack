@@ -1,0 +1,178 @@
+{
+  "examples": [
+    {
+      "name": "Simple equality filter",
+      "query": {
+        "filter": {
+          "field": ".severity",
+          "operator": "eq",
+          "value": "High"
+        },
+        "timeRange": {
+          "last": "1h"
+        },
+        "limit": 100
+      }
+    },
+    {
+      "name": "Failed authentication hunt",
+      "query": {
+        "select": [".time", ".severity", ".actor.user.name", ".src_endpoint.ip", ".status"],
+        "filter": {
+          "type": "and",
+          "conditions": [
+            {
+              "field": ".class_uid",
+              "operator": "eq",
+              "value": 3002
+            },
+            {
+              "field": ".status",
+              "operator": "eq",
+              "value": "Failed"
+            },
+            {
+              "field": ".severity",
+              "operator": "eq",
+              "value": "High"
+            },
+            {
+              "type": "not",
+              "condition": {
+                "field": ".src_endpoint.ip",
+                "operator": "cidr",
+                "value": "10.0.0.0/8"
+              }
+            }
+          ]
+        },
+        "timeRange": {
+          "last": "24h"
+        },
+        "sort": [
+          {
+            "field": ".time",
+            "order": "desc"
+          }
+        ],
+        "limit": 100
+      }
+    },
+    {
+      "name": "Lateral movement detection",
+      "query": {
+        "select": [".time", ".src_endpoint.ip", ".src_endpoint.port", ".dst_endpoint.ip", ".dst_endpoint.port"],
+        "filter": {
+          "type": "and",
+          "conditions": [
+            {
+              "field": ".class_uid",
+              "operator": "eq",
+              "value": 4001
+            },
+            {
+              "field": ".src_endpoint.ip",
+              "operator": "cidr",
+              "value": "192.168.0.0/16"
+            },
+            {
+              "field": ".dst_endpoint.ip",
+              "operator": "cidr",
+              "value": "192.168.0.0/16"
+            },
+            {
+              "type": "or",
+              "conditions": [
+                {
+                  "field": ".dst_endpoint.port",
+                  "operator": "eq",
+                  "value": 445
+                },
+                {
+                  "field": ".dst_endpoint.port",
+                  "operator": "eq",
+                  "value": 3389
+                }
+              ]
+            }
+          ]
+        },
+        "timeRange": {
+          "last": "1h"
+        },
+        "limit": 500
+      }
+    },
+    {
+      "name": "Top users aggregation",
+      "query": {
+        "filter": {
+          "field": ".class_uid",
+          "operator": "eq",
+          "value": 3002
+        },
+        "timeRange": {
+          "last": "7d"
+        },
+        "aggregations": [
+          {
+            "type": "terms",
+            "field": ".actor.user.name",
+            "name": "top_users",
+            "size": 10
+          }
+        ]
+      }
+    },
+    {
+      "name": "Events over time histogram",
+      "query": {
+        "filter": {
+          "field": ".severity_id",
+          "operator": "gte",
+          "value": 4
+        },
+        "timeRange": {
+          "last": "24h"
+        },
+        "aggregations": [
+          {
+            "type": "date_histogram",
+            "field": ".time",
+            "name": "events_over_time",
+            "interval": "1h"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Nested aggregation - tactics by severity",
+      "query": {
+        "filter": {
+          "field": ".class_uid",
+          "operator": "eq",
+          "value": 2004
+        },
+        "timeRange": {
+          "last": "7d"
+        },
+        "aggregations": [
+          {
+            "type": "terms",
+            "field": ".severity",
+            "name": "by_severity",
+            "size": 5,
+            "aggregations": [
+              {
+                "type": "terms",
+                "field": ".attacks[0].tactic.name",
+                "name": "top_tactics_per_severity",
+                "size": 3
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
