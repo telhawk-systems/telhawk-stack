@@ -122,6 +122,55 @@
   * Documentation: docs/ALERT_SCHEDULING.md
 - [ ] Connect dashboards to saved query definitions
 
+## Query Language
+- [ ] Phase 1: JSON Query Foundation
+  * Define canonical JSON query structure (select, filter, timeRange, aggregations, sort, pagination)
+  * Implement JSON → OpenSearch DSL translator
+  * JSON schema validation with comprehensive error messages
+  * Update query service API to accept JSON queries: POST /api/v1/query
+  * Field path syntax: jq-style OCSF paths (`.time`, `.actor.user.name`, `.src_endpoint.ip`)
+  * Filter operators: eq, ne, gt, gte, lt, lte, in, contains, startsWith, endsWith, regex, exists, cidr
+  * Compound filters: and, or, not with nesting support
+  * OCSF-aware field defaults per event class (auto-inject select clause)
+  * Unit tests for translator covering all operators and edge cases
+  * **Documentation:** docs/QUERY_LANGUAGE_DESIGN.md ✅
+- [ ] Phase 2: Filter Chip Integration
+  * Update web UI to generate JSON queries from filter chips
+  * Implement event class → default fields mapping
+  * Filter chip state → JSON query translation
+  * Multiple values for same field → OR logic optimization
+  * Replace OpenSearch query_string with JSON queries in UI
+  * Update SearchConsole.tsx to use JSON query builder
+  * Frontend utility: `web/frontend/src/utils/queryBuilder.ts`
+- [ ] Phase 3: Text Syntax Parser (Future)
+  * Design text syntax grammar (field:value, operators, boolean logic)
+  * Implement parser using participle (Go parser library)
+  * Text syntax → JSON query AST translation
+  * Field name aliases for user convenience (user → .actor.user.name, src_ip → .src_endpoint.ip)
+  * Support wildcards, CIDR notation, comparison operators
+  * Grouping and precedence with parentheses
+  * API accepts both text and JSON input formats
+  * UI "Advanced Query" mode with text input and syntax highlighting
+  * Parser error messages with helpful suggestions
+- [ ] Phase 4: Saved Searches
+  * Database schema for saved searches (PostgreSQL JSONB storage)
+  * API endpoints: POST/GET/PUT/DELETE /api/v1/searches
+  * Store queries as canonical JSON (version-safe, portable)
+  * Save search metadata: name, description, owner, sharing permissions
+  * UI: Save/Load buttons in search console
+  * Share searches with other users (view/edit/admin permissions)
+  * Search templates library (pre-built queries for common use cases)
+  * Version history for saved searches (track changes over time)
+- [ ] Phase 5: S3 Cold Storage Integration (Long-term)
+  * JSON query → S3/Parquet predicate translation
+  * Time range → partition pruning logic (year/month/day partitions)
+  * Select clause → Parquet column projection
+  * Filter conditions → Parquet row group filtering
+  * Query router: time-based tier selection (hot/warm/cold)
+  * Integration with DuckDB or AWS Athena for S3 queries
+  * Result merging across multiple tiers
+  * Performance optimization: parallel partition scans
+
 ## Storage Service
 - [x] Scaffold OpenSearch client and index lifecycle management
 - [x] Define OCSF-aware index templates and ILM policies
