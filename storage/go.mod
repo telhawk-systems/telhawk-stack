@@ -1,6 +1,6 @@
 module github.com/telhawk-systems/telhawk-stack/storage
 
-go 1.24.2
+go 1.25
 
 require (
 	github.com/opensearch-project/opensearch-go/v2 v2.3.0
