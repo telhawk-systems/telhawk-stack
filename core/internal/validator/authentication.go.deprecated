@@ -1,0 +1,41 @@
+package validator
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf"
+)
+
+// AuthenticationValidator validates OCSF Authentication events (class_uid 3002).
+type AuthenticationValidator struct{}
+
+// Supports returns true for authentication events.
+func (AuthenticationValidator) Supports(class string) bool {
+	return class == "Authentication" || class == "authentication"
+}
+
+// Validate ensures authentication events have required fields.
+func (AuthenticationValidator) Validate(ctx context.Context, event *ocsf.Event) error {
+	_ = ctx
+
+	if event.ClassUID != 3002 {
+		return nil // Not an authentication event
+	}
+
+	// Authentication events should have actor.user populated (the authenticating party)
+	// Note: The Authentication-specific "user" field is for the target account, not the actor
+	if event.Actor == nil {
+		return fmt.Errorf("authentication event missing actor field (should contain user who is authenticating)")
+	}
+
+	if event.Actor.User == nil {
+		return fmt.Errorf("authentication event missing actor.user field (should contain user information)")
+	}
+
+	if event.Actor.User.Name == "" {
+		return fmt.Errorf("authentication event missing actor.user.name field (username is required)")
+	}
+
+	return nil
+}
