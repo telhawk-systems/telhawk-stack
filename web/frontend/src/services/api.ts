@@ -1,4 +1,5 @@
 import { User, UserDetails, LoginRequest, LoginResponse, HECToken } from '../types';
+import { Query, QueryResponse } from '../types/query';
 
 class ApiClient {
   private baseUrl = '/api';
@@ -99,6 +100,34 @@ class ApiClient {
 
     if (!response.ok) {
       throw new Error('Search failed');
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Execute a canonical JSON query
+   * Uses the new query language from Phase 2 implementation
+   */
+  async executeQuery(query: Query): Promise<QueryResponse> {
+    // Get CSRF token if not already set
+    if (!this.csrfToken) {
+      await this.getCSRFToken();
+    }
+
+    const response = await fetch(`${this.baseUrl}/query/api/v1/query`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': this.csrfToken!,
+      },
+      credentials: 'include',
+      body: JSON.stringify(query),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: 'Query failed' }));
+      throw new Error(errorData.message || 'Query failed');
     }
 
     return response.json();
