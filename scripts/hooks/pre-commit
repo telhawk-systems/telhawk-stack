@@ -1,0 +1,35 @@
+#!/bin/bash
+# Pre-commit hook for TelHawk Stack
+# Automatically formats Go code with gofmt before committing
+
+# Get list of staged Go files
+STAGED_GO_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep '\.go$')
+
+if [ -z "$STAGED_GO_FILES" ]; then
+    # No Go files staged, exit successfully
+    exit 0
+fi
+
+# Format each staged Go file
+NEEDS_FORMATTING=false
+for file in $STAGED_GO_FILES; do
+    # Skip deleted files
+    if [ ! -f "$file" ]; then
+        continue
+    fi
+
+    # Check if file needs formatting
+    if ! gofmt -l "$file" | grep -q '^$'; then
+        echo "Formatting $file"
+        gofmt -w "$file"
+        git add "$file"
+        NEEDS_FORMATTING=true
+    fi
+done
+
+if [ "$NEEDS_FORMATTING" = true ]; then
+    echo ""
+    echo "✓ Go files have been automatically formatted with gofmt"
+fi
+
+exit 0
