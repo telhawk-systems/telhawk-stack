@@ -1,0 +1,178 @@
+name: Go Build, Test, and Lint
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        go-version: ['1.23']
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go-version }}
+
+      - name: Verify Go modules are tidy
+        run: |
+          echo "Checking go.mod files are tidy..."
+          modules=$(find . -name "go.mod" -not -path "*/node_modules/*" -not -path "*/ocsf-schema/*")
+          failed=0
+          for mod in $modules; do
+            dir=$(dirname "$mod")
+            echo "Checking $dir"
+            cd "$GITHUB_WORKSPACE/$dir"
+            go mod tidy
+            if ! git diff --exit-code go.mod go.sum 2>/dev/null; then
+              echo "ERROR: go.mod or go.sum not tidy in $dir"
+              failed=1
+            fi
+          done
+          if [ $failed -eq 1 ]; then
+            echo "Run 'go mod tidy' in the affected directories"
+            exit 1
+          fi
+
+      - name: Run go vet
+        run: |
+          echo "Running go vet on all modules..."
+          modules=$(find . -name "go.mod" -not -path "*/node_modules/*" -not -path "*/ocsf-schema/*")
+          for mod in $modules; do
+            dir=$(dirname "$mod")
+            echo "Vetting $dir"
+            cd "$GITHUB_WORKSPACE/$dir"
+            go vet ./...
+          done
+
+      - name: Check code formatting
+        run: |
+          echo "Checking gofmt..."
+          unformatted=$(gofmt -l $(find . -name "*.go" -not -path "*/node_modules/*" -not -path "*/ocsf-schema/*" -not -path "*/vendor/*"))
+          if [ -n "$unformatted" ]; then
+            echo "ERROR: The following files are not properly formatted:"
+            echo "$unformatted"
+            echo ""
+            echo "Run 'gofmt -w .' to fix formatting"
+            exit 1
+          fi
+          echo "All Go files are properly formatted"
+
+      - name: Run tests
+        run: |
+          echo "Running tests on all modules..."
+          modules=$(find . -name "go.mod" -not -path "*/node_modules/*" -not -path "*/ocsf-schema/*")
+          failed=0
+          for mod in $modules; do
+            dir=$(dirname "$mod")
+            echo "Testing $dir"
+            cd "$GITHUB_WORKSPACE/$dir"
+            if ! go test -v -race -coverprofile=coverage.out ./...; then
+              echo "ERROR: Tests failed in $dir"
+              failed=1
+            fi
+          done
+          if [ $failed -eq 1 ]; then
+            exit 1
+          fi
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        module:
+          - auth
+          - cli
+          - common
+          - core
+          - ingest
+          - query
+          - storage
+          - web/backend
+          - tools/event-seeder
+          - tools/normalizer-generator
+          - tools/ocsf-generator
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+
+      - name: Run golangci-lint on ${{ matrix.module }}
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          args: --timeout=5m
+          working-directory: ${{ matrix.module }}
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+
+      - name: Build all services
+        run: |
+          echo "Building all Go services..."
+
+          echo "Building auth service..."
+          cd auth && go build -v -o ../bin/auth ./cmd/auth && cd ..
+
+          echo "Building ingest service..."
+          cd ingest && go build -v -o ../bin/ingest ./cmd/ingest && cd ..
+
+          echo "Building core service..."
+          cd core && go build -v -o ../bin/core ./cmd/core && cd ..
+
+          echo "Building storage service..."
+          cd storage && go build -v -o ../bin/storage ./cmd/storage && cd ..
+
+          echo "Building query service..."
+          cd query && go build -v -o ../bin/query ./cmd/query && cd ..
+
+          echo "Building web service..."
+          cd web/backend && go build -v -o ../../bin/web ./cmd/web && cd ../..
+
+          echo "Building CLI..."
+          cd cli && go build -v -o ../bin/thawk . && cd ..
+
+          echo "Building event seeder..."
+          cd tools/event-seeder && go build -v -o ../../bin/event-seeder . && cd ../..
+
+          echo "All builds successful!"
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: binaries
+          path: bin/
+          retention-days: 7

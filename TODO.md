@@ -248,7 +248,17 @@
   * JWT token parsing to extract user_id for authorization
   * Audit logging for all HEC token operations
   * CLI commands: thawk token create/list/revoke
-- [ ] Add CI pipeline with linting, gofmt, and go test
+- [x] Add CI pipeline with linting, gofmt, and go test ✅
+  * GitHub Actions workflow: .github/workflows/go-build-test-lint.yml
+  * Three parallel jobs: Test, Lint, Build
+  * Test job: gofmt check, go vet, go mod tidy verification, go test with race detector
+  * Lint job: golangci-lint across all 11 Go modules
+  * Build job: compile all services and upload artifacts
+  * Configuration: .golangci.yml with 15+ linters enabled
+  * Runs on push to main and internal pull requests
+  * Coverage reports generated locally per module
+  * Pre-push script: scripts/pre-push.sh for local validation
+  * Documentation: docs/CI_DEVELOPMENT.md
 - [ ] Publish OpenAPI docs automatically (query/core endpoints)
 
 ## Documentation
