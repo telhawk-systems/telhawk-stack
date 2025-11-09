@@ -1,3 +1,6 @@
+import { detectEventType, getEventTypeName, getEventTypeIcon } from '../utils/eventTypes';
+import { TypeSpecificDetails } from './events/TypeSpecificDetails';
+
 interface EventDetailModalProps {
   event: any;
   onClose: () => void;
@@ -5,6 +8,10 @@ interface EventDetailModalProps {
 
 export function EventDetailModal({ event, onClose }: EventDetailModalProps) {
   if (!event) return null;
+
+  const eventType = detectEventType(event);
+  const typeName = getEventTypeName(eventType);
+  const typeIcon = getEventTypeIcon(eventType);
 
   const renderValue = (value: any): string => {
     if (value === null || value === undefined) return 'N/A';
@@ -28,7 +35,13 @@ export function EventDetailModal({ event, onClose }: EventDetailModalProps) {
       <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
-          <h2 className="text-xl font-bold text-gray-800">Event Details</h2>
+          <div className="flex items-center space-x-3">
+            <span className="text-2xl">{typeIcon}</span>
+            <div>
+              <h2 className="text-xl font-bold text-gray-800">Event Details</h2>
+              <p className="text-sm text-gray-600">{typeName}</p>
+            </div>
+          </div>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 text-2xl font-bold leading-none"
@@ -39,9 +52,9 @@ export function EventDetailModal({ event, onClose }: EventDetailModalProps) {
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6">
-          {/* Main Fields */}
+          {/* Main OCSF Fields */}
           <div className="mb-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-3">OCSF Fields</h3>
+            <h3 className="text-lg font-semibold text-gray-800 mb-3">OCSF Core Fields</h3>
             <div className="grid grid-cols-2 gap-4">
               {mainFields.map(({ label, key, format }) => (
                 <div key={key} className="border-b border-gray-200 pb-2">
@@ -53,6 +66,9 @@ export function EventDetailModal({ event, onClose }: EventDetailModalProps) {
               ))}
             </div>
           </div>
+
+          {/* Type-Specific Details */}
+          <TypeSpecificDetails event={event} type={eventType} />
 
           {/* Metadata */}
           {event.metadata && (
