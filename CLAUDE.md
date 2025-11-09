@@ -141,24 +141,37 @@ See `tools/event-seeder/README.md` for full documentation.
 ### Service Communication Flow
 
 ```
-External Sources → Ingest (8088) → Core (8090) → Storage (8083) → OpenSearch (9200)
-                       ↓                                                    ↑
-                   Auth (8080)                                              |
-                                                                             |
-                                    Query (8082) ←---------------------------+
+External Sources → Ingest (8088*) → Core (internal) → Storage (internal) → OpenSearch (localhost)
+                       ↓                                                           ↑
+                   Auth (internal)                                                 |
+                                                                                    |
+                                    Query (internal) ←------------------------------+
                                         ↓
-                                    Web (3000)
+                                    Web (3000*)
+
+* = Externally exposed ports
+All other services are internal to Docker network only
 ```
+
+**Security Posture:**
+- **Exposed Services:** Only `web` (3000) and `ingest` (8088) accept external connections
+- **Internal Services:** `auth`, `query`, `core`, `storage` are only accessible via Docker network
+- **Localhost-Only:** OpenSearch (9200, 9600) and Redis (6379) bound to 127.0.0.1
+- **Access Methods:**
+  - End users → Web UI (port 3000)
+  - Event sources → Ingest HEC endpoint (port 8088)
+  - Admin operations → `thawk` CLI tool (uses internal network)
+- **No Direct Service Access:** Cannot bypass web UI authentication by calling internal services directly
 
 ### Service Descriptions
 
-- **auth (port 8080)**: JWT-based authentication, user management, HEC token generation/validation, RBAC. Uses PostgreSQL for persistence.
-- **ingest (port 8088)**: Splunk HEC-compatible ingestion endpoint. Validates tokens via auth service, forwards raw events to core for normalization.
-- **core (port 8090)**: OCSF normalization engine. Converts raw events to OCSF-compliant format using auto-generated normalizers (77 OCSF classes). Implements validation, DLQ for failed events, and forwards to storage.
-- **storage (port 8083)**: OpenSearch abstraction layer. Handles bulk indexing, index lifecycle management, and data persistence.
-- **query (port 8082)**: Query API with OpenSearch integration. Supports SPL-subset, time-based filtering, aggregations, cursor-based pagination.
-- **web (port 3000)**: React-based frontend with search console, event table, OCSF field inspection.
-- **cli (thawk)**: Cobra-based CLI for authentication, HEC token management, event ingestion, and search queries.
+- **auth (internal:8080)**: JWT-based authentication, user management, HEC token generation/validation, RBAC. Uses PostgreSQL for persistence. **Internal only** - accessed via web UI or thawk CLI.
+- **ingest (external:8088)**: Splunk HEC-compatible ingestion endpoint. Validates tokens via auth service, forwards raw events to core for normalization. **Externally exposed** for event collection.
+- **core (internal:8090)**: OCSF normalization engine. Converts raw events to OCSF-compliant format using auto-generated normalizers (77 OCSF classes). Implements validation, DLQ for failed events, and forwards to storage. **Internal only**.
+- **storage (internal:8083)**: OpenSearch abstraction layer. Handles bulk indexing, index lifecycle management, and data persistence. **Internal only**.
+- **query (internal:8082)**: Query API with OpenSearch integration. Supports SPL-subset, time-based filtering, aggregations, cursor-based pagination. **Internal only** - accessed via web UI.
+- **web (external:3000)**: React-based frontend with search console, event table, OCSF field inspection. **Externally exposed** as primary user interface.
+- **cli (thawk)**: Cobra-based CLI for authentication, HEC token management, event ingestion, and search queries. Uses Docker network for internal service access.
 
 ### Supporting Services
 
@@ -456,15 +469,27 @@ func (n *CustomNormalizer) Matches(envelope *model.RawEventEnvelope) bool {
 
 ## Security Considerations
 
-- Default passwords in `docker-compose.yml` MUST be changed for production
+**Network Exposure:**
+- **Minimal Attack Surface**: Only web (3000) and ingest (8088) exposed externally
+- **No Direct Service Access**: Auth, query, core, and storage services ONLY accessible via Docker network
+- **Self-Registration Disabled**: User accounts must be created by administrators (registration endpoint disabled)
+- **Admin Access**: All administrative operations require authentication via web UI or thawk CLI
+
+**Authentication & Authorization:**
 - JWT secrets MUST be set via `AUTH_JWT_SECRET` environment variable
+- HEC tokens are random UUIDs, stored hashed in database
+- All auth events forwarded to SIEM for audit trail (nonrepudiation)
+- Audit log table captures all authentication/authorization events with HMAC signatures
+
+**Transport Security:**
 - TLS MUST be enabled in production (`*_TLS_ENABLED=true`)
 - PostgreSQL uses SSL/TLS in production (`sslmode=require`)
 - OpenSearch uses TLS with client certificates
-- HEC tokens are random UUIDs, stored hashed in database
-- All auth events forwarded to SIEM for audit trail
-- Audit log table captures all authentication/authorization events
+
+**Operational Security:**
+- Default passwords in `docker-compose.yml` MUST be changed for production
 - Rate limiting prevents abuse of ingestion endpoints
+- Dead Letter Queue captures failed events for forensic analysis
 
 ## Documentation
 
