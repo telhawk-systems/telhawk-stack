@@ -1,3 +1,5 @@
+import { detectEventType, getEventTypeName, getEventTypeIcon } from '../utils/eventTypes';
+
 interface Event {
   time: string;
   category: string;
@@ -42,82 +44,155 @@ export function EventsTable({ events, totalMatches, onEventClick, onLoadMore, lo
     }
   };
 
+  const renderValue = (value: any): string => {
+    if (value === null || value === undefined) return 'N/A';
+    if (typeof value === 'object') return JSON.stringify(value);
+    return String(value);
+  };
+
+  const renderEventCard = (event: Event, index: number) => {
+    const eventType = detectEventType(event);
+    const typeName = getEventTypeName(eventType);
+    const typeIcon = getEventTypeIcon(eventType);
+    const eventData = event.raw?.data?.event || event;
+
+    // Type-specific fields to display
+    let typeSpecificFields: Array<{ label: string; value: any }> = [];
+
+    switch (eventType) {
+      case 'authentication':
+        typeSpecificFields = [
+          { label: 'Username', value: eventData.user?.name || eventData.actor?.user?.name },
+          { label: 'Source IP', value: eventData.src_endpoint?.ip },
+          { label: 'Status', value: eventData.status },
+          { label: 'Auth Protocol', value: eventData.auth_protocol },
+        ];
+        break;
+      case 'network':
+        typeSpecificFields = [
+          { label: 'Source', value: eventData.src_endpoint ? `${eventData.src_endpoint.ip}:${eventData.src_endpoint.port}` : 'N/A' },
+          { label: 'Destination', value: eventData.dst_endpoint ? `${eventData.dst_endpoint.ip}:${eventData.dst_endpoint.port}` : 'N/A' },
+          { label: 'Protocol', value: eventData.connection_info?.protocol_name },
+          { label: 'Direction', value: eventData.connection_info?.direction },
+        ];
+        break;
+      case 'process':
+        typeSpecificFields = [
+          { label: 'Process', value: eventData.process?.name },
+          { label: 'PID', value: eventData.process?.pid },
+          { label: 'Command', value: eventData.process?.cmd_line },
+          { label: 'User', value: eventData.actor?.user?.name || eventData.user?.name },
+        ];
+        break;
+      case 'file':
+        typeSpecificFields = [
+          { label: 'File Path', value: eventData.file?.path },
+          { label: 'Operation', value: eventData.activity_name },
+          { label: 'User', value: eventData.actor?.user?.name || eventData.user?.name },
+          { label: 'Size', value: eventData.file?.size ? `${eventData.file.size} bytes` : 'N/A' },
+        ];
+        break;
+      case 'dns':
+        typeSpecificFields = [
+          { label: 'Query', value: eventData.query?.hostname },
+          { label: 'Type', value: eventData.query?.type },
+          { label: 'Answer', value: eventData.answers?.[0]?.rdata },
+          { label: 'Source IP', value: eventData.src_endpoint?.ip },
+        ];
+        break;
+      case 'http':
+        typeSpecificFields = [
+          { label: 'Method', value: eventData.http_request?.method },
+          { label: 'URL', value: eventData.http_request?.url?.path || eventData.http_request?.url?.text },
+          { label: 'Status Code', value: eventData.http_response?.code },
+          { label: 'Client IP', value: eventData.src_endpoint?.ip },
+        ];
+        break;
+      case 'detection':
+        typeSpecificFields = [
+          { label: 'Finding', value: eventData.finding?.title || eventData.message },
+          { label: 'Tactic', value: eventData.attacks?.[0]?.tactic?.name },
+          { label: 'Technique', value: eventData.attacks?.[0]?.technique?.name },
+          { label: 'Risk Score', value: eventData.risk_score },
+        ];
+        break;
+      default:
+        // Splunk-like fallback view for unknown event types or raw events
+        typeSpecificFields = [
+          { label: 'Source Type', value: event.properties?.source_type || eventData.sourcetype },
+          { label: 'Source', value: event.properties?.source || eventData.source },
+          { label: 'Host', value: eventData.device?.hostname || eventData.device?.ip || eventData.observables?.hostname },
+          { label: 'Message', value: eventData.message || eventData.description || 'No message' },
+        ];
+    }
+
+    return (
+      <div
+        key={index}
+        className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer mb-3"
+        onClick={() => onEventClick(event)}
+      >
+        {/* Header Row */}
+        <div className="flex items-center justify-between mb-3 pb-3 border-b border-gray-200">
+          <div className="flex items-center space-x-3">
+            <span className="text-2xl">{typeIcon}</span>
+            <div>
+              <div className="flex items-center space-x-2">
+                <span className="font-semibold text-gray-900">{typeName}</span>
+                <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getSeverityColor(event.severity)}`}>
+                  {event.severity || 'Unknown'}
+                </span>
+              </div>
+              <div className="text-sm text-gray-500 mt-1">
+                {new Date(event.time).toLocaleString()}
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onEventClick(event);
+            }}
+            className="text-blue-600 hover:text-blue-800 font-medium text-sm"
+          >
+            View Details →
+          </button>
+        </div>
+
+        {/* Type-Specific Fields Grid */}
+        <div className="grid grid-cols-2 gap-3">
+          {typeSpecificFields.map((field, i) => (
+            <div key={i} className="flex flex-col">
+              <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                {field.label}
+              </span>
+              <span className="text-sm text-gray-900 mt-1 truncate" title={renderValue(field.value)}>
+                {renderValue(field.value)}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden">
-      <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="bg-white rounded-lg shadow-md px-6 py-4">
         <h3 className="text-lg font-semibold text-gray-800">
           Events {totalMatches && `(${events.length} of ${totalMatches})`}
         </h3>
       </div>
-      
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Time
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Severity
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Category
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Class
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Activity
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {events.map((event, index) => (
-              <tr 
-                key={index} 
-                className="hover:bg-gray-50 transition-colors cursor-pointer"
-                onClick={() => onEventClick(event)}
-              >
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {new Date(event.time).toLocaleString()}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getSeverityColor(event.severity)}`}>
-                    {event.severity || 'Unknown'}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {event.category || 'N/A'}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {event.class || 'N/A'}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {event.activity || 'N/A'}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onEventClick(event);
-                    }}
-                    className="text-blue-600 hover:text-blue-800 font-medium"
-                  >
-                    View Details
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+
+      {/* Event Cards List */}
+      <div className="space-y-3">
+        {events.map((event, index) => renderEventCard(event, index))}
       </div>
 
       {/* Pagination Controls */}
       {onLoadMore && (
-        <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+        <div className="bg-white rounded-lg shadow-md px-6 py-4">
           <div className="flex items-center justify-between">
             <p className="text-sm text-gray-600">
               Showing {events.length} {totalMatches && `of ${totalMatches} total events`}
