@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/telhawk-systems/telhawk-stack/auth/internal/models"
 	"github.com/telhawk-systems/telhawk-stack/auth/internal/service"
@@ -381,6 +382,42 @@ func (h *AuthHandler) RevokeHECTokenHandler(w http.ResponseWriter, r *http.Reque
 	userAgent := r.Header.Get("User-Agent")
 
 	if err := h.service.RevokeHECTokenByUser(req.Token, userID, ipAddress, userAgent); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// RevokeHECTokenByIDHandler handles RESTful revocation with token ID in URL path
+// Endpoint: DELETE /api/v1/hec/tokens/{id}/revoke
+func (h *AuthHandler) RevokeHECTokenByIDHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete && r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	userID := r.Header.Get("X-User-ID")
+	if userID == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	// Extract token ID from path: /api/v1/hec/tokens/{id}/revoke
+	path := r.URL.Path
+	// Remove prefix and suffix to get token ID
+	tokenID := strings.TrimPrefix(path, "/api/v1/hec/tokens/")
+	tokenID = strings.TrimSuffix(tokenID, "/revoke")
+
+	if tokenID == "" {
+		http.Error(w, "Token ID is required", http.StatusBadRequest)
+		return
+	}
+
+	ipAddress := getClientIP(r)
+	userAgent := r.Header.Get("User-Agent")
+
+	if err := h.service.RevokeHECTokenByID(tokenID, userID, ipAddress, userAgent); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}

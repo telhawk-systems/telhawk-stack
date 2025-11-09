@@ -122,6 +122,19 @@ func (r *InMemoryRepository) GetHECToken(token string) (*models.HECToken, error)
 	return hecToken, nil
 }
 
+// GetHECTokenByID retrieves an HEC token by its ID
+func (r *InMemoryRepository) GetHECTokenByID(id string) (*models.HECToken, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	for _, token := range r.hecTokens {
+		if token.ID == id {
+			return token, nil
+		}
+	}
+	return nil, ErrHECTokenNotFound
+}
+
 func (r *InMemoryRepository) ListHECTokensByUser(userID string) ([]*models.HECToken, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()

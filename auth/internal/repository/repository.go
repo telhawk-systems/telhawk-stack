@@ -27,6 +27,7 @@ type Repository interface {
 
 	CreateHECToken(token *models.HECToken) error
 	GetHECToken(token string) (*models.HECToken, error)
+	GetHECTokenByID(id string) (*models.HECToken, error)
 	ListHECTokensByUser(userID string) ([]*models.HECToken, error)
 	RevokeHECToken(token string) error
 }

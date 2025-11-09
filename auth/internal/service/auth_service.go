@@ -458,3 +458,36 @@ func (s *AuthService) RevokeHECTokenByUser(token, userID, ipAddress, userAgent s
 	return nil
 }
 
+// RevokeHECTokenByID revokes an HEC token by its ID (used for RESTful endpoint)
+func (s *AuthService) RevokeHECTokenByID(tokenID, userID, ipAddress, userAgent string) error {
+	hecToken, err := s.repo.GetHECTokenByID(tokenID)
+	if err != nil {
+		return err
+	}
+
+	if hecToken.UserID != userID {
+		return errors.New("unauthorized")
+	}
+
+	if err := s.repo.RevokeHECToken(hecToken.Token); err != nil {
+		s.auditLog.Log(
+			models.ActorTypeUser, userID, "",
+			models.ActionHECTokenRevoke, "hec_token", hecToken.ID,
+			ipAddress, userAgent,
+			models.ResultFailure, err.Error(),
+			nil,
+		)
+		return err
+	}
+
+	s.auditLog.Log(
+		models.ActorTypeUser, userID, "",
+		models.ActionHECTokenRevoke, "hec_token", hecToken.ID,
+		ipAddress, userAgent,
+		models.ResultSuccess, "",
+		nil,
+	)
+
+	return nil
+}
+

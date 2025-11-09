@@ -257,6 +257,39 @@ func (r *PostgresRepository) GetHECToken(token string) (*models.HECToken, error)
 	return &hecToken, nil
 }
 
+// GetHECTokenByID retrieves an HEC token by its ID
+func (r *PostgresRepository) GetHECTokenByID(id string) (*models.HECToken, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	query := `
+		SELECT id, token, name, user_id, enabled, created_at, COALESCE(expires_at, '0001-01-01'::timestamp)
+		FROM hec_tokens
+		WHERE id = $1
+	`
+
+	var hecToken models.HECToken
+	var expiresAt time.Time
+
+	err := r.pool.QueryRow(ctx, query, id).Scan(
+		&hecToken.ID, &hecToken.Token, &hecToken.Name, &hecToken.UserID,
+		&hecToken.Enabled, &hecToken.CreatedAt, &expiresAt,
+	)
+
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrHECTokenNotFound
+		}
+		return nil, fmt.Errorf("failed to get HEC token: %w", err)
+	}
+
+	if !expiresAt.IsZero() && expiresAt.Year() > 1 {
+		hecToken.ExpiresAt = expiresAt
+	}
+
+	return &hecToken, nil
+}
+
 func (r *PostgresRepository) ListHECTokensByUser(userID string) ([]*models.HECToken, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
