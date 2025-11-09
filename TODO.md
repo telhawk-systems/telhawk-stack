@@ -1,8 +1,21 @@
 # TelHawk Stack TODO
 
-**Last Updated:** 2025-11-07
+**Last Updated:** 2025-11-08
 
-## Recent Accomplishments (Nov 6, 2025)
+## Recent Accomplishments (Nov 8, 2025)
+- ✅ Upgraded all services to Go 1.25
+- ✅ Migrated from gorilla/csrf to Go 1.25 net/http.CrossOriginProtection
+- ✅ Implemented complete user management UI with CRUD operations
+- ✅ Implemented HEC token management UI with create/list/revoke
+- ✅ Added server-side dashboard metrics caching (5-minute TTL)
+- ✅ Fixed CSRF middleware to properly exempt authenticated endpoints
+- ✅ Added pagination support to web UI search results
+- ✅ Implemented event type-specific views for all 7 major OCSF classes
+- ✅ Added dynamic table columns that adapt based on event type (class_uid)
+- ✅ Created type-specific detail views with organized, relevant fields
+- ✅ Added event type icons and color coding to UI components
+
+## Previous Accomplishments (Nov 6, 2025)
 - ✅ Fixed OpenSearch integration (removed duplicate write indices)
 - ✅ Enabled auth event forwarding to HEC endpoint
 - ✅ Verified OCSF 1.1.0 compliance for all events
@@ -136,18 +149,26 @@
   * EventClassChart (bar chart) for top event classes
   * TimelineChart (line chart) for events over time
   * Integration with OpenSearch aggregation API
+  * Server-side caching for dashboard metrics (configurable TTL, default 5 minutes)
+  * Dedicated /api/dashboard/metrics GET endpoint with cache headers
+  * Fixed OpenSearch aggregation errors with .keyword subfields
   * Tab navigation between Overview and Search
+  * Pagination support for search results
   * Documentation: docs/DASHBOARD_VISUALIZATION.md
-- [ ] Create event type-specific views for major OCSF classes
-  * Authentication events (3002): Login attempts, user context, session details
-  * Network Activity (4001): Source/dest IPs, ports, protocols, connection status
-  * Process Activity (1007): Command lines, parent/child processes, user context
-  * File Activity (4006): File paths, operations, hashes, permissions
-  * DNS Activity (4003): Query/response, domain names, record types
-  * HTTP Activity (4002): URLs, methods, status codes, user agents
-  * Detection Finding (2004): Rule names, severity, tactics/techniques
-  * Custom table columns and detail views per event type
-  * Type-aware filtering and search
+- [x] Create event type-specific views for major OCSF classes ✅
+  * Authentication events (3002): Username, source IP, status with color coding
+  * Network Activity (4001): Source/dest endpoints with ports, protocol
+  * Process Activity (1007): Process name/command line, PID, user context
+  * File Activity (4006): File paths, operations, user context
+  * DNS Activity (4003): Query hostname, query type, answers
+  * HTTP Activity (4002): Request method/URL, status code with color, destination
+  * Detection Finding (2004): Finding title, MITRE ATT&CK tactic/technique
+  * Event type detection utility based on class_uid
+  * Dynamic table columns that adapt to event type
+  * Type-specific detail views with relevant fields organized by section
+  * Event type icons and color coding in modal headers
+  * Components: TypeSpecificColumns, TypeSpecificDetails, eventTypes utility
+  * Files: web/frontend/src/utils/eventTypes.ts, web/frontend/src/components/events/
 - [ ] Establish testing strategy for UI rendering validation
 
 ## Authentication & Authorization
@@ -160,16 +181,22 @@
   * Create, validate, revoke HEC tokens
   * Token association with users
   * Token validation caching (5m TTL)
-- [ ] User management UI
-  * List/view users
-  * Create/edit/delete users
-  * Role assignment (admin, analyst, viewer)
-  * Password reset functionality
-- [ ] HEC token management UI
+- [x] User management UI ✅
+  * List/view users with real-time status
+  * Create new users with username, email, password, role selection
+  * Edit user roles (admin, analyst, viewer)
+  * Enable/disable user accounts
+  * Reset user passwords
+  * Delete users
+  * Complete CRUD operations via /api/v1/auth/register and user endpoints
+- [x] HEC token management UI ✅
   * View HEC tokens for current user
   * Create new HEC tokens with names
   * Revoke existing tokens
-  * Token usage statistics
+  * Token display with masked values (full value shown once on creation)
+  * Copy-to-clipboard functionality
+  * Status indicators and creation dates
+  * Admin-only access via /tokens route
 - [ ] Advanced authorization
   * Role-based access control (RBAC) enforcement
   * Per-index access controls
