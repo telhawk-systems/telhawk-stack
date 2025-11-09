@@ -23,13 +23,17 @@ func TestGenerateAuthEvent(t *testing.T) {
 			t.Errorf("Expected class_name Authentication, got %v", event["class_name"])
 		}
 
-		// Verify user object exists
-		user, ok := event["user"].(map[string]interface{})
+		// Verify actor.user object exists (OCSF compliant)
+		actor, ok := event["actor"].(map[string]interface{})
 		if !ok {
-			t.Fatal("user field missing or wrong type")
+			t.Fatal("actor field missing or wrong type")
+		}
+		user, ok := actor["user"].(map[string]interface{})
+		if !ok {
+			t.Fatal("actor.user field missing or wrong type")
 		}
 		if user["name"] == nil || user["uid"] == nil || user["email"] == nil {
-			t.Error("user missing required fields")
+			t.Error("actor.user missing required fields")
 		}
 
 		// Verify src_endpoint exists

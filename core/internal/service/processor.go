@@ -40,7 +40,15 @@ func (p *Processor) Process(ctx context.Context, envelope *model.RawEventEnvelop
 	event, err := p.pipeline.Process(ctx, envelope)
 	if err != nil {
 		p.failed.Add(1)
-		
+
+		// Log detailed normalization/validation failure information
+		payloadPreview := string(envelope.Payload)
+		if len(payloadPreview) > 500 {
+			payloadPreview = payloadPreview[:500] + "..."
+		}
+		log.Printf("ERROR: Normalization/validation failed for event [id=%s, source=%s, source_type=%s, format=%s]: %v\nPayload preview: %s",
+			envelope.ID, envelope.Source, envelope.SourceType, envelope.Format, err, payloadPreview)
+
 		// Write to DLQ for normalization failures
 		if p.dlq != nil {
 			if dlqErr := p.dlq.Write(ctx, envelope, err, "normalization_failed"); dlqErr != nil {
@@ -49,7 +57,7 @@ func (p *Processor) Process(ctx context.Context, envelope *model.RawEventEnvelop
 				p.dlqWritten.Add(1)
 			}
 		}
-		
+
 		return nil, err
 	}
 

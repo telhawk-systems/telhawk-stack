@@ -190,10 +190,12 @@ func generateAuthEvent() map[string]interface{} {
 			}
 			return "Failure"
 		}(),
-		"user": map[string]interface{}{
-			"name":   gofakeit.Username(),
-			"uid":    gofakeit.UUID(),
-			"email":  gofakeit.Email(),
+		"actor": map[string]interface{}{
+			"user": map[string]interface{}{
+				"name":   gofakeit.Username(),
+				"uid":    gofakeit.UUID(),
+				"email":  gofakeit.Email(),
+			},
 		},
 		"src_endpoint": map[string]interface{}{
 			"ip":       gofakeit.IPv4Address(),
