@@ -5,6 +5,7 @@ import { EventsTable } from '../components/EventsTable';
 import { EventDetailModal } from '../components/EventDetailModal';
 import { DashboardOverview } from '../components/dashboard/DashboardOverview';
 import { apiClient } from '../services/api';
+import { Query } from '../types/query';
 
 type TabType = 'overview' | 'search';
 
@@ -15,26 +16,31 @@ export function DashboardPage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState('');
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
-  const [currentQuery, setCurrentQuery] = useState<string>('');
+  const [currentQuery, setCurrentQuery] = useState<Query | null>(null);
   const [allEvents, setAllEvents] = useState<any[]>([]);
 
-  const handleSearch = async (query: string, timeRange?: { start: string; end: string }) => {
+  const handleSearch = async (query: Query) => {
     setError('');
     setLoading(true);
     setResults(null);
     setAllEvents([]);
+    setCurrentQuery(query);
 
     try {
-      // Build query with time range if provided
-      let searchQuery = query;
-      if (timeRange) {
-        searchQuery = `${query} time:[${timeRange.start} TO ${timeRange.end}]`;
-      }
+      const data = await apiClient.executeQuery(query);
 
-      setCurrentQuery(searchQuery);
-      const data = await apiClient.search(searchQuery);
-      setResults(data);
-      setAllEvents(data.results || []);
+      // Map response to match expected format
+      const results = {
+        results: data.events || [],
+        result_count: data.events?.length || 0,
+        total_matches: data.total,
+        latency_ms: data.took || 0,
+        cursor: data.cursor,
+        request_id: 'query-' + Date.now(), // Generate a request ID
+      };
+
+      setResults(results);
+      setAllEvents(data.events || []);
     } catch (err) {
       setError('Search failed. Please try again.');
       console.error('Search error:', err);
@@ -44,23 +50,32 @@ export function DashboardPage() {
   };
 
   const handleLoadMore = async () => {
-    if (!results?.search_after || loadingMore) return;
+    if (!results?.cursor || loadingMore || !currentQuery) return;
 
     setLoadingMore(true);
     setError('');
 
     try {
-      const data = await apiClient.search(currentQuery, 50, undefined, results.search_after);
+      // Update query with cursor for next page
+      const nextPageQuery: Query = {
+        ...currentQuery,
+        cursor: results.cursor,
+      };
+
+      const data = await apiClient.executeQuery(nextPageQuery);
 
       // Append new results to existing events
-      const newEvents = [...allEvents, ...(data.results || [])];
+      const newEvents = [...allEvents, ...(data.events || [])];
       setAllEvents(newEvents);
 
-      // Update results with new search_after cursor and counts
+      // Update results with new cursor and counts
       setResults({
-        ...data,
         results: newEvents,
         result_count: newEvents.length,
+        total_matches: data.total,
+        latency_ms: data.took || 0,
+        cursor: data.cursor,
+        request_id: 'query-' + Date.now(),
       });
     } catch (err) {
       setError('Failed to load more results. Please try again.');
@@ -145,7 +160,7 @@ export function DashboardPage() {
                 events={allEvents}
                 totalMatches={results.total_matches}
                 onEventClick={setSelectedEvent}
-                onLoadMore={results.search_after ? handleLoadMore : undefined}
+                onLoadMore={results.cursor ? handleLoadMore : undefined}
                 loadingMore={loadingMore}
               />
             </>
