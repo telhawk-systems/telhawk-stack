@@ -5,7 +5,6 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/gorilla/csrf"
 	"github.com/telhawk/web/internal/auth"
 )
 
@@ -29,15 +28,13 @@ type LoginRequest struct {
 }
 
 func (h *AuthHandler) GetCSRFToken(w http.ResponseWriter, r *http.Request) {
-	token := csrf.Token(r)
-	tokenPreview := token
-	if len(tokenPreview) > 20 {
-		tokenPreview = tokenPreview[:20] + "..."
-	}
-	log.Printf("Generated CSRF token for request from %s: %s", r.RemoteAddr, tokenPreview)
+	// Go 1.25's CrossOriginProtection uses header-based validation
+	// (Sec-Fetch-Site and Origin) instead of tokens
+	// Return empty token for backward compatibility with frontend
+	log.Printf("CSRF token requested from %s (using header-based protection)", r.RemoteAddr)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"csrf_token": token,
+		"csrf_token": "",
 	})
 }
 
