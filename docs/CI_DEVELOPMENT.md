@@ -14,6 +14,45 @@ The CI pipeline consists of three parallel jobs:
 2. **Lint** - Static analysis with golangci-lint
 3. **Build** - Compile all services
 
+## Git Hooks (Automatic Formatting)
+
+Git hooks can automatically format your Go code before each commit, ensuring you never commit unformatted code.
+
+### Install Git Hooks
+
+Run once after cloning the repository:
+
+```bash
+./scripts/install-hooks.sh
+```
+
+This installs:
+- **pre-commit hook**: Automatically runs `gofmt -w` on all staged Go files before committing
+
+### What the Hook Does
+
+When you run `git commit`, the pre-commit hook:
+1. Finds all staged `.go` files
+2. Runs `gofmt -w` on each file
+3. Re-stages the formatted files
+4. Proceeds with the commit
+
+You'll see output like:
+```
+Formatting auth/internal/handlers/auth.go
+Formatting core/internal/pipeline/pipeline.go
+
+✓ Go files have been automatically formatted with gofmt
+```
+
+### Bypassing the Hook
+
+To commit without running hooks (not recommended):
+
+```bash
+git commit --no-verify
+```
+
 ## Running Checks Locally
 
 ### 1. Format Check (gofmt)

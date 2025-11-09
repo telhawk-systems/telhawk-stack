@@ -535,9 +535,17 @@ See the [LICENSE](LICENSE) file for full terms.
 
 For bug reports and feature requests, please open an issue on GitHub.
 
-### Running Tests and CI Checks
+### Git Hooks and Testing
 
-Before committing changes, run the pre-push checks locally:
+**Install Git hooks** (recommended - run once after cloning):
+
+```bash
+./scripts/install-hooks.sh
+```
+
+This installs a pre-commit hook that automatically formats Go code with `gofmt` before each commit.
+
+**Run pre-push checks** before committing changes:
 
 ```bash
 ./scripts/pre-push.sh
@@ -550,7 +558,7 @@ This script runs the same checks as CI:
 - Unit tests with race detector
 - Linting (golangci-lint, if installed)
 
-For detailed information about CI and local development checks, see [docs/CI_DEVELOPMENT.md](docs/CI_DEVELOPMENT.md).
+For detailed information about CI, Git hooks, and local development checks, see [docs/CI_DEVELOPMENT.md](docs/CI_DEVELOPMENT.md).
 
 ## Commercial Support & Services
 
