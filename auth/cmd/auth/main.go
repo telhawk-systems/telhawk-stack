@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/golang-migrate/migrate/v4"
@@ -124,7 +125,20 @@ func main() {
 		}
 	})
 	mux.HandleFunc("/api/v1/hec/tokens/revoke", handler.RevokeHECTokenHandler)
-	
+
+	// RESTful endpoint for revoking specific token by ID: /api/v1/hec/tokens/{id}/revoke
+	mux.HandleFunc("/api/v1/hec/tokens/", func(w http.ResponseWriter, r *http.Request) {
+		path := r.URL.Path
+		// Check if path matches /api/v1/hec/tokens/{id}/revoke
+		if strings.HasPrefix(path, "/api/v1/hec/tokens/") && strings.HasSuffix(path, "/revoke") {
+			if r.Method == http.MethodDelete || r.Method == http.MethodPost {
+				handler.RevokeHECTokenByIDHandler(w, r)
+				return
+			}
+		}
+		http.Error(w, "Not found", http.StatusNotFound)
+	})
+
 	mux.HandleFunc("/healthz", handler.HealthCheck)
 
 	// Create server with config values

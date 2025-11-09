@@ -26,7 +26,7 @@ export interface EventClassConfig {
  */
 export const FIELD_FILTERS: Record<string, FieldFilterConfig> = {
   // Authentication (3002)
-  username: { id: 'username', label: 'Username', ocsfPath: 'user.name', type: 'text' },
+  username: { id: 'username', label: 'Username', ocsfPath: 'actor.user.name', type: 'text' },
   source_ip: { id: 'source_ip', label: 'Source IP', ocsfPath: 'src_endpoint.ip', type: 'ip' },
   status: { id: 'status', label: 'Status', ocsfPath: 'status', type: 'enum', enumValues: ['Success', 'Failure', 'Unknown'] },
   auth_protocol: { id: 'auth_protocol', label: 'Auth Protocol', ocsfPath: 'auth_protocol', type: 'enum', enumValues: ['LDAP', 'Kerberos', 'NTLM', 'SAML', 'OAuth'] },
@@ -45,16 +45,16 @@ export const FIELD_FILTERS: Record<string, FieldFilterConfig> = {
   // Process Activity (1007)
   process_name: { id: 'process_name', label: 'Process Name', ocsfPath: 'process.name', type: 'text' },
   user: { id: 'user', label: 'User', ocsfPath: 'actor.user.name', type: 'text' },
-  parent_process: { id: 'parent_process', label: 'Parent Process', ocsfPath: 'process.parent_process.name', type: 'text' },
+  parent_process: { id: 'parent_process', label: 'Parent Process', ocsfPath: 'parent_process.name', type: 'text' },
   command_line: { id: 'command_line', label: 'Command Line', ocsfPath: 'process.cmd_line', type: 'text' },
   pid: { id: 'pid', label: 'Process ID', ocsfPath: 'process.pid', type: 'number' },
-  executable_hash: { id: 'executable_hash', label: 'Executable Hash', ocsfPath: 'process.file.hashes[0].value', type: 'text' },
+  executable_hash: { id: 'executable_hash', label: 'Executable Hash', ocsfPath: 'process.file.hashes', type: 'text' },
 
   // File Activity (4006)
   file_path: { id: 'file_path', label: 'File Path', ocsfPath: 'file.path', type: 'text' },
-  operation: { id: 'operation', label: 'Operation', ocsfPath: 'activity_name', type: 'enum', enumValues: ['Create', 'Read', 'Update', 'Delete', 'Rename', 'Copy'] },
+  operation: { id: 'operation', label: 'Operation', ocsfPath: 'activity_name', type: 'text' },
   file_size: { id: 'file_size', label: 'File Size', ocsfPath: 'file.size', type: 'number' },
-  file_hash: { id: 'file_hash', label: 'File Hash', ocsfPath: 'file.hashes[0].value', type: 'text' },
+  file_hash: { id: 'file_hash', label: 'File Hash', ocsfPath: 'file.hashes', type: 'text' },
   modified_time: { id: 'modified_time', label: 'Modified Time', ocsfPath: 'file.modified_time', type: 'text' },
 
   // DNS Activity (4003)
