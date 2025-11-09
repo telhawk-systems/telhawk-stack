@@ -326,6 +326,7 @@ Comprehensive guides for configuration, deployment, and usage:
 ### Additional Resources
 
 - **OCSF Compliance** - See section below for OCSF schema implementation details
+- **[UX Design Philosophy](docs/UX_DESIGN_PHILOSOPHY.md)** - Why TelHawk's interface works like a CRM, not a traditional SIEM. If you've used any modern CRM or ticketing system, you'll know how to triage events - no SIEM-specific training required.
 - **API Documentation** - Coming soon
 - **Web UI Guide** - Coming soon
 
