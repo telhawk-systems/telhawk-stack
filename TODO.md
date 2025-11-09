@@ -376,6 +376,26 @@
   * IOC matching and flagging
 
 ## Investigation & Response
+- [ ] **B** Entity modeling (MVP: clickable entities + timeline)
+  * Make user/IP/hostname clickable in event table
+  * Entity detail page showing all events for that entity
+  * Real-time query across all event types (no entity DB needed)
+  * Entity timeline sorted by time
+  * Basic entity stats (event count, first/last seen)
+  * Support entity types: user, IP, hostname, process, file
+  * Entity filter using existing query language
+  * Related entities view (this user → these hosts)
+  * **Est: 2-3 days implementation**
+- [ ] Entity profiling & advanced modeling
+  * Entity database for historical profiling
+  * Entity baselining and anomaly detection
+  * Session/identity stitching across event types
+  * Relationship graph (entity-to-entity connections)
+  * Graph visualization for lateral movement
+  * Kill chain progression tracking
+  * Blast radius analysis
+  * Risk scoring per entity
+  * Machine learning-based entity behavior
 - [ ] Incident/Case management (full lifecycle)
   * Create cases from events/alerts
   * Case state tracking (open, acknowledged, in-progress, resolved, closed)
@@ -389,16 +409,6 @@
   * Case templates for common scenarios
   * Incident metrics (MTTA, MTTR, volume by type)
   * Case reporting and export
-- [ ] Entity & relationship modeling
-  * First-class entity types (users, hosts, IPs, services, applications)
-  * Entity profiling and baselining
-  * Session/identity stitching across event types
-  * Relationship graph (entity-to-entity connections)
-  * Graph visualization for lateral movement
-  * Kill chain progression tracking
-  * Blast radius analysis
-  * Entity timeline (all activity for an entity)
-  * Anomaly detection per entity
 - [ ] Event correlation & analysis
   * Link related events across classes
   * Investigation graph visualization
