@@ -9,6 +9,7 @@ import (
 
 	"github.com/telhawk-systems/telhawk-stack/query/internal/models"
 	"github.com/telhawk-systems/telhawk-stack/query/internal/service"
+	"github.com/telhawk-systems/telhawk-stack/query/pkg/model"
 )
 
 // Handler wires HTTP routes to the query service.
@@ -44,6 +45,25 @@ func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 	resp, err := h.svc.ExecuteSearch(r.Context(), &req)
 	if err != nil {
 		h.writeError(w, http.StatusInternalServerError, "search_failed", err.Error())
+		return
+	}
+	h.writeJSON(w, http.StatusOK, resp)
+}
+
+// Query handles POST /api/v1/query requests with canonical JSON query format.
+func (h *Handler) Query(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		h.methodNotAllowed(w, http.MethodPost)
+		return
+	}
+	var query model.Query
+	if err := decodeJSON(r.Body, &query); err != nil {
+		h.writeError(w, http.StatusBadRequest, "invalid_request", err.Error())
+		return
+	}
+	resp, err := h.svc.ExecuteQuery(r.Context(), &query)
+	if err != nil {
+		h.writeError(w, http.StatusInternalServerError, "query_failed", err.Error())
 		return
 	}
 	h.writeJSON(w, http.StatusOK, resp)
