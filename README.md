@@ -531,14 +531,26 @@ See the [LICENSE](LICENSE) file for full terms.
 
 ## Contributing
 
-We welcome contributions! By submitting a pull request, you grant TelHawk Systems 
-the right to use your contribution under any terms, including commercial licensing.
+**Note:** This project does not accept external contributions or pull requests from forks. Development is handled internally by the TelHawk team.
 
-Guidelines:
-- Open an issue first for major changes
-- Follow Go best practices and existing code style
-- Include tests for new features
-- Update documentation as needed
+For bug reports and feature requests, please open an issue on GitHub.
+
+### Running Tests and CI Checks
+
+Before committing changes, run the pre-push checks locally:
+
+```bash
+./scripts/pre-push.sh
+```
+
+This script runs the same checks as CI:
+- Code formatting (gofmt)
+- Go module tidiness
+- Static analysis (go vet)
+- Unit tests with race detector
+- Linting (golangci-lint, if installed)
+
+For detailed information about CI and local development checks, see [docs/CI_DEVELOPMENT.md](docs/CI_DEVELOPMENT.md).
 
 ## Commercial Support & Services
 
