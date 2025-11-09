@@ -139,7 +139,15 @@ func main() {
 		normalizer.HECNormalizer{},
 	)
 	log.Printf("Registered %d normalizers (77 generated + 1 fallback)", 77+1)
-	validators := validator.NewChain(validator.BasicValidator{})
+
+	// Initialize validators (basic + all 77 generated class-specific validators)
+	allValidators := []validator.Validator{
+		validator.BasicValidator{}, // Basic OCSF structure validation
+	}
+	allValidators = append(allValidators, generated.AllValidators()...)
+	validators := validator.NewChain(allValidators...)
+	log.Printf("Registered %d validators (1 basic + 77 generated)", len(allValidators))
+
 	pipe := pipeline.New(registry, validators)
 	storageClient := storage.NewClient(cfg.Storage.URL)
 	
