@@ -10,6 +10,7 @@ import (
 func NewRouter(h *handlers.Handler) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/v1/search", h.Search)
+	mux.HandleFunc("/api/v1/query", h.Query)
 	mux.HandleFunc("/api/v1/alerts", h.Alerts)
 	mux.HandleFunc("/api/v1/alerts/", h.AlertByID)
 	mux.HandleFunc("/api/v1/dashboards", h.Dashboards)

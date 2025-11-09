@@ -14,6 +14,9 @@ import (
 
 	"github.com/telhawk-systems/telhawk-stack/query/internal/client"
 	"github.com/telhawk-systems/telhawk-stack/query/internal/models"
+	"github.com/telhawk-systems/telhawk-stack/query/internal/translator"
+	"github.com/telhawk-systems/telhawk-stack/query/internal/validator"
+	"github.com/telhawk-systems/telhawk-stack/query/pkg/model"
 )
 
 var (
@@ -86,7 +89,7 @@ func NewQueryService(version string, osClient *client.OpenSearchClient) *QuerySe
 // ExecuteSearch executes a search query against OpenSearch.
 func (s *QueryService) ExecuteSearch(ctx context.Context, req *models.SearchRequest) (*models.SearchResponse, error) {
 	startTime := time.Now()
-	
+
 	limit := req.Limit
 	if limit <= 0 {
 		limit = 100
@@ -96,7 +99,7 @@ func (s *QueryService) ExecuteSearch(ctx context.Context, req *models.SearchRequ
 	}
 
 	query := s.buildOpenSearchQuery(req)
-	
+
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(query); err != nil {
 		return nil, fmt.Errorf("encode query: %w", err)
@@ -137,7 +140,7 @@ func (s *QueryService) ExecuteSearch(ctx context.Context, req *models.SearchRequ
 
 	results := make([]map[string]interface{}, 0, len(searchResult.Hits.Hits))
 	var searchAfter []interface{}
-	
+
 	for _, hit := range searchResult.Hits.Hits {
 		event := hit.Source
 		if req.IncludeFields != nil && len(req.IncludeFields) > 0 {
@@ -155,7 +158,7 @@ func (s *QueryService) ExecuteSearch(ctx context.Context, req *models.SearchRequ
 	}
 
 	latency := time.Since(startTime).Milliseconds()
-	
+
 	response := &models.SearchResponse{
 		RequestID:    generateID(),
 		LatencyMS:    int(latency),
@@ -163,24 +166,108 @@ func (s *QueryService) ExecuteSearch(ctx context.Context, req *models.SearchRequ
 		TotalMatches: searchResult.Hits.Total.Value,
 		Results:      results,
 	}
-	
+
 	if len(searchAfter) > 0 && len(results) == limit {
 		response.SearchAfter = searchAfter
 	}
-	
+
 	if searchResult.Aggregations != nil && len(searchResult.Aggregations) > 0 {
 		response.Aggregations = searchResult.Aggregations
 	}
-	
+
+	return response, nil
+}
+
+// ExecuteQuery executes a canonical JSON query and returns search results.
+func (s *QueryService) ExecuteQuery(ctx context.Context, q *model.Query) (*models.SearchResponse, error) {
+	startTime := time.Now()
+
+	// Validate the query
+	validator := validator.NewQueryValidator()
+	if err := validator.Validate(q); err != nil {
+		return nil, fmt.Errorf("query validation failed: %w", err)
+	}
+
+	// Translate the canonical query to OpenSearch DSL
+	translator := translator.NewOpenSearchTranslator()
+	osQuery, err := translator.Translate(q)
+	if err != nil {
+		return nil, fmt.Errorf("query translation failed: %w", err)
+	}
+
+	// Execute the query
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(osQuery); err != nil {
+		return nil, fmt.Errorf("encode query: %w", err)
+	}
+
+	res, err := s.osClient.Client().Search(
+		s.osClient.Client().Search.WithContext(ctx),
+		s.osClient.Client().Search.WithIndex(s.osClient.Index()+"*"),
+		s.osClient.Client().Search.WithBody(&buf),
+		s.osClient.Client().Search.WithTrackTotalHits(true),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("search request: %w", err)
+	}
+	defer res.Body.Close()
+
+	if res.IsError() {
+		return nil, fmt.Errorf("search error: %s", res.String())
+	}
+
+	var searchResult struct {
+		Hits struct {
+			Total struct {
+				Value int `json:"value"`
+			} `json:"total"`
+			Hits []struct {
+				Source map[string]interface{} `json:"_source"`
+				Sort   []interface{}          `json:"sort"`
+			} `json:"hits"`
+		} `json:"hits"`
+		Aggregations map[string]interface{} `json:"aggregations,omitempty"`
+	}
+
+	if err := json.NewDecoder(res.Body).Decode(&searchResult); err != nil {
+		return nil, fmt.Errorf("decode response: %w", err)
+	}
+
+	results := make([]map[string]interface{}, 0, len(searchResult.Hits.Hits))
+	var searchAfter []interface{}
+
+	for _, hit := range searchResult.Hits.Hits {
+		results = append(results, hit.Source)
+		searchAfter = hit.Sort
+	}
+
+	latency := time.Since(startTime).Milliseconds()
+
+	response := &models.SearchResponse{
+		RequestID:    generateID(),
+		LatencyMS:    int(latency),
+		ResultCount:  len(results),
+		TotalMatches: searchResult.Hits.Total.Value,
+		Results:      results,
+	}
+
+	if len(searchAfter) > 0 && len(results) > 0 {
+		response.SearchAfter = searchAfter
+	}
+
+	if searchResult.Aggregations != nil && len(searchResult.Aggregations) > 0 {
+		response.Aggregations = searchResult.Aggregations
+	}
+
 	return response, nil
 }
 
 func (s *QueryService) buildOpenSearchQuery(req *models.SearchRequest) map[string]interface{} {
 	query := make(map[string]interface{})
-	
+
 	boolQuery := make(map[string]interface{})
 	must := []interface{}{}
-	
+
 	if req.Query != "" && req.Query != "*" {
 		must = append(must, map[string]interface{}{
 			"query_string": map[string]interface{}{
@@ -189,7 +276,7 @@ func (s *QueryService) buildOpenSearchQuery(req *models.SearchRequest) map[strin
 			},
 		})
 	}
-	
+
 	if req.TimeRange != nil {
 		must = append(must, map[string]interface{}{
 			"range": map[string]interface{}{
@@ -200,7 +287,7 @@ func (s *QueryService) buildOpenSearchQuery(req *models.SearchRequest) map[strin
 			},
 		})
 	}
-	
+
 	if len(must) > 0 {
 		boolQuery["must"] = must
 	} else {
@@ -211,14 +298,14 @@ func (s *QueryService) buildOpenSearchQuery(req *models.SearchRequest) map[strin
 		s.addAggregations(query, req)
 		return query
 	}
-	
+
 	query["query"] = map[string]interface{}{
 		"bool": boolQuery,
 	}
-	
+
 	s.addSortAndSearchAfter(query, req)
 	s.addAggregations(query, req)
-	
+
 	return query
 }
 
@@ -232,7 +319,7 @@ func (s *QueryService) addSortAndSearchAfter(query map[string]interface{}, req *
 			},
 		}
 	}
-	
+
 	if req.SearchAfter != nil && len(req.SearchAfter) > 0 {
 		query["search_after"] = req.SearchAfter
 	}
@@ -242,7 +329,7 @@ func (s *QueryService) addAggregations(query map[string]interface{}, req *models
 	if req.Aggregations == nil || len(req.Aggregations) == 0 {
 		return
 	}
-	
+
 	aggs := make(map[string]interface{})
 	for name, aggReq := range req.Aggregations {
 		switch aggReq.Type {
@@ -292,7 +379,7 @@ func (s *QueryService) addAggregations(query map[string]interface{}, req *models
 			}
 		}
 	}
-	
+
 	if len(aggs) > 0 {
 		query["aggs"] = aggs
 	}
