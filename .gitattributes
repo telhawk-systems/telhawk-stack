@@ -1,0 +1,105 @@
+# Set default behavior to automatically normalize line endings
+* text=auto
+
+# Source code
+*.go text eol=lf
+*.js text eol=lf
+*.jsx text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.php text eol=lf
+*.py text eol=lf
+*.java text eol=lf
+*.c text eol=lf
+*.cpp text eol=lf
+*.h text eol=lf
+
+# Scripts
+*.sh text eol=lf
+*.bash text eol=lf
+
+# Configuration files
+*.yml text eol=lf
+*.yaml text eol=lf
+*.json text eol=lf
+*.toml text eol=lf
+*.xml text eol=lf
+*.ini text eol=lf
+*.conf text eol=lf
+*.config text eol=lf
+.editorconfig text eol=lf
+.gitignore text eol=lf
+.gitattributes text eol=lf
+
+# Terraform
+*.tf text eol=lf
+*.tfvars text eol=lf
+*.hcl text eol=lf
+
+# Documentation
+*.md text eol=lf
+*.txt text eol=lf
+*.adoc text eol=lf
+LICENSE text eol=lf
+README text eol=lf
+
+# SQL
+*.sql text eol=lf
+
+# Web
+*.html text eol=lf
+*.css text eol=lf
+*.scss text eol=lf
+*.sass text eol=lf
+
+# Docker
+Dockerfile* text eol=lf
+*.dockerfile text eol=lf
+docker-compose*.yml text eol=lf
+.dockerignore text eol=lf
+
+# Go specific
+go.mod text eol=lf
+go.sum text eol=lf
+
+# Package managers
+package.json text eol=lf
+package-lock.json text eol=lf
+yarn.lock text eol=lf
+Cargo.toml text eol=lf
+Cargo.lock text eol=lf
+
+# Binary files (explicitly marked to prevent conversion)
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.mov binary
+*.mp4 binary
+*.mp3 binary
+*.flv binary
+*.fla binary
+*.swf binary
+*.gz binary
+*.zip binary
+*.7z binary
+*.ttf binary
+*.eot binary
+*.woff binary
+*.woff2 binary
+*.pdf binary
+*.exe binary
+*.dll binary
+*.so binary
+*.dylib binary
+
+# Archives
+*.tar binary
+*.tgz binary
+*.rar binary
+*.bz2 binary
+*.xz binary
+
+# Protobuf
+*.proto text eol=lf
