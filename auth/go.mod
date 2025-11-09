@@ -1,6 +1,6 @@
 module github.com/telhawk-systems/telhawk-stack/auth
 
-go 1.24.2
+go 1.25
 
 require (
 	github.com/golang-jwt/jwt/v5 v5.3.0
