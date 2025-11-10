@@ -482,6 +482,22 @@ services:
       - tools
     entrypoint: ["/app/thawk"]
 
+  # Development tools container with bash, curl, jq for running scripts
+  # Access internal services from the host using scripts/script_exec.sh
+  devtools:
+    build:
+      context: ./scripts
+      dockerfile: Dockerfile.devtools
+    container_name: telhawk-devtools
+    volumes:
+      - ./tmp:/tmp:rw
+      - ./scripts:/scripts:ro
+    networks:
+      - telhawk
+    profiles:
+      - devtools
+    restart: unless-stopped
+
 networks:
   telhawk:
     driver: bridge

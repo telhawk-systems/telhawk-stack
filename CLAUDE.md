@@ -65,9 +65,13 @@ docker-compose run --rm thawk <command>
 # Example: docker-compose run --rm thawk auth login -u admin -p admin123
 ```
 
-### Internal API Access (curl wrapper)
+### Internal API Access (Development Tools)
 
-The `scripts/curl.sh` wrapper allows you to make API calls to internal services (auth, rules, query, core, storage, alerting) that are not exposed externally. This is useful for testing, debugging, and administrative tasks.
+TelHawk provides two tools for accessing internal services that are not exposed externally:
+
+#### Quick API Calls: `scripts/curl.sh`
+
+For single curl commands, use the curl wrapper:
 
 ```bash
 # Make GET request to rules service
@@ -94,7 +98,48 @@ The `scripts/curl.sh` wrapper allows you to make API calls to internal services 
 ./scripts/curl.sh -v -X GET http://core:8090/healthz
 ```
 
-**How it works:** The script runs `curlimages/curl` in a temporary Docker container connected to the TelHawk network, allowing access to internal services.
+#### Running Scripts: `scripts/script_exec.sh`
+
+For complex operations or automation, use the persistent devtools container:
+
+```bash
+# Start the devtools container (one-time, stays running)
+docker-compose --profile devtools up -d devtools
+
+# Run a bash script with access to internal services
+./scripts/script_exec.sh tmp/my_script.sh
+```
+
+**Available tools in scripts:**
+- `bash` - Full bash shell
+- `curl` - HTTP client
+- `jq` - JSON processor
+- `wget` - File downloader
+- Access to all internal services (auth, rules, query, core, storage, opensearch, etc.)
+
+**Example script** (`tmp/create_detection_rules.sh`):
+```bash
+#!/bin/bash
+# Create multiple detection rules
+
+RULES_API="http://rules:8084/api/v1/schemas"
+
+for severity in critical high medium; do
+  curl -s -X POST "$RULES_API" \
+    -H "Content-Type: application/json" \
+    -d "{
+      \"model\": {...},
+      \"view\": {\"severity\": \"$severity\", ...},
+      \"controller\": {...}
+    }" | jq -r '.id'
+done
+```
+
+**File locations:**
+- Scripts in `./tmp/` are accessible at `/tmp/` in the container (read/write)
+- Scripts in `./scripts/` are accessible at `/scripts/` in the container (read-only)
+
+**How it works:** Both tools use an Alpine-based Docker image (`telhawk-stack-devtools`) with curl, bash, jq, and wget. The image is automatically built and connected to the TelHawk internal network.
 
 ### Database Migrations
 

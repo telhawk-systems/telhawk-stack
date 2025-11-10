@@ -1,0 +1,14 @@
+FROM alpine:3.19
+
+# Install essential tools for development and testing
+RUN apk add --no-cache \
+    curl \
+    jq \
+    bash \
+    ca-certificates \
+    wget
+
+WORKDIR /scripts
+
+# Keep container running
+CMD ["tail", "-f", "/dev/null"]
