@@ -4,7 +4,7 @@ set -e
 OPENSEARCH_ADMIN_USER="${OPENSEARCH_ADMIN_USER:-admin}"
 OPENSEARCH_PASSWORD="${OPENSEARCH_INITIAL_ADMIN_PASSWORD:-TelHawk123!}"
 
-echo "TelHawk OpenSearch - NO DEMO CREDENTIALS"
+echo "TelHawk OpenSearch - Synchronous Startup"
 echo "Setting up OpenSearch with user: ${OPENSEARCH_ADMIN_USER}"
 
 # Determine which certificates to use
@@ -26,7 +26,10 @@ chmod 644 /usr/share/opensearch/config/*.pem
 chmod 644 /usr/share/opensearch/config/*-key.pem
 
 # Configure OpenSearch - single-node + SSL
-cat >> /usr/share/opensearch/config/opensearch.yml << EOF
+# Remove any existing cluster.initial_cluster_manager_nodes to avoid duplicates
+sed -i '/^cluster\.initial_cluster_manager_nodes:/d' /usr/share/opensearch/config/opensearch.yml
+
+cat >> /usr/share/opensearch/config/opensearch.yml << 'EOF'
 
 # TelHawk Single Node Configuration
 cluster.initial_cluster_manager_nodes: ["opensearch"]
@@ -52,33 +55,85 @@ echo "Starting OpenSearch..."
 /usr/share/opensearch/bin/opensearch &
 OPENSEARCH_PID=$!
 
-# Wait for OpenSearch, then create/update credentials
-(
-    echo "Waiting for OpenSearch to start..."
-    sleep 90
-    
-    # Use admin cert to check readiness (no password needed)
-    until curl -fk --cert /usr/share/opensearch/config/admin.pem \
-        --key /usr/share/opensearch/config/admin-key.pem \
-        https://localhost:9200 >/dev/null 2>&1; do
-        sleep 2
-    done
-    
-    echo "OpenSearch is up. Creating/updating user: ${OPENSEARCH_ADMIN_USER}"
-    
-    # Update admin user password using admin cert
-    curl -fk --cert /usr/share/opensearch/config/admin.pem \
-        --key /usr/share/opensearch/config/admin-key.pem \
-        -XPUT "https://localhost:9200/_plugins/_security/api/internalusers/${OPENSEARCH_ADMIN_USER}" \
-        -H 'Content-Type: application/json' \
-        -d "{
-          \"password\": \"${OPENSEARCH_PASSWORD}\",
-          \"backend_roles\": [\"admin\"],
-          \"attributes\": {},
-          \"description\": \"TelHawk admin user - NO DEMO CREDENTIALS\"
-        }" && echo "✓ User ${OPENSEARCH_ADMIN_USER} configured" || echo "⚠ User configuration failed"
-    
-    echo "✓ Credentials configured - NO DEMO CREDENTIALS USED"
-) &
+# Wait for OpenSearch to be ready (using admin cert - no password needed)
+echo "Waiting for OpenSearch to be ready..."
+MAX_WAIT=180
+WAITED=0
+until curl -fsk --cert /usr/share/opensearch/config/admin.pem \
+    --key /usr/share/opensearch/config/admin-key.pem \
+    https://localhost:9200/_cluster/health >/dev/null 2>&1; do
 
+    if [ $WAITED -ge $MAX_WAIT ]; then
+        echo "ERROR: OpenSearch failed to start within ${MAX_WAIT} seconds"
+        kill $OPENSEARCH_PID 2>/dev/null || true
+        exit 1
+    fi
+
+    sleep 2
+    WAITED=$((WAITED + 2))
+    echo "  ... waited ${WAITED}s"
+done
+
+echo "✓ OpenSearch is ready"
+
+# Wait for security plugin to be fully initialized
+echo "Waiting for security plugin to initialize..."
+WAITED=0
+until curl -sk --cert /usr/share/opensearch/config/admin.pem \
+    --key /usr/share/opensearch/config/admin-key.pem \
+    https://localhost:9200/_plugins/_security/api/internalusers 2>/dev/null | grep -q "admin"; do
+
+    if [ $WAITED -ge 60 ]; then
+        echo "ERROR: Security plugin failed to initialize within 60 seconds"
+        kill $OPENSEARCH_PID 2>/dev/null || true
+        exit 1
+    fi
+
+    sleep 2
+    WAITED=$((WAITED + 2))
+    echo "  ... waited ${WAITED}s"
+done
+
+echo "✓ Security plugin initialized"
+
+# Now configure/update admin user credentials synchronously
+echo "Configuring user: ${OPENSEARCH_ADMIN_USER}"
+
+HTTP_CODE=$(curl -sk --cert /usr/share/opensearch/config/admin.pem \
+    --key /usr/share/opensearch/config/admin-key.pem \
+    -w "%{http_code}" \
+    -o /tmp/curl_response.txt \
+    -XPUT "https://localhost:9200/_plugins/_security/api/internalusers/${OPENSEARCH_ADMIN_USER}" \
+    -H 'Content-Type: application/json' \
+    -d "{
+      \"password\": \"${OPENSEARCH_PASSWORD}\",
+      \"backend_roles\": [\"admin\"],
+      \"attributes\": {},
+      \"description\": \"TelHawk admin user - NO DEMO CREDENTIALS\"
+    }")
+
+if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "201" ]; then
+    echo "✓ User ${OPENSEARCH_ADMIN_USER} configured successfully"
+else
+    echo "ERROR: Failed to configure user (HTTP $HTTP_CODE)"
+    echo "Response: $(cat /tmp/curl_response.txt 2>/dev/null)"
+    kill $OPENSEARCH_PID 2>/dev/null || true
+    exit 1
+fi
+
+# Verify authentication works with the configured password
+echo "Verifying authentication..."
+if curl -fsk -u "${OPENSEARCH_ADMIN_USER}:${OPENSEARCH_PASSWORD}" \
+    https://localhost:9200/_cluster/health >/dev/null 2>&1; then
+    echo "✓ Authentication verified"
+else
+    echo "ERROR: Authentication verification failed"
+    kill $OPENSEARCH_PID 2>/dev/null || true
+    exit 1
+fi
+
+echo "✓ OpenSearch fully configured and ready for connections"
+echo "  Credentials: ${OPENSEARCH_ADMIN_USER} / <configured>"
+
+# Wait for OpenSearch process (this becomes the main process)
 wait $OPENSEARCH_PID
