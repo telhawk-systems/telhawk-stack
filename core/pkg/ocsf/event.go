@@ -1,8 +1,8 @@
 package ocsf
 
 import (
-	"time"
 	"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf/objects"
+	"time"
 )
 
 // Event represents an OCSF compliant event record.
@@ -30,9 +30,14 @@ type Event struct {
 	ObservedTime time.Time `json:"observed_time"`
 
 	// Event-specific fields
-	Actor       *objects.Actor         `json:"actor,omitempty"`
-	Enrichments map[string]string      `json:"enrichments,omitempty"`
-	Properties  map[string]string      `json:"properties,omitempty"`
+	Actor       *objects.Actor    `json:"actor,omitempty"`
+	SrcEndpoint *objects.Endpoint `json:"src_endpoint,omitempty"`
+	DstEndpoint *objects.Endpoint `json:"dst_endpoint,omitempty"`
+	Device      *objects.Device   `json:"device,omitempty"`
+	Process     *objects.Process  `json:"process,omitempty"`
+	File        *objects.File     `json:"file,omitempty"`
+	Enrichments map[string]string `json:"enrichments,omitempty"`
+	Properties  map[string]string `json:"properties,omitempty"`
 
 	// Raw data preservation
 	Raw RawDescriptor `json:"raw"`
@@ -88,7 +93,7 @@ func (e *Event) Clone() *Event {
 	}
 	// Note: Actor is a pointer to objects.Actor, shallow copy is sufficient
 	// for most use cases. For deep copy, caller should clone the Actor separately.
-	
+
 	if len(e.Metadata.Profiles) > 0 {
 		dup.Metadata.Profiles = make([]string, len(e.Metadata.Profiles))
 		copy(dup.Metadata.Profiles, e.Metadata.Profiles)
