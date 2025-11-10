@@ -1,0 +1,259 @@
+package handlers
+
+import (
+	"encoding/json"
+	"log"
+	"net/http"
+	"strconv"
+
+	"github.com/telhawk-systems/telhawk-stack/rules/internal/models"
+	"github.com/telhawk-systems/telhawk-stack/rules/internal/service"
+)
+
+type Handler struct {
+	service *service.Service
+}
+
+func NewHandler(service *service.Service) *Handler {
+	return &Handler{service: service}
+}
+
+// HealthCheck handles health check requests
+func (h *Handler) HealthCheck(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"status": "healthy"})
+}
+
+// CreateSchema handles POST /api/v1/schemas
+func (h *Handler) CreateSchema(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req models.CreateSchemaRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	// TODO: Extract user ID from JWT token
+	userID := "00000000-0000-0000-0000-000000000001" // Placeholder
+
+	schema, err := h.service.CreateSchema(r.Context(), &req, userID)
+	if err != nil {
+		log.Printf("Error creating schema: %v", err)
+		http.Error(w, "Failed to create schema", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(schema)
+}
+
+// UpdateSchema handles PUT /api/v1/schemas/:id
+func (h *Handler) UpdateSchema(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPut {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Extract ID from path
+	id := r.URL.Path[len("/api/v1/schemas/"):]
+	if id == "" {
+		http.Error(w, "Schema ID required", http.StatusBadRequest)
+		return
+	}
+
+	var req models.UpdateSchemaRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	// TODO: Extract user ID from JWT token
+	userID := "00000000-0000-0000-0000-000000000001" // Placeholder
+
+	schema, err := h.service.UpdateSchema(r.Context(), id, &req, userID)
+	if err != nil {
+		log.Printf("Error updating schema: %v", err)
+		http.Error(w, "Failed to update schema", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(schema)
+}
+
+// ListSchemas handles GET /api/v1/schemas
+func (h *Handler) ListSchemas(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Parse query parameters
+	req := &models.ListSchemasRequest{
+		Page:            parseInt(r.URL.Query().Get("page"), 1),
+		Limit:           parseInt(r.URL.Query().Get("limit"), 50),
+		Severity:        r.URL.Query().Get("severity"),
+		Title:           r.URL.Query().Get("title"),
+		ID:              r.URL.Query().Get("id"),
+		IncludeDisabled: r.URL.Query().Get("include_disabled") == "true",
+		IncludeHidden:   r.URL.Query().Get("include_hidden") == "true",
+	}
+
+	response, err := h.service.ListSchemas(r.Context(), req)
+	if err != nil {
+		log.Printf("Error listing schemas: %v", err)
+		http.Error(w, "Failed to list schemas", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
+// GetSchema handles GET /api/v1/schemas/:id
+func (h *Handler) GetSchema(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Extract ID from path (simple implementation)
+	id := r.URL.Path[len("/api/v1/schemas/"):]
+	if id == "" {
+		http.Error(w, "Schema ID required", http.StatusBadRequest)
+		return
+	}
+
+	// Check for version query parameter
+	var version *int
+	if v := r.URL.Query().Get("version"); v != "" {
+		if vInt, err := strconv.Atoi(v); err == nil {
+			version = &vInt
+		}
+	}
+
+	schema, err := h.service.GetSchema(r.Context(), id, version)
+	if err != nil {
+		log.Printf("Error getting schema: %v", err)
+		http.Error(w, "Schema not found", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(schema)
+}
+
+// GetVersionHistory handles GET /api/v1/schemas/:id/versions
+func (h *Handler) GetVersionHistory(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Extract ID from path
+	path := r.URL.Path
+	id := path[len("/api/v1/schemas/"):]
+	if len(id) > len("/versions") {
+		id = id[:len(id)-len("/versions")]
+	}
+
+	response, err := h.service.GetVersionHistory(r.Context(), id)
+	if err != nil {
+		log.Printf("Error getting version history: %v", err)
+		http.Error(w, "Schema not found", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
+// DisableSchema handles PUT /api/v1/schemas/:id/disable
+func (h *Handler) DisableSchema(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPut {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Extract version ID from path
+	path := r.URL.Path
+	versionID := path[len("/api/v1/schemas/"):]
+	if len(versionID) > len("/disable") {
+		versionID = versionID[:len(versionID)-len("/disable")]
+	}
+
+	// TODO: Extract user ID from JWT token
+	userID := "00000000-0000-0000-0000-000000000001"
+
+	if err := h.service.DisableSchema(r.Context(), versionID, userID); err != nil {
+		log.Printf("Error disabling schema: %v", err)
+		http.Error(w, "Failed to disable schema", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"status": "disabled"})
+}
+
+// EnableSchema handles PUT /api/v1/schemas/:id/enable
+func (h *Handler) EnableSchema(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPut {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Extract version ID from path
+	path := r.URL.Path
+	versionID := path[len("/api/v1/schemas/"):]
+	if len(versionID) > len("/enable") {
+		versionID = versionID[:len(versionID)-len("/enable")]
+	}
+
+	if err := h.service.EnableSchema(r.Context(), versionID); err != nil {
+		log.Printf("Error enabling schema: %v", err)
+		http.Error(w, "Failed to enable schema", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"status": "enabled"})
+}
+
+// HideSchema handles DELETE /api/v1/schemas/:id
+func (h *Handler) HideSchema(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Extract version ID from path
+	versionID := r.URL.Path[len("/api/v1/schemas/"):]
+
+	// TODO: Extract user ID from JWT token
+	userID := "00000000-0000-0000-0000-000000000001"
+
+	if err := h.service.HideSchema(r.Context(), versionID, userID); err != nil {
+		log.Printf("Error hiding schema: %v", err)
+		http.Error(w, "Failed to hide schema", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"status": "hidden"})
+}
+
+// Helper function to parse integer query parameters
+func parseInt(s string, defaultVal int) int {
+	if s == "" {
+		return defaultVal
+	}
+	if v, err := strconv.Atoi(s); err == nil {
+		return v
+	}
+	return defaultVal
+}

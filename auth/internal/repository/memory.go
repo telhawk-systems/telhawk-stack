@@ -2,6 +2,7 @@ package repository
 
 import (
 	"sync"
+	"time"
 
 	"github.com/telhawk-systems/telhawk-stack/auth/internal/models"
 )
@@ -99,7 +100,8 @@ func (r *InMemoryRepository) RevokeSession(refreshToken string) error {
 		return ErrSessionNotFound
 	}
 
-	session.Revoked = true
+	now := time.Now()
+	session.RevokedAt = &now
 	return nil
 }
 
@@ -157,7 +159,8 @@ func (r *InMemoryRepository) RevokeHECToken(token string) error {
 		return ErrHECTokenNotFound
 	}
 
-	hecToken.Enabled = false
+	now := time.Now()
+	hecToken.RevokedAt = &now
 	return nil
 }
 
