@@ -1,4 +1,6 @@
+import { useNavigate } from 'react-router-dom';
 import { detectEventType, getEventTypeName, getEventTypeIcon } from '../utils/eventTypes';
+import { EntityType, getEntityIcon } from '../utils/entityUtils';
 
 interface Event {
   time: string;
@@ -18,6 +20,8 @@ interface EventsTableProps {
 }
 
 export function EventsTable({ events, totalMatches, onEventClick, onLoadMore, loadingMore }: EventsTableProps) {
+  const navigate = useNavigate();
+
   if (!events || events.length === 0) {
     return (
       <div className="bg-white rounded-lg shadow-md p-8 text-center">
@@ -50,6 +54,28 @@ export function EventsTable({ events, totalMatches, onEventClick, onLoadMore, lo
     return String(value);
   };
 
+  /**
+   * Render an entity value as a clickable link
+   */
+  const renderEntityLink = (value: string, type: EntityType) => {
+    if (!value || value === 'N/A') return value;
+
+    const handleClick = (event: React.MouseEvent) => {
+      event.stopPropagation(); // Prevent event card click
+      navigate(`/entity/${type}/${encodeURIComponent(value)}`);
+    };
+
+    return (
+      <button
+        onClick={handleClick}
+        className="text-blue-600 hover:text-blue-800 hover:underline font-medium text-left truncate"
+        title={`View all events for ${type}: ${value}`}
+      >
+        {getEntityIcon(type)} {value}
+      </button>
+    );
+  };
+
   const renderEventCard = (event: Event, index: number) => {
     const eventType = detectEventType(event);
     const typeName = getEventTypeName(eventType);
@@ -57,47 +83,47 @@ export function EventsTable({ events, totalMatches, onEventClick, onLoadMore, lo
     const eventData = event.raw?.data?.event || event;
 
     // Type-specific fields to display
-    let typeSpecificFields: Array<{ label: string; value: any }> = [];
+    let typeSpecificFields: Array<{ label: string; value: any; entityType?: EntityType }> = [];
 
     switch (eventType) {
       case 'authentication':
         typeSpecificFields = [
-          { label: 'Username', value: eventData.user?.name || eventData.actor?.user?.name },
-          { label: 'Source IP', value: eventData.src_endpoint?.ip },
+          { label: 'Username', value: eventData.user?.name || eventData.actor?.user?.name, entityType: 'user' },
+          { label: 'Source IP', value: eventData.src_endpoint?.ip, entityType: 'ip' },
           { label: 'Status', value: eventData.status },
           { label: 'Auth Protocol', value: eventData.auth_protocol },
         ];
         break;
       case 'network':
         typeSpecificFields = [
-          { label: 'Source', value: eventData.src_endpoint ? `${eventData.src_endpoint.ip}:${eventData.src_endpoint.port}` : 'N/A' },
-          { label: 'Destination', value: eventData.dst_endpoint ? `${eventData.dst_endpoint.ip}:${eventData.dst_endpoint.port}` : 'N/A' },
+          { label: 'Source IP', value: eventData.src_endpoint?.ip, entityType: 'ip' },
+          { label: 'Destination IP', value: eventData.dst_endpoint?.ip, entityType: 'ip' },
           { label: 'Protocol', value: eventData.connection_info?.protocol_name },
           { label: 'Direction', value: eventData.connection_info?.direction },
         ];
         break;
       case 'process':
         typeSpecificFields = [
-          { label: 'Process', value: eventData.process?.name },
+          { label: 'Process', value: eventData.process?.name, entityType: 'process' },
           { label: 'PID', value: eventData.process?.pid },
           { label: 'Command', value: eventData.process?.cmd_line },
-          { label: 'User', value: eventData.actor?.user?.name || eventData.user?.name },
+          { label: 'User', value: eventData.actor?.user?.name || eventData.user?.name, entityType: 'user' },
         ];
         break;
       case 'file':
         typeSpecificFields = [
-          { label: 'File Path', value: eventData.file?.path },
+          { label: 'File Path', value: eventData.file?.path, entityType: 'file' },
           { label: 'Operation', value: eventData.activity_name },
-          { label: 'User', value: eventData.actor?.user?.name || eventData.user?.name },
+          { label: 'User', value: eventData.actor?.user?.name || eventData.user?.name, entityType: 'user' },
           { label: 'Size', value: eventData.file?.size ? `${eventData.file.size} bytes` : 'N/A' },
         ];
         break;
       case 'dns':
         typeSpecificFields = [
-          { label: 'Query', value: eventData.query?.hostname },
+          { label: 'Query', value: eventData.query?.hostname, entityType: 'hostname' },
           { label: 'Type', value: eventData.query?.type },
           { label: 'Answer', value: eventData.answers?.[0]?.rdata },
-          { label: 'Source IP', value: eventData.src_endpoint?.ip },
+          { label: 'Source IP', value: eventData.src_endpoint?.ip, entityType: 'ip' },
         ];
         break;
       case 'http':
@@ -105,7 +131,7 @@ export function EventsTable({ events, totalMatches, onEventClick, onLoadMore, lo
           { label: 'Method', value: eventData.http_request?.method },
           { label: 'URL', value: eventData.http_request?.url?.path || eventData.http_request?.url?.text },
           { label: 'Status Code', value: eventData.http_response?.code },
-          { label: 'Client IP', value: eventData.src_endpoint?.ip },
+          { label: 'Client IP', value: eventData.src_endpoint?.ip, entityType: 'ip' },
         ];
         break;
       case 'detection':
@@ -121,7 +147,7 @@ export function EventsTable({ events, totalMatches, onEventClick, onLoadMore, lo
         typeSpecificFields = [
           { label: 'Source Type', value: event.properties?.source_type || eventData.sourcetype },
           { label: 'Source', value: event.properties?.source || eventData.source },
-          { label: 'Host', value: eventData.device?.hostname || eventData.device?.ip || eventData.observables?.hostname },
+          { label: 'Host', value: eventData.device?.hostname || eventData.device?.ip || eventData.observables?.hostname, entityType: eventData.device?.hostname ? 'hostname' : eventData.device?.ip ? 'ip' : undefined },
           { label: 'Message', value: eventData.message || eventData.description || 'No message' },
         ];
     }
@@ -167,7 +193,9 @@ export function EventsTable({ events, totalMatches, onEventClick, onLoadMore, lo
                 {field.label}
               </span>
               <span className="text-sm text-gray-900 mt-1 truncate" title={renderValue(field.value)}>
-                {renderValue(field.value)}
+                {field.entityType && field.value && field.value !== 'N/A'
+                  ? renderEntityLink(renderValue(field.value), field.entityType)
+                  : renderValue(field.value)}
               </span>
             </div>
           ))}
