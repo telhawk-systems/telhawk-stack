@@ -18,11 +18,6 @@ TelHawk Stack is a lightweight, OCSF-compliant SIEM (Security Information and Ev
 # Build all services
 cd <service-name> && go build -o ../bin/<service-name> ./cmd/<service-name>
 
-# Examples:
-cd auth && go build -o ../bin/auth ./cmd/auth
-cd ingest && go build -o ../bin/ingest ./cmd/ingest
-cd cli && go build -o ../bin/thawk .
-
 # Test all modules
 go test ./...
 
@@ -38,27 +33,6 @@ go test -cover ./...
 ```bash
 # Start the full stack (default development mode)
 docker-compose up -d
-
-# View logs
-docker-compose logs -f
-
-# Rebuild all services
-docker-compose build
-
-# Rebuild specific service
-docker-compose build <service-name>
-
-# Rebuild and restart
-docker-compose up -d --build
-
-# Stop all services
-docker-compose down
-
-# Stop and remove volumes (deletes all data)
-docker-compose down -v
-
-# Check service health
-docker-compose ps
 
 # Run CLI tool
 docker-compose run --rm thawk <command>
@@ -77,9 +51,6 @@ For single curl commands, use the curl wrapper:
 # Make GET request to rules service
 ./scripts/curl.sh http://rules:8084/api/v1/schemas
 
-# Pretty print JSON with jq
-./scripts/curl.sh -s http://rules:8084/api/v1/schemas | jq '.'
-
 # Create a detection rule
 ./scripts/curl.sh -X POST http://rules:8084/api/v1/schemas \
   -H "Content-Type: application/json" \
@@ -87,9 +58,6 @@ For single curl commands, use the curl wrapper:
 
 # Check service health
 ./scripts/curl.sh http://auth:8080/healthz
-./scripts/curl.sh http://query:8082/healthz
-./scripts/curl.sh http://rules:8084/healthz
-./scripts/curl.sh http://alerting:8085/healthz
 
 # Query OpenSearch directly (requires credentials)
 ./scripts/curl.sh -u admin:TelHawk123! -k https://opensearch:9200/_cat/indices
@@ -200,18 +168,6 @@ go build
 # Historical data (week of events):
 ./event-seeder -token YOUR_TOKEN -count 10000 -time-spread 168h -interval 0
 ```
-
-**Event Types Generated:**
-- Authentication (3002): Login attempts, MFA, logout, password changes
-- Network Activity (4001): TCP/UDP/ICMP connections, firewall events
-- Process Activity (1007): Process launches with command lines
-- File Activity (4006): File operations (create, read, update, delete)
-- DNS Activity (4003): DNS queries with various record types
-- HTTP Activity (4002): HTTP requests with realistic status codes
-- Detection Finding (2004): Security alerts with MITRE ATT&CK tactics
-
-See `tools/event-seeder/README.md` for full documentation.
-
 ## Architecture
 
 ### Service Communication Flow
@@ -462,20 +418,6 @@ The system follows an immutable database pattern for audit trails and versioning
 - Rate limiting: `rate_limit_hits_total`
 - Acks: `acks_pending`, `acks_completed_total`
 
-## Testing
-
-### Test Organization
-
-- Unit tests alongside source files: `*_test.go`
-- Integration tests in dedicated files: `*_integration_test.go`
-- Test data and fixtures in `testdata/` directories
-
-### Key Test Files
-
-- `core/internal/pipeline/integration_test.go`: End-to-end normalization pipeline
-- `ingest/internal/handlers/hec_handler_test.go`: HEC endpoint tests
-- `query/internal/service/service_test.go`: Query API tests
-
 ### Running Tests
 
 ```bash
@@ -485,15 +427,6 @@ go test ./...
 # Run with verbose output
 go test -v ./...
 
-# Run specific test
-go test -v ./core/internal/pipeline -run TestNormalization
-
-# Run with race detection
-go test -race ./...
-
-# Generate coverage report
-go test -coverprofile=coverage.out ./...
-go tool cover -html=coverage.out
 ```
 
 ## CLI Tool (thawk)
@@ -624,7 +557,6 @@ func (n *CustomNormalizer) Matches(envelope *model.RawEventEnvelope) bool {
 Key documentation files:
 - `README.md`: Overview, quick start, architecture
 - `docs/CONFIGURATION.md`: Complete configuration reference
-- `docs/TLS_CONFIGURATION.md`: TLS/certificate setup
 - `docs/CLI_CONFIGURATION.md`: CLI usage guide
 - `DOCKER.md`: Docker commands and troubleshooting
 - `TODO.md`: Development roadmap and recent accomplishments
@@ -657,5 +589,3 @@ npm run build  # Production build
 - Password: `admin123`
 - Email: `admin@telhawk.local`
 - Roles: `[admin]`
-
-**IMPORTANT**: Change all default passwords before production deployment.
