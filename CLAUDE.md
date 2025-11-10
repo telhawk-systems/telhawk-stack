@@ -409,8 +409,6 @@ The system follows an immutable database pattern for audit trails and versioning
 
 **Health Checks**:
 - All services expose `/healthz` or `/readyz` endpoints
-- Docker health checks with configurable retries
-- Dependencies managed via `depends_on` with health conditions
 
 **Metrics** (Prometheus format at `/metrics`):
 - Event processing: `events_total`, `normalization_duration`, `storage_duration`
@@ -506,27 +504,6 @@ The generator:
 
 2. Migrations run automatically on auth service startup
 3. Use PostgreSQL best practices: indexes, constraints, comments
-
-### Adding a New OCSF Normalizer (Custom)
-
-If you need custom normalization logic beyond the generated code:
-
-1. Create file in `core/internal/normalizer/` (not in `generated/`)
-2. Implement the `Normalizer` interface
-3. Register in `core/internal/normalizer/registry.go`
-
-Example:
-```go
-type CustomNormalizer struct{}
-
-func (n *CustomNormalizer) Normalize(ctx context.Context, envelope *model.RawEventEnvelope) (*ocsf.Event, error) {
-    // Custom logic
-}
-
-func (n *CustomNormalizer) Matches(envelope *model.RawEventEnvelope) bool {
-    // Match condition
-}
-```
 
 ## Security Considerations
 
