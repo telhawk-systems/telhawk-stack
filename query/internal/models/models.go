@@ -16,12 +16,12 @@ type SortOptions struct {
 
 // SearchRequest captures the SPL query and optional constraints.
 type SearchRequest struct {
-	Query         string                   `json:"query"`
-	TimeRange     *TimeRange               `json:"time_range,omitempty"`
-	Limit         int                      `json:"limit,omitempty"`
-	Sort          *SortOptions             `json:"sort,omitempty"`
-	IncludeFields []string                 `json:"include_fields,omitempty"`
-	SearchAfter   []interface{}            `json:"search_after,omitempty"`
+	Query         string                        `json:"query"`
+	TimeRange     *TimeRange                    `json:"time_range,omitempty"`
+	Limit         int                           `json:"limit,omitempty"`
+	Sort          *SortOptions                  `json:"sort,omitempty"`
+	IncludeFields []string                      `json:"include_fields,omitempty"`
+	SearchAfter   []interface{}                 `json:"search_after,omitempty"`
 	Aggregations  map[string]AggregationRequest `json:"aggregations,omitempty"`
 }
 
@@ -35,13 +35,14 @@ type AggregationRequest struct {
 
 // SearchResponse is returned after executing a search.
 type SearchResponse struct {
-	RequestID    string                   `json:"request_id"`
-	LatencyMS    int                      `json:"latency_ms"`
-	ResultCount  int                      `json:"result_count"`
-	TotalMatches int                      `json:"total_matches,omitempty"`
-	Results      []map[string]interface{} `json:"results"`
-	SearchAfter  []interface{}            `json:"search_after,omitempty"`
-	Aggregations map[string]interface{}   `json:"aggregations,omitempty"`
+	RequestID       string                   `json:"request_id"`
+	LatencyMS       int                      `json:"latency_ms"`
+	ResultCount     int                      `json:"result_count"`
+	TotalMatches    int                      `json:"total_matches,omitempty"`
+	Results         []map[string]interface{} `json:"results"`
+	SearchAfter     []interface{}            `json:"search_after,omitempty"`
+	Aggregations    map[string]interface{}   `json:"aggregations,omitempty"`
+	OpenSearchQuery string                   `json:"-"` // Not serialized, used for debug header
 }
 
 // AlertSchedule controls when an alert runs and its lookback window.

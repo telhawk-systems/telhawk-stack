@@ -29,18 +29,22 @@ export function DashboardPage() {
     try {
       const data = await apiClient.executeQuery(query);
 
+      // Handle both response formats (results vs events)
+      const events = (data as any).results || data.events || [];
+      const total = (data as any).total_matches || data.total || 0;
+
       // Map response to match expected format
       const results = {
-        results: data.events || [],
-        result_count: data.events?.length || 0,
-        total_matches: data.total,
-        latency_ms: data.took || 0,
-        cursor: data.cursor,
-        request_id: 'query-' + Date.now(), // Generate a request ID
+        results: events,
+        result_count: events.length,
+        total_matches: total,
+        latency_ms: data.took || (data as any).latency_ms || 0,
+        cursor: (data as any).search_after?.[0]?.toString() || data.cursor,
+        request_id: (data as any).request_id || 'query-' + Date.now(),
       };
 
       setResults(results);
-      setAllEvents(data.events || []);
+      setAllEvents(events);
     } catch (err) {
       setError('Search failed. Please try again.');
       console.error('Search error:', err);
@@ -64,17 +68,21 @@ export function DashboardPage() {
 
       const data = await apiClient.executeQuery(nextPageQuery);
 
+      // Handle both response formats (results vs events)
+      const events = (data as any).results || data.events || [];
+      const total = (data as any).total_matches || data.total || 0;
+
       // Append new results to existing events
-      const newEvents = [...allEvents, ...(data.events || [])];
+      const newEvents = [...allEvents, ...events];
       setAllEvents(newEvents);
 
       // Update results with new cursor and counts
       setResults({
         results: newEvents,
         result_count: newEvents.length,
-        total_matches: data.total,
-        latency_ms: data.took || 0,
-        cursor: data.cursor,
+        total_matches: total,
+        latency_ms: data.took || (data as any).latency_ms || 0,
+        cursor: (data as any).search_after?.[0]?.toString() || data.cursor,
         request_id: 'query-' + Date.now(),
       });
     } catch (err) {

@@ -5,6 +5,7 @@ import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { UsersPage } from './pages/UsersPage';
 import { TokensPage } from './pages/TokensPage';
+import { EntityDetailPage } from './pages/EntityDetailPage';
 
 function App() {
   return (
@@ -33,6 +34,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <TokensPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/entity/:entityType/:entityValue"
+            element={
+              <ProtectedRoute>
+                <EntityDetailPage />
               </ProtectedRoute>
             }
           />

@@ -66,6 +66,12 @@ func (h *Handler) Query(w http.ResponseWriter, r *http.Request) {
 		h.writeError(w, http.StatusInternalServerError, "query_failed", err.Error())
 		return
 	}
+
+	// Add debug header with OpenSearch query (enabled by default in Docker)
+	if resp.OpenSearchQuery != "" {
+		w.Header().Set("X-Opensearch-Query", resp.OpenSearchQuery)
+	}
+
 	h.writeJSON(w, http.StatusOK, resp)
 }
 
