@@ -25,5 +25,5 @@ fi
 # Run curl in a container on the TelHawk network
 # --rm: Remove container after execution
 # --network: Connect to TelHawk network
-# curlimages/curl: Official curl Docker image (lightweight Alpine-based)
-docker run --rm --network "$NETWORK" curlimages/curl:latest "$@"
+# telhawk-stack-devtools: Alpine-based image with curl, bash, jq, wget
+docker run --rm --network "$NETWORK" telhawk-stack-devtools curl "$@"

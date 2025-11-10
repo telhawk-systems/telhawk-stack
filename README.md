@@ -305,10 +305,11 @@ curl -u admin:TelHawk123! http://localhost:9200/_cluster/health
 docker-compose ps
 ```
 
-#### 7. Access Internal Services (curl wrapper)
+#### 7. Access Internal Services (Development Tools)
 
-For debugging or advanced API usage, use the `scripts/curl.sh` wrapper to access internal services that aren't exposed externally:
+For debugging or advanced API usage, TelHawk provides two tools for accessing internal services:
 
+**Quick API calls with `scripts/curl.sh`:**
 ```bash
 # List all detection rules
 ./scripts/curl.sh -s http://rules:8084/api/v1/schemas | jq '.'
@@ -321,7 +322,32 @@ For debugging or advanced API usage, use the `scripts/curl.sh` wrapper to access
 ./scripts/curl.sh -u admin:TelHawk123! -k https://opensearch:9200/_cat/indices
 ```
 
-The wrapper runs curl in a Docker container connected to the TelHawk network, allowing access to services on the internal network.
+**Run bash scripts with `scripts/script_exec.sh`:**
+
+For more complex operations, use the persistent devtools container:
+
+```bash
+# Start the devtools container
+docker-compose --profile devtools up -d devtools
+
+# Run a script inside the devtools container
+./scripts/script_exec.sh tmp/my_script.sh
+
+# The script has access to: bash, curl, jq, wget, and all internal services
+```
+
+Example script (`tmp/create_users.sh`):
+```bash
+#!/bin/bash
+# Scripts can use bash, curl, jq, and access internal services
+for i in {1..5}; do
+  curl -X POST http://auth:8080/api/v1/users \
+    -H "Content-Type: application/json" \
+    -d "{\"username\":\"user$i\",\"password\":\"pass$i\"}" | jq '.'
+done
+```
+
+Both tools use a lightweight Alpine-based Docker container connected to the TelHawk network.
 
 #### 8. Stop the Stack
 ```bash
