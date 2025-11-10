@@ -243,12 +243,16 @@ func (s *QueryService) ExecuteQuery(ctx context.Context, q *model.Query) (*model
 
 	latency := time.Since(startTime).Milliseconds()
 
+	// Serialize the OpenSearch query for debugging
+	osQueryJSON, _ := json.Marshal(osQuery)
+
 	response := &models.SearchResponse{
-		RequestID:    generateID(),
-		LatencyMS:    int(latency),
-		ResultCount:  len(results),
-		TotalMatches: searchResult.Hits.Total.Value,
-		Results:      results,
+		RequestID:       generateID(),
+		LatencyMS:       int(latency),
+		ResultCount:     len(results),
+		TotalMatches:    searchResult.Hits.Total.Value,
+		Results:         results,
+		OpenSearchQuery: string(osQueryJSON),
 	}
 
 	if len(searchAfter) > 0 && len(results) > 0 {
