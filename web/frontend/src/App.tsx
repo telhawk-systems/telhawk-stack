@@ -5,6 +5,9 @@ import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { UsersPage } from './pages/UsersPage';
 import { TokensPage } from './pages/TokensPage';
+import { RulesPage } from './pages/RulesPage';
+import { RuleDetailPage } from './pages/RuleDetailPage';
+import { AlertsPage } from './pages/AlertsPage';
 import { EntityDetailPage } from './pages/EntityDetailPage';
 
 function App() {
@@ -34,6 +37,30 @@ function App() {
             element={
               <ProtectedRoute>
                 <TokensPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/rules"
+            element={
+              <ProtectedRoute>
+                <RulesPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/rules/:id"
+            element={
+              <ProtectedRoute>
+                <RuleDetailPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/alerts"
+            element={
+              <ProtectedRoute>
+                <AlertsPage />
               </ProtectedRoute>
             }
           />

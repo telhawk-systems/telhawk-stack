@@ -305,7 +305,25 @@ curl -u admin:TelHawk123! http://localhost:9200/_cluster/health
 docker-compose ps
 ```
 
-#### 7. Stop the Stack
+#### 7. Access Internal Services (curl wrapper)
+
+For debugging or advanced API usage, use the `scripts/curl.sh` wrapper to access internal services that aren't exposed externally:
+
+```bash
+# List all detection rules
+./scripts/curl.sh -s http://rules:8084/api/v1/schemas | jq '.'
+
+# Check internal service health
+./scripts/curl.sh http://auth:8080/healthz
+./scripts/curl.sh http://query:8082/healthz
+
+# Query OpenSearch directly
+./scripts/curl.sh -u admin:TelHawk123! -k https://opensearch:9200/_cat/indices
+```
+
+The wrapper runs curl in a Docker container connected to the TelHawk network, allowing access to services on the internal network.
+
+#### 8. Stop the Stack
 ```bash
 # Stop all services
 docker-compose down
@@ -321,6 +339,7 @@ Comprehensive guides for configuration, deployment, and usage:
 - **[Configuration Guide](docs/CONFIGURATION.md)** - Complete service configuration reference (YAML + environment variables)
 - **[TLS Configuration](docs/TLS_CONFIGURATION.md)** - Enable HTTPS/TLS with self-signed or production certificates
 - **[CLI Configuration](docs/CLI_CONFIGURATION.md)** - TelHawk CLI (`thawk`) configuration and usage
+- **[Alerting API Reference](docs/ALERTING_API.md)** - Detection rules and alerting system API documentation
 - **[Docker Quick Reference](DOCKER.md)** - Docker and docker-compose commands, troubleshooting
 
 ### Additional Resources

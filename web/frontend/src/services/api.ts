@@ -1,5 +1,6 @@
 import { User, UserDetails, LoginRequest, LoginResponse, HECToken } from '../types';
 import { Query, QueryResponse } from '../types/query';
+import { Alert, AlertDetails, AlertsListResponse, AlertUpdateRequest, Case, CaseDetails, CasesListResponse, CreateCaseRequest } from '../types/alerts';
 
 class ApiClient {
   private baseUrl = '/api';
@@ -311,6 +312,137 @@ class ApiClient {
     if (!response.ok) {
       throw new Error('Failed to revoke HEC token');
     }
+  }
+
+  // Alerts API
+  async listAlerts(params?: {
+    page?: number;
+    limit?: number;
+    severity?: string;
+    status?: string;
+    from?: string;
+    to?: string;
+    detection_schema_id?: string;
+    case_id?: string;
+    priority?: string;
+  }): Promise<AlertsListResponse> {
+    const queryParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined) {
+          queryParams.append(key, String(value));
+        }
+      });
+    }
+
+    const response = await fetch(`${this.baseUrl}/alerting/api/v1/alerts?${queryParams}`, {
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to list alerts');
+    }
+
+    return response.json();
+  }
+
+  async getAlert(id: string): Promise<AlertDetails> {
+    const response = await fetch(`${this.baseUrl}/alerting/api/v1/alerts/${id}`, {
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to get alert');
+    }
+
+    return response.json();
+  }
+
+  async updateAlert(id: string, updates: AlertUpdateRequest): Promise<Alert> {
+    if (!this.csrfToken) {
+      await this.getCSRFToken();
+    }
+
+    const response = await fetch(`${this.baseUrl}/alerting/api/v1/alerts/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': this.csrfToken!,
+      },
+      credentials: 'include',
+      body: JSON.stringify(updates),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to update alert');
+    }
+
+    return response.json();
+  }
+
+  // Cases API
+  async listCases(params?: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    severity?: string;
+    priority?: string;
+    assigned_to?: string;
+    from?: string;
+    to?: string;
+  }): Promise<CasesListResponse> {
+    const queryParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined) {
+          queryParams.append(key, String(value));
+        }
+      });
+    }
+
+    const response = await fetch(`${this.baseUrl}/alerting/api/v1/cases?${queryParams}`, {
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to list cases');
+    }
+
+    return response.json();
+  }
+
+  async getCase(id: string): Promise<CaseDetails> {
+    const response = await fetch(`${this.baseUrl}/alerting/api/v1/cases/${id}`, {
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to get case');
+    }
+
+    return response.json();
+  }
+
+  async createCase(request: CreateCaseRequest): Promise<Case> {
+    if (!this.csrfToken) {
+      await this.getCSRFToken();
+    }
+
+    const response = await fetch(`${this.baseUrl}/alerting/api/v1/cases`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': this.csrfToken!,
+      },
+      credentials: 'include',
+      body: JSON.stringify(request),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to create case');
+    }
+
+    return response.json();
   }
 }
 

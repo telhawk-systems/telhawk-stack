@@ -50,6 +50,26 @@ export function Layout({ children }: LayoutProps) {
                 >
                   Search
                 </Link>
+                <Link
+                  to="/rules"
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                    location.pathname === '/rules'
+                      ? 'bg-blue-600 text-white shadow-md'
+                      : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                  }`}
+                >
+                  Rules
+                </Link>
+                <Link
+                  to="/alerts"
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                    location.pathname === '/alerts'
+                      ? 'bg-blue-600 text-white shadow-md'
+                      : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                  }`}
+                >
+                  Alerts
+                </Link>
                 {isAdmin && (
                   <>
                     <Link

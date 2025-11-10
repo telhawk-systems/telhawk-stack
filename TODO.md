@@ -335,6 +335,12 @@
   * Covers: JWT/refresh tokens, HEC tokens, web UI integration
   * Security patterns: cookie storage, token refresh, rate limiting
   * PostgreSQL schema with audit logging
+- [x] Document alerting and detection rules API ✅
+  * Documentation: docs/ALERTING_API.md
+  * Covers: Rules service (detection schemas), Alerting service (alerts, cases)
+  * Detection schema CRUD with MVC pattern and immutable versioning
+  * Case management and alert-to-case associations
+  * Complete API reference with error codes
 - [ ] Provide onboarding guide for adding new data sources
 
 ## Data Management & Retention
@@ -369,6 +375,7 @@
   * Threshold-based alerting
   * Notification channels (email, webhook, Slack)
   * Alert history and status tracking
+  * **API Documentation:** See [docs/ALERTING_API.md](docs/ALERTING_API.md) for Rules and Alerting service endpoints
 - [ ] Threat intelligence
   * IOC (Indicators of Compromise) management
   * STIX/TAXII feed integration
