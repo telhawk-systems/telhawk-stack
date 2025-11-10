@@ -166,6 +166,8 @@ All other services are internal to Docker network only
 ### Service Descriptions
 
 - **auth (internal:8080)**: JWT-based authentication, user management, HEC token generation/validation, RBAC. Uses PostgreSQL for persistence. **Internal only** - accessed via web UI or thawk CLI.
+- **rules (internal:8084)**: Detection schema management service. Stores detection rules using MVC pattern (Model/View/Controller) with immutable versioning. Uses PostgreSQL for persistence. **Internal only** - accessed via web UI and alerting service.
+- **alerting (internal:8085)**: Evaluation engine and case management. Polls OpenSearch for events, evaluates against detection schemas, generates alerts, manages investigation cases. Uses PostgreSQL for case data, OpenSearch for alerts. **Internal only** - accessed via web UI.
 - **ingest (external:8088)**: Splunk HEC-compatible ingestion endpoint. Validates tokens via auth service, forwards raw events to core for normalization. **Externally exposed** for event collection.
 - **core (internal:8090)**: OCSF normalization engine. Converts raw events to OCSF-compliant format using auto-generated normalizers (77 OCSF classes). Implements validation, DLQ for failed events, and forwards to storage. **Internal only**.
 - **storage (internal:8083)**: OpenSearch abstraction layer. Handles bulk indexing, index lifecycle management, and data persistence. **Internal only**.
@@ -177,6 +179,8 @@ All other services are internal to Docker network only
 
 - **opensearch (9200, 9600)**: Primary datastore with TLS/mTLS security
 - **auth-db (PostgreSQL)**: Stores users, sessions, HEC tokens, audit logs
+- **rules-db (PostgreSQL)**: Stores detection schemas with immutable versioning
+- **alerting-db (PostgreSQL)**: Stores cases and case-alert associations
 - **redis (6379)**: Rate limiting (sliding window algorithm), future caching
 
 ## Code Architecture
@@ -286,16 +290,64 @@ The stack uses mutual TLS (mTLS) for service-to-service communication:
 
 ### Database Schema Patterns
 
-**PostgreSQL (auth service)**:
-- All tables use UUID primary keys
-- Timestamps tracked with `created_at`, `updated_at` columns
-- Trigger-based `updated_at` automation
-- Foreign keys with CASCADE delete
-- Comprehensive indexes on lookup fields
-- JSONB for flexible metadata storage (audit_log.metadata)
+**PostgreSQL - Immutability Pattern**:
+The system follows an immutable database pattern for audit trails and versioning:
+
+**Core Principles**:
+- **UUID v7**: All new IDs use `uuid.NewV7()` for time-ordered UUIDs (better B-tree performance than random UUIDs)
+- **Lifecycle Timestamps**: Use `disabled_at`, `deleted_at`, `hidden_at` instead of boolean flags for audit trails
+- **Append-Only Pattern**: INSERT for new content, UPDATE only for lifecycle timestamps
+- **No Physical Deletes**: Soft delete with `deleted_at` timestamp and `deleted_by` user reference
+- **Immutable Versioning**: Content changes create new rows with same stable ID but new version ID
+
+**Auth Service (users, hec_tokens, sessions)**:
+- UUIDs: UUID v7 primary keys
+- Lifecycle: `created_at`, `disabled_at`, `disabled_by`, `deleted_at`, `deleted_by`
+- No `enabled` boolean or `updated_at` timestamp
+- Helper methods: `IsActive()` checks lifecycle state
+- Example:
+  ```sql
+  CREATE TABLE users (
+      id UUID PRIMARY KEY,
+      username VARCHAR(255) NOT NULL UNIQUE,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      disabled_at TIMESTAMP,
+      disabled_by UUID REFERENCES users(id),
+      deleted_at TIMESTAMP,
+      deleted_by UUID REFERENCES users(id)
+  );
+  ```
+
+**Rules Service (detection_schemas)**:
+- Immutable versioning: Same `id` (stable) + new `version_id` (version-specific) per update
+- Window functions calculate version numbers on read (no race conditions)
+- Lifecycle: `created_at`, `disabled_at`, `disabled_by`, `hidden_at`, `hidden_by`
+- Server-generated UUIDs: Users NEVER provide `id` or `version_id` in requests
+- POST creates new rule (server generates both IDs), PUT creates new version (reuses `id`, new `version_id`)
+- Example:
+  ```sql
+  CREATE TABLE detection_schemas (
+      id UUID NOT NULL,                 -- Stable identifier (groups versions)
+      version_id UUID PRIMARY KEY,      -- Version-specific UUID (UUID v7)
+      model JSONB NOT NULL,
+      view JSONB NOT NULL,
+      controller JSONB NOT NULL,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      disabled_at TIMESTAMP,
+      disabled_by UUID,
+      hidden_at TIMESTAMP,
+      hidden_by UUID
+  );
+  ```
+
+**Alerting Service (cases, case_alerts)**:
+- Cases: UUID v7 IDs, mutable status field (open, in_progress, resolved, closed)
+- Case lifecycle: `created_at`, `updated_at`, `closed_at`, `closed_by`
+- Case-Alert junction: Links cases to alerts (OpenSearch documents)
+- Foreign keys: `detection_schema_id` (stable) and `detection_schema_version_id` (version)
 
 **OpenSearch**:
-- Daily time-based indices: `telhawk-events-YYYY.MM.DD`
+- Daily time-based indices: `telhawk-events-YYYY.MM.DD`, `telhawk-alerts-YYYY.MM.DD`
 - OCSF-optimized mappings (nested objects for actors, devices, etc.)
 - Retention managed via index lifecycle policies
 - Query pattern: `telhawk-events-*` for searches across all indices

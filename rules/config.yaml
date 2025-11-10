@@ -1,0 +1,29 @@
+server:
+  port: 8084
+  read_timeout: 15s
+  write_timeout: 15s
+  idle_timeout: 60s
+
+database:
+  type: postgres
+  postgres:
+    host: localhost
+    port: 5432
+    database: telhawk_rules
+    user: telhawk
+    password: ""
+    sslmode: disable
+
+validation:
+  max_time_window: 24h
+  max_threshold: 100000
+  allowed_aggregations:
+    - count
+    - sum
+    - avg
+    - max
+    - min
+
+logging:
+  level: info
+  format: json

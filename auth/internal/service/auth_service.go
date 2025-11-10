@@ -18,9 +18,9 @@ var (
 )
 
 type AuthService struct {
-	repo       repository.Repository
-	tokenGen   *tokens.TokenGenerator
-	auditLog   *audit.Logger
+	repo     repository.Repository
+	tokenGen *tokens.TokenGenerator
+	auditLog *audit.Logger
 }
 
 func NewAuthService(repo repository.Repository, ingestClient *audit.IngestClient) *AuthService {
@@ -30,7 +30,7 @@ func NewAuthService(repo repository.Repository, ingestClient *audit.IngestClient
 	} else {
 		auditLogger = audit.NewLoggerWithRepo("audit-secret-key", repo.(audit.Repository))
 	}
-	
+
 	return &AuthService{
 		repo:     repo,
 		tokenGen: tokens.NewTokenGenerator("access-secret-key", "refresh-secret-key"),
@@ -51,15 +51,14 @@ func (s *AuthService) Register(req *models.RegisterRequest, ipAddress, userAgent
 		return nil, err
 	}
 
+	userID, _ := uuid.NewV7()
 	user := &models.User{
-		ID:           uuid.New().String(),
+		ID:           userID.String(),
 		Username:     req.Username,
 		Email:        req.Email,
 		PasswordHash: string(hashedPassword),
 		Roles:        req.Roles,
-		Enabled:      true,
 		CreatedAt:    time.Now(),
-		UpdatedAt:    time.Now(),
 	}
 
 	if len(user.Roles) == 0 {
@@ -104,12 +103,12 @@ func (s *AuthService) Login(req *models.LoginRequest, ipAddress, userAgent strin
 		return nil, ErrInvalidCredentials
 	}
 
-	if !user.Enabled {
+	if !user.IsActive() {
 		s.auditLog.Log(
 			models.ActorTypeUser, user.ID, user.Username,
 			models.ActionLogin, "session", "",
 			ipAddress, userAgent,
-			models.ResultFailure, "account disabled",
+			models.ResultFailure, "account disabled or deleted",
 			nil,
 		)
 		return nil, ErrInvalidCredentials
@@ -143,14 +142,14 @@ func (s *AuthService) Login(req *models.LoginRequest, ipAddress, userAgent strin
 		return nil, err
 	}
 
+	sessionID, _ := uuid.NewV7()
 	session := &models.Session{
-		ID:           uuid.New().String(),
+		ID:           sessionID.String(),
 		UserID:       user.ID,
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 		ExpiresAt:    time.Now().Add(7 * 24 * time.Hour),
 		CreatedAt:    time.Now(),
-		Revoked:      false,
 	}
 
 	if err := s.repo.CreateSession(session); err != nil {
@@ -182,7 +181,7 @@ func (s *AuthService) RefreshToken(refreshToken string) (*models.LoginResponse, 
 		return nil, ErrInvalidToken
 	}
 
-	if session.Revoked || time.Now().After(session.ExpiresAt) {
+	if !session.IsActive() {
 		return nil, ErrInvalidToken
 	}
 
@@ -234,18 +233,18 @@ func (s *AuthService) ValidateHECToken(token, ipAddress, userAgent string) (*mod
 		return nil, err
 	}
 
-	if !hecToken.Enabled {
+	if !hecToken.IsActive() {
 		s.auditLog.Log(
 			models.ActorTypeService, hecToken.UserID, "",
 			models.ActionHECTokenValidate, "hec_token", hecToken.ID,
 			ipAddress, userAgent,
-			models.ResultFailure, "token disabled",
+			models.ResultFailure, "token disabled or revoked",
 			map[string]interface{}{"token_name": hecToken.Name},
 		)
 		return nil, ErrInvalidToken
 	}
 
-	if !hecToken.ExpiresAt.IsZero() && time.Now().After(hecToken.ExpiresAt) {
+	if hecToken.ExpiresAt != nil && !hecToken.ExpiresAt.IsZero() && time.Now().After(*hecToken.ExpiresAt) {
 		s.auditLog.Log(
 			models.ActorTypeService, hecToken.UserID, "",
 			models.ActionHECTokenValidate, "hec_token", hecToken.ID,
@@ -287,11 +286,7 @@ func (s *AuthService) UpdateUserDetails(userID string, req *models.UpdateUserReq
 	if req.Roles != nil {
 		user.Roles = req.Roles
 	}
-	if req.Enabled != nil {
-		user.Enabled = *req.Enabled
-	}
-
-	user.UpdatedAt = time.Now()
+	// Note: Use DisableUser/EnableUser methods to manage user lifecycle
 
 	if err := s.repo.UpdateUser(user); err != nil {
 		s.auditLog.Log(
@@ -362,7 +357,6 @@ func (s *AuthService) ResetPassword(userID string, newPassword, actorID, ipAddre
 	}
 
 	user.PasswordHash = string(hashedPassword)
-	user.UpdatedAt = time.Now()
 
 	if err := s.repo.UpdateUser(user); err != nil {
 		s.auditLog.Log(
@@ -387,14 +381,15 @@ func (s *AuthService) ResetPassword(userID string, newPassword, actorID, ipAddre
 }
 
 func (s *AuthService) CreateHECToken(userID, name, expiresIn, ipAddress, userAgent string) (*models.HECToken, error) {
-	token := uuid.New().String()
+	tokenUUID, _ := uuid.NewV7()
+	token := tokenUUID.String()
 
+	idUUID, _ := uuid.NewV7()
 	hecToken := &models.HECToken{
-		ID:        uuid.New().String(),
+		ID:        idUUID.String(),
 		UserID:    userID,
 		Token:     token,
 		Name:      name,
-		Enabled:   true,
 		CreatedAt: time.Now(),
 	}
 
@@ -490,4 +485,3 @@ func (s *AuthService) RevokeHECTokenByID(tokenID, userID, ipAddress, userAgent s
 
 	return nil
 }
-

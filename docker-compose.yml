@@ -84,6 +84,52 @@ services:
       start_period: 10s
     restart: unless-stopped
 
+  rules-db:
+    build:
+      context: ./auth-db
+      dockerfile: Dockerfile
+    container_name: telhawk-rules-db
+    command: postgres -c ssl=on -c ssl_cert_file=/var/lib/postgresql/server.crt -c ssl_key_file=/var/lib/postgresql/server.key
+    environment:
+      - POSTGRES_DB=telhawk_rules
+      - POSTGRES_USER=telhawk
+      - POSTGRES_PASSWORD=${RULES_DB_PASSWORD:-telhawk-rules-dev}
+    volumes:
+      - rules-db-data:/var/lib/postgresql/data
+    networks:
+      - telhawk-db
+      - telhawk
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U telhawk -d telhawk_rules"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  alerting-db:
+    build:
+      context: ./auth-db
+      dockerfile: Dockerfile
+    container_name: telhawk-alerting-db
+    command: postgres -c ssl=on -c ssl_cert_file=/var/lib/postgresql/server.crt -c ssl_key_file=/var/lib/postgresql/server.key
+    environment:
+      - POSTGRES_DB=telhawk_alerting
+      - POSTGRES_USER=telhawk
+      - POSTGRES_PASSWORD=${ALERTING_DB_PASSWORD:-telhawk-alerting-dev}
+    volumes:
+      - alerting-db-data:/var/lib/postgresql/data
+    networks:
+      - telhawk-db
+      - telhawk
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U telhawk -d telhawk_alerting"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
   redis:
     image: redis:7-alpine
     container_name: telhawk-redis
@@ -142,6 +188,88 @@ services:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "/busybox/wget", "-q", "-O", "-", "http://localhost:8080/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+  rules:
+    build:
+      context: ./rules
+      dockerfile: Dockerfile
+    container_name: telhawk-rules
+    # SECURITY: Internal service only - no external exposure
+    # Access via web UI
+    expose:
+      - "8084"
+    environment:
+      - RULES_SERVER_PORT=8084
+      - RULES_SERVER_READ_TIMEOUT=15s
+      - RULES_SERVER_WRITE_TIMEOUT=15s
+      - RULES_SERVER_IDLE_TIMEOUT=60s
+      - RULES_DATABASE_POSTGRES_HOST=rules-db
+      - RULES_DATABASE_POSTGRES_PORT=5432
+      - RULES_DATABASE_POSTGRES_USER=telhawk
+      - RULES_DATABASE_POSTGRES_PASSWORD=${RULES_DB_PASSWORD:-telhawk-rules-dev}
+      - RULES_DATABASE_POSTGRES_DATABASE=telhawk_rules
+      - RULES_DATABASE_POSTGRES_SSLMODE=require
+    volumes:
+      - telhawk-certs:/certs:ro
+    networks:
+      - telhawk-db
+      - telhawk
+    depends_on:
+      telhawk-certs:
+        condition: service_completed_successfully
+      rules-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "/busybox/wget", "-q", "-O", "-", "http://localhost:8084/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+  alerting:
+    build:
+      context: ./alerting
+      dockerfile: Dockerfile
+    container_name: telhawk-alerting
+    # SECURITY: Internal service only - no external exposure
+    # Access via web UI
+    expose:
+      - "8085"
+    environment:
+      - ALERTING_SERVER_PORT=8085
+      - ALERTING_SERVER_READ_TIMEOUT=15s
+      - ALERTING_SERVER_WRITE_TIMEOUT=15s
+      - ALERTING_SERVER_IDLE_TIMEOUT=60s
+      - ALERTING_DATABASE_POSTGRES_HOST=alerting-db
+      - ALERTING_DATABASE_POSTGRES_PORT=5432
+      - ALERTING_DATABASE_POSTGRES_USER=telhawk
+      - ALERTING_DATABASE_POSTGRES_PASSWORD=${ALERTING_DB_PASSWORD:-telhawk-alerting-dev}
+      - ALERTING_DATABASE_POSTGRES_DATABASE=telhawk_alerting
+      - ALERTING_DATABASE_POSTGRES_SSLMODE=require
+      - ALERTING_STORAGE_URL=https://opensearch:9200
+      - ALERTING_STORAGE_USERNAME=${OPENSEARCH_ADMIN_USER:-admin}
+      - ALERTING_STORAGE_PASSWORD=${OPENSEARCH_PASSWORD:-TelHawk123!}
+      - ALERTING_STORAGE_INSECURE=true
+    volumes:
+      - telhawk-certs:/certs:ro
+    networks:
+      - telhawk-db
+      - telhawk
+    depends_on:
+      telhawk-certs:
+        condition: service_completed_successfully
+      alerting-db:
+        condition: service_healthy
+      opensearch:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "/busybox/wget", "-q", "-O", "-", "http://localhost:8085/healthz"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -367,5 +495,9 @@ volumes:
   telhawk-certs:
   thawk-config:
   auth-db-data:
+    driver: local
+  rules-db-data:
+    driver: local
+  alerting-db-data:
     driver: local
   redis-data:
