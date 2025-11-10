@@ -38,13 +38,13 @@ func (r *PostgresRepository) CreateUser(user *models.User) error {
 	defer cancel()
 
 	query := `
-		INSERT INTO users (id, username, email, password_hash, roles, enabled, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		INSERT INTO users (id, username, email, password_hash, roles, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6)
 	`
 
 	_, err := r.pool.Exec(ctx, query,
 		user.ID, user.Username, user.Email, user.PasswordHash,
-		user.Roles, user.Enabled, user.CreatedAt, user.UpdatedAt,
+		user.Roles, user.CreatedAt,
 	)
 
 	if err != nil {
@@ -62,7 +62,7 @@ func (r *PostgresRepository) GetUserByUsername(username string) (*models.User, e
 	defer cancel()
 
 	query := `
-		SELECT id, username, email, password_hash, roles, enabled, created_at, updated_at
+		SELECT id, username, email, password_hash, roles, created_at, disabled_at, disabled_by, deleted_at, deleted_by
 		FROM users
 		WHERE username = $1
 	`
@@ -70,7 +70,7 @@ func (r *PostgresRepository) GetUserByUsername(username string) (*models.User, e
 	var user models.User
 	err := r.pool.QueryRow(ctx, query, username).Scan(
 		&user.ID, &user.Username, &user.Email, &user.PasswordHash,
-		&user.Roles, &user.Enabled, &user.CreatedAt, &user.UpdatedAt,
+		&user.Roles, &user.CreatedAt, &user.DisabledAt, &user.DisabledBy, &user.DeletedAt, &user.DeletedBy,
 	)
 
 	if err != nil {
@@ -88,7 +88,7 @@ func (r *PostgresRepository) GetUserByID(id string) (*models.User, error) {
 	defer cancel()
 
 	query := `
-		SELECT id, username, email, password_hash, roles, enabled, created_at, updated_at
+		SELECT id, username, email, password_hash, roles, created_at, disabled_at, disabled_by, deleted_at, deleted_by
 		FROM users
 		WHERE id = $1
 	`
@@ -96,7 +96,7 @@ func (r *PostgresRepository) GetUserByID(id string) (*models.User, error) {
 	var user models.User
 	err := r.pool.QueryRow(ctx, query, id).Scan(
 		&user.ID, &user.Username, &user.Email, &user.PasswordHash,
-		&user.Roles, &user.Enabled, &user.CreatedAt, &user.UpdatedAt,
+		&user.Roles, &user.CreatedAt, &user.DisabledAt, &user.DisabledBy, &user.DeletedAt, &user.DeletedBy,
 	)
 
 	if err != nil {
@@ -115,12 +115,12 @@ func (r *PostgresRepository) UpdateUser(user *models.User) error {
 
 	query := `
 		UPDATE users
-		SET username = $2, email = $3, password_hash = $4, roles = $5, enabled = $6
+		SET username = $2, email = $3, password_hash = $4, roles = $5
 		WHERE id = $1
 	`
 
 	result, err := r.pool.Exec(ctx, query,
-		user.ID, user.Username, user.Email, user.PasswordHash, user.Roles, user.Enabled,
+		user.ID, user.Username, user.Email, user.PasswordHash, user.Roles,
 	)
 
 	if err != nil {
@@ -139,13 +139,13 @@ func (r *PostgresRepository) CreateSession(session *models.Session) error {
 	defer cancel()
 
 	query := `
-		INSERT INTO sessions (id, user_id, access_token, refresh_token, expires_at, created_at, revoked)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		INSERT INTO sessions (id, user_id, access_token, refresh_token, expires_at, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6)
 	`
 
 	_, err := r.pool.Exec(ctx, query,
 		session.ID, session.UserID, session.AccessToken, session.RefreshToken,
-		session.ExpiresAt, session.CreatedAt, session.Revoked,
+		session.ExpiresAt, session.CreatedAt,
 	)
 
 	if err != nil {
@@ -160,7 +160,7 @@ func (r *PostgresRepository) GetSession(refreshToken string) (*models.Session, e
 	defer cancel()
 
 	query := `
-		SELECT id, user_id, access_token, refresh_token, expires_at, created_at, revoked
+		SELECT id, user_id, access_token, refresh_token, expires_at, created_at, revoked_at, revoked_by
 		FROM sessions
 		WHERE refresh_token = $1
 	`
@@ -168,7 +168,7 @@ func (r *PostgresRepository) GetSession(refreshToken string) (*models.Session, e
 	var session models.Session
 	err := r.pool.QueryRow(ctx, query, refreshToken).Scan(
 		&session.ID, &session.UserID, &session.AccessToken, &session.RefreshToken,
-		&session.ExpiresAt, &session.CreatedAt, &session.Revoked,
+		&session.ExpiresAt, &session.CreatedAt, &session.RevokedAt, &session.RevokedBy,
 	)
 
 	if err != nil {
@@ -204,18 +204,13 @@ func (r *PostgresRepository) CreateHECToken(token *models.HECToken) error {
 	defer cancel()
 
 	query := `
-		INSERT INTO hec_tokens (id, token, name, user_id, enabled, created_at, expires_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		INSERT INTO hec_tokens (id, token, name, user_id, created_at, expires_at)
+		VALUES ($1, $2, $3, $4, $5, $6)
 	`
-
-	var expiresAt *time.Time
-	if !token.ExpiresAt.IsZero() {
-		expiresAt = &token.ExpiresAt
-	}
 
 	_, err := r.pool.Exec(ctx, query,
 		token.ID, token.Token, token.Name, token.UserID,
-		token.Enabled, token.CreatedAt, expiresAt,
+		token.CreatedAt, token.ExpiresAt,
 	)
 
 	if err != nil {
@@ -230,7 +225,8 @@ func (r *PostgresRepository) GetHECToken(token string) (*models.HECToken, error)
 	defer cancel()
 
 	query := `
-		SELECT id, token, name, user_id, enabled, created_at, COALESCE(expires_at, '0001-01-01'::timestamp)
+		SELECT id, token, name, user_id, created_at, COALESCE(expires_at, '0001-01-01'::timestamp),
+		       disabled_at, disabled_by, revoked_at, revoked_by
 		FROM hec_tokens
 		WHERE token = $1
 	`
@@ -240,7 +236,8 @@ func (r *PostgresRepository) GetHECToken(token string) (*models.HECToken, error)
 
 	err := r.pool.QueryRow(ctx, query, token).Scan(
 		&hecToken.ID, &hecToken.Token, &hecToken.Name, &hecToken.UserID,
-		&hecToken.Enabled, &hecToken.CreatedAt, &expiresAt,
+		&hecToken.CreatedAt, &expiresAt, &hecToken.DisabledAt, &hecToken.DisabledBy,
+		&hecToken.RevokedAt, &hecToken.RevokedBy,
 	)
 
 	if err != nil {
@@ -251,7 +248,8 @@ func (r *PostgresRepository) GetHECToken(token string) (*models.HECToken, error)
 	}
 
 	if !expiresAt.IsZero() && expiresAt.Year() > 1 {
-		hecToken.ExpiresAt = expiresAt
+		expiresCopy := expiresAt
+		hecToken.ExpiresAt = &expiresCopy
 	}
 
 	return &hecToken, nil
@@ -263,7 +261,8 @@ func (r *PostgresRepository) GetHECTokenByID(id string) (*models.HECToken, error
 	defer cancel()
 
 	query := `
-		SELECT id, token, name, user_id, enabled, created_at, COALESCE(expires_at, '0001-01-01'::timestamp)
+		SELECT id, token, name, user_id, created_at, COALESCE(expires_at, '0001-01-01'::timestamp),
+		       disabled_at, disabled_by, revoked_at, revoked_by
 		FROM hec_tokens
 		WHERE id = $1
 	`
@@ -273,7 +272,8 @@ func (r *PostgresRepository) GetHECTokenByID(id string) (*models.HECToken, error
 
 	err := r.pool.QueryRow(ctx, query, id).Scan(
 		&hecToken.ID, &hecToken.Token, &hecToken.Name, &hecToken.UserID,
-		&hecToken.Enabled, &hecToken.CreatedAt, &expiresAt,
+		&hecToken.CreatedAt, &expiresAt, &hecToken.DisabledAt, &hecToken.DisabledBy,
+		&hecToken.RevokedAt, &hecToken.RevokedBy,
 	)
 
 	if err != nil {
@@ -284,7 +284,8 @@ func (r *PostgresRepository) GetHECTokenByID(id string) (*models.HECToken, error
 	}
 
 	if !expiresAt.IsZero() && expiresAt.Year() > 1 {
-		hecToken.ExpiresAt = expiresAt
+		expiresCopy := expiresAt
+		hecToken.ExpiresAt = &expiresCopy
 	}
 
 	return &hecToken, nil
@@ -295,7 +296,8 @@ func (r *PostgresRepository) ListHECTokensByUser(userID string) ([]*models.HECTo
 	defer cancel()
 
 	query := `
-		SELECT id, token, name, user_id, enabled, created_at, COALESCE(expires_at, '0001-01-01'::timestamp)
+		SELECT id, token, name, user_id, created_at, COALESCE(expires_at, '0001-01-01'::timestamp),
+		       disabled_at, disabled_by, revoked_at, revoked_by
 		FROM hec_tokens
 		WHERE user_id = $1
 		ORDER BY created_at DESC
@@ -314,14 +316,16 @@ func (r *PostgresRepository) ListHECTokensByUser(userID string) ([]*models.HECTo
 
 		err := rows.Scan(
 			&token.ID, &token.Token, &token.Name, &token.UserID,
-			&token.Enabled, &token.CreatedAt, &expiresAt,
+			&token.CreatedAt, &expiresAt, &token.DisabledAt, &token.DisabledBy,
+			&token.RevokedAt, &token.RevokedBy,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan HEC token: %w", err)
 		}
 
 		if !expiresAt.IsZero() && expiresAt.Year() > 1 {
-			token.ExpiresAt = expiresAt
+			expiresCopy := expiresAt
+			token.ExpiresAt = &expiresCopy
 		}
 
 		tokens = append(tokens, &token)
@@ -334,7 +338,7 @@ func (r *PostgresRepository) RevokeHECToken(token string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	query := `UPDATE hec_tokens SET enabled = false WHERE token = $1`
+	query := `UPDATE hec_tokens SET revoked_at = NOW() WHERE token = $1`
 
 	result, err := r.pool.Exec(ctx, query, token)
 	if err != nil {
@@ -387,7 +391,8 @@ func (r *PostgresRepository) ListUsers() ([]*models.User, error) {
 	defer cancel()
 
 	query := `
-		SELECT id, username, email, password_hash, roles, enabled, created_at, updated_at
+		SELECT id, username, email, password_hash, roles, created_at,
+		       disabled_at, disabled_by, deleted_at, deleted_by
 		FROM users
 		ORDER BY created_at DESC
 	`
@@ -403,7 +408,8 @@ func (r *PostgresRepository) ListUsers() ([]*models.User, error) {
 		var user models.User
 		err := rows.Scan(
 			&user.ID, &user.Username, &user.Email, &user.PasswordHash,
-			&user.Roles, &user.Enabled, &user.CreatedAt, &user.UpdatedAt,
+			&user.Roles, &user.CreatedAt, &user.DisabledAt, &user.DisabledBy,
+			&user.DeletedAt, &user.DeletedBy,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan user: %w", err)

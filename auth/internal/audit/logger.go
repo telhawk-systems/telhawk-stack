@@ -16,10 +16,10 @@ type Repository interface {
 }
 
 type Logger struct {
-	secretKey     []byte
-	logs          []*models.AuditLog
-	repo          Repository
-	ingestClient  *IngestClient
+	secretKey    []byte
+	logs         []*models.AuditLog
+	repo         Repository
+	ingestClient *IngestClient
 }
 
 func NewLogger(secretKey string) *Logger {
@@ -47,8 +47,9 @@ func NewLoggerWithRepoAndIngest(secretKey string, repo Repository, ingestClient 
 }
 
 func (l *Logger) Log(actorType, actorID, actorUsername, action, resource, resourceID, ipAddress, userAgent, result, reason string, metadata map[string]interface{}) *models.AuditLog {
+	id, _ := uuid.NewV7()
 	log := &models.AuditLog{
-		ID:            uuid.New().String(),
+		ID:            id.String(),
 		Timestamp:     time.Now().UTC(),
 		ActorType:     actorType,
 		ActorID:       actorID,
@@ -69,18 +70,18 @@ func (l *Logger) Log(actorType, actorID, actorUsername, action, resource, resour
 	// Always persist to PostgreSQL
 	if l.repo != nil {
 		entry := &models.AuditLogEntry{
-			Timestamp:     log.Timestamp,
-			ActorType:     actorType,
-			ActorID:       actorID,
-			ActorName:     actorUsername,
-			Action:        action,
-			ResourceType:  resource,
-			ResourceID:    resourceID,
-			IPAddress:     ipAddress,
-			UserAgent:     userAgent,
-			Result:        result,
-			ErrorMessage:  reason,
-			Metadata:      metadata,
+			Timestamp:    log.Timestamp,
+			ActorType:    actorType,
+			ActorID:      actorID,
+			ActorName:    actorUsername,
+			Action:       action,
+			ResourceType: resource,
+			ResourceID:   resourceID,
+			IPAddress:    ipAddress,
+			UserAgent:    userAgent,
+			Result:       result,
+			ErrorMessage: reason,
+			Metadata:     metadata,
 		}
 		if err := l.repo.LogAudit(entry); err != nil {
 			// Silently ignore audit persistence errors to not block auth operations

@@ -1,0 +1,20 @@
+server:
+  port: 8085
+  read_timeout: 15s
+  write_timeout: 15s
+  idle_timeout: 60s
+
+database:
+  postgres:
+    host: alerting-db
+    port: 5432
+    user: telhawk
+    password: telhawk-alerting-dev
+    database: telhawk_alerting
+    sslmode: disable
+
+storage:
+  url: https://opensearch:9200
+  username: admin
+  password: TelHawk123!
+  insecure: true
