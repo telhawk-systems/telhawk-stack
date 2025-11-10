@@ -150,17 +150,37 @@ func (t *OpenSearchTranslator) translateSimpleCondition(filter *model.FilterExpr
 
 	switch filter.Operator {
 	case model.OpEq:
+		// Use term for exact-match fields (IPs, IDs, numbers), match for text fields
+		if t.shouldUseTermQuery(field, filter.Value) {
+			return map[string]interface{}{
+				"term": map[string]interface{}{
+					field: filter.Value,
+				},
+			}, nil
+		}
 		return map[string]interface{}{
-			"term": map[string]interface{}{
+			"match": map[string]interface{}{
 				field: filter.Value,
 			},
 		}, nil
 
 	case model.OpNe:
+		// Use term for exact-match fields (IPs, IDs, numbers), match for text fields
+		if t.shouldUseTermQuery(field, filter.Value) {
+			return map[string]interface{}{
+				"bool": map[string]interface{}{
+					"must_not": map[string]interface{}{
+						"term": map[string]interface{}{
+							field: filter.Value,
+						},
+					},
+				},
+			}, nil
+		}
 		return map[string]interface{}{
 			"bool": map[string]interface{}{
 				"must_not": map[string]interface{}{
-					"term": map[string]interface{}{
+					"match": map[string]interface{}{
 						field: filter.Value,
 					},
 				},
@@ -469,4 +489,54 @@ func (t *OpenSearchTranslator) translateFieldPath(field string) string {
 		return field[1:]
 	}
 	return field
+}
+
+// shouldUseTermQuery determines if a field should use term (exact match) vs match (analyzed text) queries.
+// Returns true for fields that should use term queries (IPs, IDs, numeric values, boolean values).
+func (t *OpenSearchTranslator) shouldUseTermQuery(field string, value interface{}) bool {
+	// Numeric and boolean values always use term queries
+	switch value.(type) {
+	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64, bool:
+		return true
+	}
+
+	// Check field name patterns for exact-match fields
+	// IP addresses
+	if strings.HasSuffix(field, ".ip") || strings.HasSuffix(field, "_ip") {
+		return true
+	}
+
+	// IDs (uid, id)
+	if strings.HasSuffix(field, ".uid") || strings.HasSuffix(field, "_uid") ||
+		strings.HasSuffix(field, ".id") || strings.HasSuffix(field, "_id") {
+		return true
+	}
+
+	// Port numbers
+	if strings.HasSuffix(field, ".port") || strings.HasSuffix(field, "_port") {
+		return true
+	}
+
+	// Status codes, class UIDs, category UIDs, etc.
+	if strings.Contains(field, "_uid") || strings.Contains(field, "_id") ||
+		strings.HasSuffix(field, ".code") || strings.HasSuffix(field, "_code") {
+		return true
+	}
+
+	// Specific OCSF fields that should use exact matching
+	exactMatchFields := map[string]bool{
+		"class_uid":    true,
+		"category_uid": true,
+		"activity_id":  true,
+		"type_uid":     true,
+		"severity_id":  true,
+		"status_id":    true,
+		"observables":  true,
+	}
+	if exactMatchFields[field] {
+		return true
+	}
+
+	// Default to match query for text fields (names, messages, etc.)
+	return false
 }
