@@ -55,11 +55,11 @@ services:
       opensearch-certs:
         condition: service_completed_successfully
     healthcheck:
-      test: ["CMD-SHELL", "curl -fk --cert /usr/share/opensearch/config/admin.pem --key /usr/share/opensearch/config/admin-key.pem https://localhost:9200/_cluster/health | grep -q 'yellow\\|green'"]
+      test: ["CMD-SHELL", "curl -fsk -u $${OPENSEARCH_ADMIN_USER:-admin}:$${OPENSEARCH_INITIAL_ADMIN_PASSWORD:-TelHawk123!} https://localhost:9200/_cluster/health | grep -q 'yellow\\|green'"]
       interval: 15s
       timeout: 10s
       retries: 20
-      start_period: 90s
+      start_period: 120s
 
   auth-db:
     build:

@@ -43,7 +43,7 @@ CREATE INDEX idx_sessions_refresh_token ON sessions(refresh_token);
 CREATE INDEX idx_sessions_user_id ON sessions(user_id);
 CREATE INDEX idx_sessions_expires_at ON sessions(expires_at);
 CREATE INDEX idx_sessions_active ON sessions(id)
-    WHERE revoked_at IS NULL AND expires_at > NOW();
+    WHERE revoked_at IS NULL;
 
 -- HEC tokens table (immutable pattern)
 CREATE TABLE IF NOT EXISTS hec_tokens (
@@ -64,7 +64,7 @@ CREATE TABLE IF NOT EXISTS hec_tokens (
 CREATE INDEX idx_hec_tokens_token ON hec_tokens(token);
 CREATE INDEX idx_hec_tokens_user_id ON hec_tokens(user_id);
 CREATE INDEX idx_hec_tokens_active ON hec_tokens(token)
-    WHERE disabled_at IS NULL AND revoked_at IS NULL AND (expires_at IS NULL OR expires_at > NOW());
+    WHERE disabled_at IS NULL AND revoked_at IS NULL;
 
 -- Audit log table
 CREATE TABLE IF NOT EXISTS audit_log (
