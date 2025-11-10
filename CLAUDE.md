@@ -65,6 +65,37 @@ docker-compose run --rm thawk <command>
 # Example: docker-compose run --rm thawk auth login -u admin -p admin123
 ```
 
+### Internal API Access (curl wrapper)
+
+The `scripts/curl.sh` wrapper allows you to make API calls to internal services (auth, rules, query, core, storage, alerting) that are not exposed externally. This is useful for testing, debugging, and administrative tasks.
+
+```bash
+# Make GET request to rules service
+./scripts/curl.sh http://rules:8084/api/v1/schemas
+
+# Pretty print JSON with jq
+./scripts/curl.sh -s http://rules:8084/api/v1/schemas | jq '.'
+
+# Create a detection rule
+./scripts/curl.sh -X POST http://rules:8084/api/v1/schemas \
+  -H "Content-Type: application/json" \
+  -d @rule-definition.json
+
+# Check service health
+./scripts/curl.sh http://auth:8080/healthz
+./scripts/curl.sh http://query:8082/healthz
+./scripts/curl.sh http://rules:8084/healthz
+./scripts/curl.sh http://alerting:8085/healthz
+
+# Query OpenSearch directly (requires credentials)
+./scripts/curl.sh -u admin:TelHawk123! -k https://opensearch:9200/_cat/indices
+
+# All standard curl options work
+./scripts/curl.sh -v -X GET http://core:8090/healthz
+```
+
+**How it works:** The script runs `curlimages/curl` in a temporary Docker container connected to the TelHawk network, allowing access to internal services.
+
 ### Database Migrations
 
 The auth service uses golang-migrate for database schema management:
