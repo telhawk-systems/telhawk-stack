@@ -23,7 +23,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const currentUser = await apiClient.getCurrentUser();
       setUser(currentUser);
-    } catch (error) {
+    } catch (error: any) {
+      // Expected when not logged in - don't log as error
+      if (error?.message?.includes('Failed to fetch user') || error?.response?.status === 401) {
+        console.log('User is not logged in');
+      } else {
+        console.error('Auth check failed:', error);
+      }
       setUser(null);
     } finally {
       setLoading(false);

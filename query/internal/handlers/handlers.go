@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -198,7 +199,15 @@ func (h *Handler) SavedSearches(w http.ResponseWriter, r *http.Request) {
 		req.CreatedBy = userID
 		saved, err := h.svc.CreateSavedSearch(r.Context(), &req)
 		if err != nil {
-			h.writeJSONAPIError(w, http.StatusInternalServerError, "saved_search_create_failed", "Failed to create saved search")
+			log.Printf("Failed to create saved search: %v", err)
+			// Return validation errors with 400, other errors with 500
+			if strings.Contains(err.Error(), "validation failed") ||
+				strings.Contains(err.Error(), "cannot be empty") ||
+				strings.Contains(err.Error(), "invalid query") {
+				h.writeJSONAPIError(w, http.StatusBadRequest, "validation_failed", err.Error())
+			} else {
+				h.writeJSONAPIError(w, http.StatusInternalServerError, "saved_search_create_failed", err.Error())
+			}
 			return
 		}
 		w.Header().Set("Location", "/api/v1/saved-searches/"+saved.ID)
@@ -391,7 +400,15 @@ func (h *Handler) SavedSearchByID(w http.ResponseWriter, r *http.Request) {
 		req.CreatedBy = userID
 		saved, err := h.svc.UpdateSavedSearch(r.Context(), id, &req)
 		if err != nil {
-			h.writeJSONAPIError(w, http.StatusInternalServerError, "saved_search_update_failed", "Failed to update saved search")
+			log.Printf("Failed to update saved search: %v", err)
+			// Return validation errors with 400, other errors with 500
+			if strings.Contains(err.Error(), "validation failed") ||
+				strings.Contains(err.Error(), "cannot be empty") ||
+				strings.Contains(err.Error(), "invalid query") {
+				h.writeJSONAPIError(w, http.StatusBadRequest, "validation_failed", err.Error())
+			} else {
+				h.writeJSONAPIError(w, http.StatusInternalServerError, "saved_search_update_failed", err.Error())
+			}
 			return
 		}
 		h.writeJSONAPIResourceWithLinks(w, http.StatusOK, saved, map[string]interface{}{"self": "/api/v1/saved-searches/" + saved.ID})
