@@ -216,10 +216,10 @@ class ApiClient {
       if (response.status === 409) throw new Error('Search disabled');
       if (!response.ok) throw new Error('Run failed');
       const json = await response.json();
-      const items = Array.isArray(json?.data) ? json.data : [];
-      const events = items.map((r: any) => r.attributes || {});
-      const meta = json?.meta || {};
-      return { events, total: meta.total || events.length, latency_ms: meta.latency_ms || 0 };
+      // JSON:API format: data is an object with attributes containing results
+      const attrs = json?.data?.attributes || {};
+      const results = attrs.results || [];
+      return { events: results, total: attrs.total_matches || results.length, latency_ms: attrs.latency_ms || 0 };
     }
     if (!response.ok) throw new Error(`${action} failed`);
     return response.json();
