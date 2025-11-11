@@ -244,11 +244,12 @@ func (h *Handler) SavedSearchByID(w http.ResponseWriter, r *http.Request) {
 		}
 		resp, err := h.svc.RunSavedSearch(r.Context(), id)
 		if err != nil {
+			log.Printf("Failed to run saved search %s: %v", id, err)
 			if err.Error() == "search_disabled" {
 				h.writeJSONAPIConflict(w, "search_disabled", "Saved search is disabled")
 				return
 			}
-			h.writeJSONAPIError(w, http.StatusInternalServerError, "saved_search_run_failed", "Failed to run saved search")
+			h.writeJSONAPIError(w, http.StatusInternalServerError, "saved_search_run_failed", err.Error())
 			return
 		}
 		attrs := map[string]interface{}{

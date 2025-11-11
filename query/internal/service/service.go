@@ -802,10 +802,28 @@ func (s *QueryService) RunSavedSearch(ctx context.Context, id string) (*models.S
 	if saved.DisabledAt != nil {
 		return nil, fmt.Errorf("search_disabled")
 	}
-	// Execute directly using OpenSearch client
+
+	// Unmarshal saved query into Query model
+	queryJSON, err := json.Marshal(saved.Query)
+	if err != nil {
+		return nil, fmt.Errorf("marshal saved query: %w", err)
+	}
+	var query model.Query
+	if err := json.Unmarshal(queryJSON, &query); err != nil {
+		return nil, fmt.Errorf("unmarshal saved query: %w", err)
+	}
+
+	// Translate Phase 2 query to OpenSearch DSL
+	translator := translator.NewOpenSearchTranslator()
+	osQuery, err := translator.Translate(&query)
+	if err != nil {
+		return nil, fmt.Errorf("translate saved query: %w", err)
+	}
+
+	// Execute using OpenSearch client
 	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(saved.Query); err != nil {
-		return nil, fmt.Errorf("encode saved query: %w", err)
+	if err := json.NewEncoder(&buf).Encode(osQuery); err != nil {
+		return nil, fmt.Errorf("encode opensearch query: %w", err)
 	}
 	res, err := s.osClient.Client().Search(
 		s.osClient.Client().Search.WithContext(ctx),
