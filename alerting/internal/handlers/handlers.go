@@ -10,12 +10,21 @@ import (
 	"github.com/telhawk-systems/telhawk-stack/alerting/internal/service"
 )
 
-type Handler struct {
-	service *service.Service
+// StorageClient defines the interface for querying OpenSearch
+type StorageClient interface {
+	Query(method, path string, body []byte) ([]byte, error)
 }
 
-func NewHandler(service *service.Service) *Handler {
-	return &Handler{service: service}
+type Handler struct {
+	service       *service.Service
+	storageClient StorageClient
+}
+
+func NewHandler(service *service.Service, storageClient StorageClient) *Handler {
+	return &Handler{
+		service:       service,
+		storageClient: storageClient,
+	}
 }
 
 // HealthCheck handles health check requests
@@ -248,6 +257,170 @@ func (h *Handler) GetCaseAlerts(w http.ResponseWriter, r *http.Request) {
 		"case_id": caseID,
 		"alerts":  alerts,
 	})
+}
+
+// ListAlerts handles GET /api/v1/alerts
+func (h *Handler) ListAlerts(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Parse query parameters
+	page := parseInt(r.URL.Query().Get("page"), 1)
+	limit := parseInt(r.URL.Query().Get("limit"), 20)
+	severity := r.URL.Query().Get("severity")
+	detectionSchemaID := r.URL.Query().Get("detection_schema_id")
+	// Note: status, case_id, and priority filtering can be added in the future
+
+	// Build OpenSearch query
+	mustClauses := []map[string]interface{}{}
+
+	if severity != "" {
+		mustClauses = append(mustClauses, map[string]interface{}{
+			"term": map[string]interface{}{"severity.keyword": severity},
+		})
+	}
+
+	if detectionSchemaID != "" {
+		mustClauses = append(mustClauses, map[string]interface{}{
+			"term": map[string]interface{}{"detection_schema_id.keyword": detectionSchemaID},
+		})
+	}
+
+	query := map[string]interface{}{
+		"query": map[string]interface{}{
+			"bool": map[string]interface{}{
+				"must": mustClauses,
+			},
+		},
+		"sort": []map[string]interface{}{
+			{"time": map[string]string{"order": "desc"}},
+		},
+		"from": (page - 1) * limit,
+		"size": limit,
+	}
+
+	queryJSON, err := json.Marshal(query)
+	if err != nil {
+		log.Printf("Error building query: %v", err)
+		http.Error(w, "Failed to build query", http.StatusInternalServerError)
+		return
+	}
+
+	// Query OpenSearch
+	respBody, err := h.storageClient.Query("POST", "/telhawk-alerts-*/_search", queryJSON)
+	if err != nil {
+		log.Printf("Error querying alerts: %v", err)
+		http.Error(w, "Failed to query alerts", http.StatusInternalServerError)
+		return
+	}
+
+	// Parse response
+	var searchResp struct {
+		Hits struct {
+			Total struct {
+				Value int `json:"value"`
+			} `json:"total"`
+			Hits []struct {
+				ID     string                 `json:"_id"`
+				Index  string                 `json:"_index"`
+				Source map[string]interface{} `json:"_source"`
+			} `json:"hits"`
+		} `json:"hits"`
+	}
+
+	if err := json.Unmarshal(respBody, &searchResp); err != nil {
+		log.Printf("Error parsing response: %v", err)
+		http.Error(w, "Failed to parse response", http.StatusInternalServerError)
+		return
+	}
+
+	// Build response
+	alerts := make([]map[string]interface{}, 0, len(searchResp.Hits.Hits))
+	for _, hit := range searchResp.Hits.Hits {
+		alert := hit.Source
+		alert["_id"] = hit.ID
+		alert["_index"] = hit.Index
+		alerts = append(alerts, alert)
+	}
+
+	response := map[string]interface{}{
+		"alerts": alerts,
+		"total":  searchResp.Hits.Total.Value,
+		"page":   page,
+		"limit":  limit,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
+// GetAlert handles GET /api/v1/alerts/:id
+func (h *Handler) GetAlert(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Extract ID from path
+	id := r.URL.Path[len("/api/v1/alerts/"):]
+	if id == "" {
+		http.Error(w, "Alert ID required", http.StatusBadRequest)
+		return
+	}
+
+	// Query OpenSearch for the specific alert
+	query := map[string]interface{}{
+		"query": map[string]interface{}{
+			"ids": map[string]interface{}{
+				"values": []string{id},
+			},
+		},
+	}
+
+	queryJSON, err := json.Marshal(query)
+	if err != nil {
+		log.Printf("Error building query: %v", err)
+		http.Error(w, "Failed to build query", http.StatusInternalServerError)
+		return
+	}
+
+	respBody, err := h.storageClient.Query("POST", "/telhawk-alerts-*/_search", queryJSON)
+	if err != nil {
+		log.Printf("Error querying alert: %v", err)
+		http.Error(w, "Failed to query alert", http.StatusInternalServerError)
+		return
+	}
+
+	// Parse response
+	var searchResp struct {
+		Hits struct {
+			Hits []struct {
+				ID     string                 `json:"_id"`
+				Index  string                 `json:"_index"`
+				Source map[string]interface{} `json:"_source"`
+			} `json:"hits"`
+		} `json:"hits"`
+	}
+
+	if err := json.Unmarshal(respBody, &searchResp); err != nil {
+		log.Printf("Error parsing response: %v", err)
+		http.Error(w, "Failed to parse response", http.StatusInternalServerError)
+		return
+	}
+
+	if len(searchResp.Hits.Hits) == 0 {
+		http.Error(w, "Alert not found", http.StatusNotFound)
+		return
+	}
+
+	alert := searchResp.Hits.Hits[0].Source
+	alert["_id"] = searchResp.Hits.Hits[0].ID
+	alert["_index"] = searchResp.Hits.Hits[0].Index
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(alert)
 }
 
 // Helper function to parse integer query parameters

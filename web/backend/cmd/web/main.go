@@ -16,28 +16,30 @@ import (
 )
 
 type Config struct {
-	Port            string
-	StaticDir       string
-	AuthServiceURL  string
-	QueryServiceURL string
-	CoreServiceURL  string
-	RulesServiceURL string
-	CookieDomain    string
-	CookieSecure    bool
-	DevMode         bool
+	Port               string
+	StaticDir          string
+	AuthServiceURL     string
+	QueryServiceURL    string
+	CoreServiceURL     string
+	RulesServiceURL    string
+	AlertingServiceURL string
+	CookieDomain       string
+	CookieSecure       bool
+	DevMode            bool
 }
 
 func loadConfig() *Config {
 	cfg := &Config{
-		Port:            getEnv("WEB_PORT", "3000"),
-		StaticDir:       getEnv("STATIC_DIR", "./static"),
-		AuthServiceURL:  getEnv("AUTH_SERVICE_URL", "http://auth:8080"),
-		QueryServiceURL: getEnv("QUERY_SERVICE_URL", "http://query:8082"),
-		CoreServiceURL:  getEnv("CORE_SERVICE_URL", "http://core:8090"),
-		RulesServiceURL: getEnv("RULES_SERVICE_URL", "http://rules:8084"),
-		CookieDomain:    getEnv("COOKIE_DOMAIN", ""),
-		CookieSecure:    getEnv("COOKIE_SECURE", "true") == "true",
-		DevMode:         getEnv("DEV_MODE", "false") == "true",
+		Port:               getEnv("WEB_PORT", "3000"),
+		StaticDir:          getEnv("STATIC_DIR", "./static"),
+		AuthServiceURL:     getEnv("AUTH_SERVICE_URL", "http://auth:8080"),
+		QueryServiceURL:    getEnv("QUERY_SERVICE_URL", "http://query:8082"),
+		CoreServiceURL:     getEnv("CORE_SERVICE_URL", "http://core:8090"),
+		RulesServiceURL:    getEnv("RULES_SERVICE_URL", "http://rules:8084"),
+		AlertingServiceURL: getEnv("ALERTING_SERVICE_URL", "http://alerting:8085"),
+		CookieDomain:       getEnv("COOKIE_DOMAIN", ""),
+		CookieSecure:       getEnv("COOKIE_SECURE", "true") == "true",
+		DevMode:            getEnv("DEV_MODE", "false") == "true",
 	}
 	return cfg
 }
@@ -66,6 +68,7 @@ func main() {
 	coreProxy := proxy.NewProxy(cfg.CoreServiceURL, authClient)
 	authProxy := proxy.NewProxy(cfg.AuthServiceURL, authClient)
 	rulesProxy := proxy.NewProxy(cfg.RulesServiceURL, authClient)
+	alertingProxy := proxy.NewProxy(cfg.AlertingServiceURL, authClient)
 
 	mux := http.NewServeMux()
 
@@ -98,6 +101,11 @@ func main() {
 	// Rules service proxy (protected)
 	mux.Handle("/api/rules/", authMiddleware.Protect(
 		http.StripPrefix("/api/rules", rulesProxy.Handler()),
+	))
+
+	// Alerting service proxy (protected)
+	mux.Handle("/api/alerting/", authMiddleware.Protect(
+		http.StripPrefix("/api/alerting", alertingProxy.Handler()),
 	))
 
 	// Health check
@@ -144,6 +152,7 @@ func main() {
 	log.Printf("Auth Service: %s", cfg.AuthServiceURL)
 	log.Printf("Query Service: %s", cfg.QueryServiceURL)
 	log.Printf("Rules Service: %s", cfg.RulesServiceURL)
+	log.Printf("Alerting Service: %s", cfg.AlertingServiceURL)
 	log.Printf("Static Dir: %s", cfg.StaticDir)
 	log.Printf("Dev Mode: %v", cfg.DevMode)
 

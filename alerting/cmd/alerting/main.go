@@ -64,10 +64,7 @@ func main() {
 	// Initialize service
 	svc := service.NewService(repo)
 
-	// Initialize handlers
-	handler := handlers.NewHandler(svc)
-
-	// Initialize evaluation engine
+	// Initialize evaluation engine and storage client
 	rulesClient := evaluator.NewHTTPRulesClient("http://rules:8084")
 	storageClient := evaluator.NewHTTPStorageClient(
 		cfg.Storage.URL,
@@ -76,6 +73,9 @@ func main() {
 		cfg.Storage.Insecure,
 	)
 	eval := evaluator.NewEvaluator(rulesClient, storageClient)
+
+	// Initialize handlers with storage client access
+	handler := handlers.NewHandler(svc, storageClient)
 
 	// Start evaluation engine in background
 	evalCtx, evalCancel := context.WithCancel(context.Background())
@@ -88,7 +88,24 @@ func main() {
 	// Health check
 	mux.HandleFunc("/healthz", handler.HealthCheck)
 
-	// API routes
+	// Alerts API routes
+	mux.HandleFunc("/api/v1/alerts", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			handler.ListAlerts(w, r)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
+	mux.HandleFunc("/api/v1/alerts/", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			handler.GetAlert(w, r)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
+	// Cases API routes
 	mux.HandleFunc("/api/v1/cases", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
 			handler.CreateCase(w, r)
