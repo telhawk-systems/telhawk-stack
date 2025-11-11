@@ -326,14 +326,19 @@ services:
       - QUERY_OPENSEARCH_PASSWORD=${OPENSEARCH_PASSWORD:-TelHawk123!}
       - QUERY_OPENSEARCH_INSECURE=true
       - QUERY_OPENSEARCH_INDEX=telhawk-events-*
+      - QUERY_DATABASE_URL=postgres://telhawk:${AUTH_DB_PASSWORD:-telhawk-auth-dev}@auth-db:5432/telhawk_query?sslmode=require
+      - QUERY_AUTH_URL=http://auth:8080
     volumes:
       - telhawk-certs:/certs:ro
     networks:
       - telhawk
+      - telhawk-db
     depends_on:
       telhawk-certs:
         condition: service_completed_successfully
       opensearch:
+        condition: service_healthy
+      auth-db:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "/busybox/wget", "-q", "-O", "-", "http://localhost:8082/api/v1/health"]
