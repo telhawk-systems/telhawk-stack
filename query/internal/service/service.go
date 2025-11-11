@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -584,10 +585,44 @@ func (s *QueryService) ListSavedSearchesAfter(ctx context.Context, showAll bool,
 	return s.repo.ListLatestAfter(ctx, showAll, cursorCreatedAt, cursorVersionID, size)
 }
 
+// validateSavedSearchInput validates the name and query for a saved search
+func validateSavedSearchInput(name string, queryMap map[string]interface{}) error {
+	// Validate name is not empty or whitespace
+	trimmedName := strings.TrimSpace(name)
+	if trimmedName == "" {
+		return fmt.Errorf("saved search name cannot be empty or whitespace")
+	}
+
+	// Validate query structure by unmarshaling into the Query model
+	queryJSON, err := json.Marshal(queryMap)
+	if err != nil {
+		return fmt.Errorf("invalid query format: %w", err)
+	}
+
+	var query model.Query
+	if err := json.Unmarshal(queryJSON, &query); err != nil {
+		return fmt.Errorf("invalid query structure: %w", err)
+	}
+
+	// Validate query using the query validator
+	v := validator.NewQueryValidator()
+	if err := v.Validate(&query); err != nil {
+		return fmt.Errorf("query validation failed: %w", err)
+	}
+
+	return nil
+}
+
 func (s *QueryService) CreateSavedSearch(ctx context.Context, req *models.SavedSearchCreateRequest) (*models.SavedSearch, error) {
 	if s.repo == nil {
 		return nil, fmt.Errorf("repository not configured")
 	}
+
+	// Validate input
+	if err := validateSavedSearchInput(req.Name, req.Query); err != nil {
+		return nil, err
+	}
+
 	id := generateID()
 	versionID := generateID()
 	now := time.Now().UTC()
@@ -628,6 +663,23 @@ func (s *QueryService) UpdateSavedSearch(ctx context.Context, id string, req *mo
 	if err != nil {
 		return nil, err
 	}
+
+	// Determine the final name and query after update
+	finalName := latest.Name
+	if req.Name != nil {
+		finalName = *req.Name
+	}
+	finalQuery := latest.Query
+	if req.Query != nil {
+		finalQuery = req.Query
+	}
+
+	// Validate the updated values
+	if err := validateSavedSearchInput(finalName, finalQuery); err != nil {
+		return nil, err
+	}
+
+	// Apply updates
 	if req.Name != nil {
 		latest.Name = *req.Name
 	}

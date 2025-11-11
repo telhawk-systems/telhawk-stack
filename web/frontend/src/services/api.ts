@@ -176,7 +176,11 @@ class ApiClient {
     const body = { data: { type: 'saved-search', attributes: { name, query, filters, is_global: isGlobal }}};
     const response = await fetch(`${this.baseUrl}/query/api/v1/saved-searches`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/vnd.api+json', 'X-CSRF-Token': this.csrfToken! },
+      headers: {
+        'Accept': 'application/vnd.api+json',
+        'Content-Type': 'application/vnd.api+json',
+        'X-CSRF-Token': this.csrfToken!
+      },
       credentials: 'include',
       body: JSON.stringify(body),
     });
@@ -189,7 +193,11 @@ class ApiClient {
     const body = { data: { id, type: 'saved-search', attributes: attrs }};
     const response = await fetch(`${this.baseUrl}/query/api/v1/saved-searches/${id}`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/vnd.api+json', 'X-CSRF-Token': this.csrfToken! },
+      headers: {
+        'Accept': 'application/vnd.api+json',
+        'Content-Type': 'application/vnd.api+json',
+        'X-CSRF-Token': this.csrfToken!
+      },
       credentials: 'include',
       body: JSON.stringify(body),
     });
