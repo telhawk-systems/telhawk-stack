@@ -1,89 +1,152 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Layout } from '../components/Layout';
-import { apiClient } from '../services/api';
+import { SearchConsole } from '../components/SearchConsole';
 import { EventsTable } from '../components/EventsTable';
 import { EventDetailModal } from '../components/EventDetailModal';
+import { apiClient } from '../services/api';
+import { Query } from '../types/query';
 
 export function EventsPage() {
-  const [query, setQuery] = useState<string>('');
-  const [events, setEvents] = useState<any[]>([]);
+  const [results, setResults] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string>('');
-  const [pageSize] = useState<number>(20);
-  const [cursor, setCursor] = useState<string | undefined>(undefined);
-  const [cursorStack, setCursorStack] = useState<string[]>([]);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [error, setError] = useState('');
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
+  const [currentQuery, setCurrentQuery] = useState<Query | null>(null);
+  const [allEvents, setAllEvents] = useState<any[]>([]);
 
-  const load = async (opts?: { next?: boolean; prev?: boolean }) => {
+  const handleSearch = async (query: Query) => {
+    setError('');
+    setLoading(true);
+    setResults(null);
+    setAllEvents([]);
+    setCurrentQuery(query);
+
     try {
-      setLoading(true);
-      setError('');
-      const res = await apiClient.listEvents({ query, size: pageSize, cursor: opts?.next ? cursor : (opts?.prev ? cursorStack[cursorStack.length-1] : undefined) });
-      if (opts?.next && res.nextCursor) {
-        setCursorStack(prev => [...prev, cursor || '']);
-        setCursor(res.nextCursor);
-      } else if (opts?.prev) {
-        const copy = cursorStack.slice(0, -1);
-        setCursorStack(copy);
-        setCursor(copy.length ? copy[copy.length-1] : undefined);
-      } else {
-        setCursor(res.nextCursor);
-        setCursorStack([]);
-      }
-      setEvents(res.events);
-    } catch (e: any) {
-      setError(e?.message || 'Failed to load events');
+      const data = await apiClient.executeQuery(query);
+
+      // Handle both response formats (results vs events)
+      const events = (data as any).results || data.events || [];
+      const total = (data as any).total_matches || data.total || 0;
+
+      // Map response to match expected format
+      const results = {
+        results: events,
+        result_count: events.length,
+        total_matches: total,
+        latency_ms: data.took || (data as any).latency_ms || 0,
+        cursor: (data as any).search_after?.[0]?.toString() || data.cursor,
+        request_id: (data as any).request_id || 'query-' + Date.now(),
+      };
+
+      setResults(results);
+      setAllEvents(events);
+    } catch (err) {
+      setError('Search failed. Please try again.');
+      console.error('Search error:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { load(); // eslint-disable-next-line
-  }, []);
+  const handleLoadMore = async () => {
+    if (!results?.cursor || loadingMore || !currentQuery) return;
+
+    setLoadingMore(true);
+    setError('');
+
+    try {
+      // Update query with cursor for next page
+      const nextPageQuery: Query = {
+        ...currentQuery,
+        cursor: results.cursor,
+      };
+
+      const data = await apiClient.executeQuery(nextPageQuery);
+
+      // Handle both response formats (results vs events)
+      const events = (data as any).results || data.events || [];
+      const total = (data as any).total_matches || data.total || 0;
+
+      // Append new results to existing events
+      const newEvents = [...allEvents, ...events];
+      setAllEvents(newEvents);
+
+      // Update results with new cursor and counts
+      setResults({
+        results: newEvents,
+        result_count: newEvents.length,
+        total_matches: total,
+        latency_ms: data.took || (data as any).latency_ms || 0,
+        cursor: (data as any).search_after?.[0]?.toString() || data.cursor,
+        request_id: 'query-' + Date.now(),
+      });
+    } catch (err) {
+      setError('Failed to load more results. Please try again.');
+      console.error('Load more error:', err);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   return (
     <Layout>
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-2xl font-bold text-gray-800">Events</h2>
-        <div className="flex items-center gap-2">
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Query (e.g., severity:high AND class_uid:3002)"
-            className="px-3 py-2 border rounded w-96"
-          />
-          <button onClick={() => load()} className="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Search</button>
-        </div>
-      </div>
+      <div className="space-y-6">
+        {/* Search Console */}
+        <SearchConsole onSearch={handleSearch} loading={loading} />
 
-      {error && (
-        <div className="bg-red-50 border-l-4 border-red-500 p-3 rounded mb-4 text-sm text-red-700">{error}</div>
-      )}
-
-      <div className="bg-white rounded shadow">
-        {loading ? (
-          <div className="p-6 text-gray-500">Loading…</div>
-        ) : (
-          <div className="p-2">
-            <EventsTable
-              events={events as any}
-              onEventClick={(e) => setSelectedEvent(e)}
-            />
+        {/* Error Message */}
+        {error && (
+          <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-md">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-red-700">{error}</p>
+              </div>
+            </div>
           </div>
+        )}
+
+        {/* Results */}
+        {results && (
+          <>
+            <div className="bg-white rounded-lg shadow-md p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-500">Query completed in {results.latency_ms}ms</p>
+                  <p className="text-lg font-semibold text-gray-900">
+                    {results.result_count} events {results.total_matches && `of ${results.total_matches} total`}
+                  </p>
+                </div>
+                {results.result_count > 0 && (
+                  <div className="text-sm text-gray-500">
+                    Request ID: {results.request_id}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <EventsTable
+              events={allEvents}
+              totalMatches={results.total_matches}
+              onEventClick={setSelectedEvent}
+              onLoadMore={results.cursor ? handleLoadMore : undefined}
+              loadingMore={loadingMore}
+            />
+          </>
         )}
       </div>
 
-      <div className="flex justify-between items-center mt-4">
-        <div className="text-sm text-gray-600">Page size: {pageSize}</div>
-        <div className="space-x-2">
-          <button disabled={cursorStack.length===0} onClick={() => load({ prev: true })} className={`px-3 py-1 rounded ${cursorStack.length>0? 'bg-gray-200':'bg-gray-100 opacity-50'}`}>Prev</button>
-          <button disabled={!cursor} onClick={() => load({ next: true })} className={`px-3 py-1 rounded ${cursor? 'bg-gray-200':'bg-gray-100 opacity-50'}`}>Next</button>
-        </div>
-      </div>
-
+      {/* Event Detail Modal */}
       {selectedEvent && (
-        <EventDetailModal event={selectedEvent} onClose={() => setSelectedEvent(null)} />
+        <EventDetailModal
+          event={selectedEvent}
+          onClose={() => setSelectedEvent(null)}
+        />
       )}
     </Layout>
   );

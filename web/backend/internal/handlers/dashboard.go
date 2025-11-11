@@ -59,31 +59,34 @@ func (h *DashboardHandler) GetMetrics(w http.ResponseWriter, r *http.Request) {
 	dashboardQuery := map[string]interface{}{
 		"query": "*",
 		"limit": 0,
-		"aggregations": map[string]interface{}{
-			"severity_count": map[string]interface{}{
+		"aggregations": []map[string]interface{}{
+			{
+				"name":  "severity_count",
 				"type":  "terms",
-				"field": "severity",
+				"field": ".severity",
 				"size":  10,
 			},
-			"events_by_class": map[string]interface{}{
+			{
+				"name":  "events_by_class",
 				"type":  "terms",
-				"field": "class_name",
+				"field": ".class_name",
 				"size":  10,
 			},
-			"timeline": map[string]interface{}{
-				"type":  "date_histogram",
-				"field": "time",
-				"opts": map[string]interface{}{
-					"interval": "1h",
-				},
+			{
+				"name":     "timeline",
+				"type":     "date_histogram",
+				"field":    ".time",
+				"interval": "1h",
 			},
-			"unique_users": map[string]interface{}{
+			{
+				"name":  "unique_users",
 				"type":  "cardinality",
-				"field": "actor.user.name.keyword",
+				"field": ".actor.user.name.keyword",
 			},
-			"unique_ips": map[string]interface{}{
+			{
+				"name":  "unique_ips",
 				"type":  "cardinality",
-				"field": "src_endpoint.ip.keyword",
+				"field": ".src_endpoint.ip.keyword",
 			},
 		},
 	}
@@ -111,9 +114,9 @@ func (h *DashboardHandler) GetMetrics(w http.ResponseWriter, r *http.Request) {
 	req.Header.Set("Accept", "application/vnd.api+json")
 	req.Header.Set("Content-Type", "application/vnd.api+json")
 
-	// Forward auth cookies
-	for _, cookie := range r.Cookies() {
-		req.AddCookie(cookie)
+	// Inject Authorization header from access_token cookie
+	if accessCookie, err := r.Cookie("access_token"); err == nil && accessCookie.Value != "" {
+		req.Header.Set("Authorization", "Bearer "+accessCookie.Value)
 	}
 
 	resp, err := http.DefaultClient.Do(req)
