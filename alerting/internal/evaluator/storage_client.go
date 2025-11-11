@@ -183,6 +183,35 @@ func (c *HTTPStorageClient) StoreAlert(ctx context.Context, alert *Alert) error 
 	return nil
 }
 
+// Query performs a generic OpenSearch query
+func (c *HTTPStorageClient) Query(method, path string, body []byte) ([]byte, error) {
+	url := c.baseURL + path
+	req, err := http.NewRequest(method, url, bytes.NewReader(body))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.SetBasicAuth(c.username, c.password)
+
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response: %w", err)
+	}
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, fmt.Errorf("request failed with status %d: %s", resp.StatusCode, string(respBody))
+	}
+
+	return respBody, nil
+}
+
 // getSeverityID maps severity string to OCSF severity_id
 func (c *HTTPStorageClient) getSeverityID(severity string) int {
 	severityMap := map[string]int{
