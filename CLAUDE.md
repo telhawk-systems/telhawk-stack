@@ -170,6 +170,18 @@ See `docs/SERVICES.md` for service flow and summaries.
 - `auth/pkg/tokens/jwt.go`: JWT generation and validation
 - `auth/migrations/001_init.up.sql`: Database schema
 
+### API Conventions (JSON:API)
+
+All new and modernized HTTP APIs follow the JSON:API 1.0 specification (https://jsonapi.org/format/):
+- Content type: `application/vnd.api+json` for requests and responses
+- Top-level members: `data`, `errors`, `meta`, `links`
+- Resources: `type`, `id`, `attributes`, optional `relationships`
+- Pagination: `page[number]`, `page[size]` (or cursor when specified)
+- Filtering and sorting use JSON:API conventions (e.g., `filter[...]`, `sort`)
+- Errors use JSON:API error objects with `status`, `code`, `title`, `detail`
+
+Example resources include Saved Searches (`type: saved-search`), where immutable versioning is represented in attributes (e.g., `version_id`, lifecycle timestamps) and ownership is conveyed via `relationships` to `user`.
+
 ### OCSF Normalization
 
 The system uses a code generator approach for OCSF compliance:

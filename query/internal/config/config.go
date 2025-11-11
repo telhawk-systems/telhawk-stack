@@ -11,9 +11,11 @@ import (
 
 // Config contains runtime configuration for the query service.
 type Config struct {
-	Server      ServerConfig      `yaml:"server"`
-	OpenSearch  OpenSearchConfig  `yaml:"opensearch"`
-	Alerting    AlertingConfig    `yaml:"alerting"`
+	Server      ServerConfig     `yaml:"server"`
+	OpenSearch  OpenSearchConfig `yaml:"opensearch"`
+	Alerting    AlertingConfig   `yaml:"alerting"`
+	DatabaseURL string           `yaml:"database_url"`
+	AuthURL     string           `yaml:"auth_url"`
 }
 
 // OpenSearchConfig captures OpenSearch connection settings.
@@ -78,6 +80,8 @@ func Default() Config {
 			CheckIntervalSeconds: 30,
 			NotificationTimeout:  10,
 		},
+		DatabaseURL: "",
+		AuthURL:     "http://auth:8080",
 	}
 }
 
@@ -158,5 +162,11 @@ func applyEnvOverrides(cfg *Config) {
 		if parsed, err := strconv.Atoi(v); err == nil {
 			cfg.Alerting.NotificationTimeout = parsed
 		}
+	}
+	if v := os.Getenv("QUERY_DATABASE_URL"); v != "" {
+		cfg.DatabaseURL = v
+	}
+	if v := os.Getenv("QUERY_AUTH_URL"); v != "" {
+		cfg.AuthURL = v
 	}
 }

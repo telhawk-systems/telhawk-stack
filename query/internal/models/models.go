@@ -45,6 +45,36 @@ type SearchResponse struct {
 	OpenSearchQuery string                   `json:"-"` // Not serialized, used for debug header
 }
 
+// SavedSearch defines a stored query owned by a user or global.
+type SavedSearch struct {
+	ID         string                 `json:"id"`
+	VersionID  string                 `json:"version_id"`
+	OwnerID    *string                `json:"owner_id,omitempty"`
+	CreatedBy  string                 `json:"created_by"`
+	Name       string                 `json:"name"`
+	Query      map[string]interface{} `json:"query"`
+	Filters    map[string]interface{} `json:"filters,omitempty"`
+	IsGlobal   bool                   `json:"is_global"`
+	CreatedAt  time.Time              `json:"created_at"`
+	DisabledAt *time.Time             `json:"disabled_at,omitempty"`
+	HiddenAt   *time.Time             `json:"hidden_at,omitempty"`
+}
+
+type SavedSearchCreateRequest struct {
+	Name      string                 `json:"name"`
+	Query     map[string]interface{} `json:"query"`
+	Filters   map[string]interface{} `json:"filters,omitempty"`
+	IsGlobal  bool                   `json:"is_global,omitempty"`
+	CreatedBy string                 `json:"created_by"`
+}
+
+type SavedSearchUpdateRequest struct {
+	Name      *string                `json:"name,omitempty"`
+	Query     map[string]interface{} `json:"query,omitempty"`
+	Filters   map[string]interface{} `json:"filters,omitempty"`
+	CreatedBy string                 `json:"created_by"`
+}
+
 // AlertSchedule controls when an alert runs and its lookback window.
 type AlertSchedule struct {
 	IntervalMinutes int `json:"interval_minutes"`

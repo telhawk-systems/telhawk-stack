@@ -55,7 +55,7 @@ func (h *DashboardHandler) GetMetrics(w http.ResponseWriter, r *http.Request) {
 	}
 	h.cacheMutex.RUnlock()
 
-	// Cache miss or expired - fetch from query service
+	// Cache miss or expired - fetch from query service using JSON:API events query
 	dashboardQuery := map[string]interface{}{
 		"query": "*",
 		"limit": 0,
@@ -88,21 +88,28 @@ func (h *DashboardHandler) GetMetrics(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 
-	queryBody, err := json.Marshal(dashboardQuery)
+	payload := map[string]interface{}{
+		"data": map[string]interface{}{
+			"type":       "event-query",
+			"attributes": dashboardQuery,
+		},
+	}
+	queryBody, err := json.Marshal(payload)
 	if err != nil {
 		log.Printf("Failed to marshal dashboard query: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
-	req, err := http.NewRequest("POST", h.queryURL+"/api/v1/search", bytes.NewReader(queryBody))
+	req, err := http.NewRequest("POST", h.queryURL+"/api/v1/events/query", bytes.NewReader(queryBody))
 	if err != nil {
 		log.Printf("Failed to create query request: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/vnd.api+json")
+	req.Header.Set("Content-Type", "application/vnd.api+json")
 
 	// Forward auth cookies
 	for _, cookie := range r.Cookies() {
@@ -131,13 +138,35 @@ func (h *DashboardHandler) GetMetrics(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Extract meta.aggregations and meta.total from JSON:API and return legacy shape
+	var respObj struct {
+		Meta struct {
+			Total        int             `json:"total"`
+			Aggregations json.RawMessage `json:"aggregations"`
+		} `json:"meta"`
+	}
+	if err := json.Unmarshal(body, &respObj); err != nil {
+		log.Printf("Failed to parse events JSON:API response: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	legacy := map[string]interface{}{
+		"total_matches": respObj.Meta.Total,
+	}
+	if len(respObj.Meta.Aggregations) > 0 {
+		legacy["aggregations"] = json.RawMessage(respObj.Meta.Aggregations)
+	} else {
+		legacy["aggregations"] = map[string]interface{}{}
+	}
+	unwrapped, _ := json.Marshal(legacy)
+
 	// Update cache
 	h.cacheMutex.Lock()
-	h.cachedData = body
+	h.cachedData = unwrapped
 	h.cacheTime = time.Now()
 	h.cacheMutex.Unlock()
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("X-Cache", "MISS")
-	w.Write(body)
+	w.Write(unwrapped)
 }

@@ -13,6 +13,11 @@
 
 ## Reference
 - TLS configuration — `docs/TLS_CONFIGURATION.md`
+- JSON:API conventions — `docs/API_JSONAPI.md`
+- Events API — `docs/EVENTS_API.md`
+- Query API — `docs/QUERY_API.md`
+- Alerts API — `docs/ALERTS_API_JSON.md`
+- Dashboards API — `docs/DASHBOARDS_API.md`
 - Query language — `docs/QUERY_LANGUAGE_DESIGN.md`
 - Alerting — `docs/ALERTING_ARCHITECTURE.md`, `docs/ALERTING_API.md`, `docs/ALERT_SCHEDULING.md`
 - Ingest features — `docs/INGEST_FEATURES_IMPLEMENTATION.md`, `docs/HEC_TOKEN_VALIDATION.md`

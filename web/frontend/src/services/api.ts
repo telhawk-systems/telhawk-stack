@@ -86,24 +86,32 @@ class ApiClient {
     const response = await fetch(`${this.baseUrl}/query/api/v1/search`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
+        'Accept': 'application/vnd.api+json',
+        'Content-Type': 'application/vnd.api+json',
         'X-CSRF-Token': this.csrfToken!,
       },
       credentials: 'include',
       body: JSON.stringify({
-        query,
-        limit: size,
-        sort: { field: 'time', order: 'desc' },
-        ...(aggregations && { aggregations }),
-        ...(searchAfter && { search_after: searchAfter })
-      }),
+        data: {
+          type: 'search',
+          attributes: {
+            query,
+            limit: size,
+            sort: { field: 'time', order: 'desc' },
+            ...(aggregations && { aggregations }),
+            ...(searchAfter && { search_after: searchAfter })
+          }
+        }
+      })
     });
 
     if (!response.ok) {
       throw new Error('Search failed');
     }
 
-    return response.json();
+    const json = await response.json();
+    const attrs = json?.data?.attributes || {};
+    return attrs;
   }
 
   /**
@@ -116,21 +124,96 @@ class ApiClient {
       await this.getCSRFToken();
     }
 
-    const response = await fetch(`${this.baseUrl}/query/api/v1/query`, {
+    const response = await fetch(`${this.baseUrl}/query/api/v1/events/query`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
+        'Accept': 'application/vnd.api+json',
+        'Content-Type': 'application/vnd.api+json',
         'X-CSRF-Token': this.csrfToken!,
       },
       credentials: 'include',
-      body: JSON.stringify(query),
+      body: JSON.stringify({ data: { type: 'event-query', attributes: query } }),
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ message: 'Query failed' }));
-      throw new Error(errorData.message || 'Query failed');
+      const errorData = await response.json().catch(() => ({ errors: [{ title: 'Query failed' }] }));
+      const title = errorData?.errors?.[0]?.title || 'Query failed';
+      throw new Error(title);
     }
 
+    const json = await response.json();
+    const items = Array.isArray(json?.data) ? json.data : [];
+    const results = items.map((r: any) => r.attributes || {});
+    const meta = json?.meta || {};
+    const total = meta.total || results.length;
+    const took = meta.latency_ms || 0;
+    const cursor = meta.next_cursor || undefined;
+    const aggregations = meta.aggregations || undefined;
+    return { events: results, total, cursor, aggregations, took } as QueryResponse;
+  }
+
+  // Saved Searches (JSON:API)
+  async listSavedSearches(showAll = false, pageNumber = 1, pageSize = 20, cursor?: string): Promise<{ data: any[]; meta?: any }> {
+    const params = new URLSearchParams();
+    if (showAll) params.set('filter[show_all]', 'true');
+    if (cursor) {
+      params.set('page[cursor]', cursor);
+      params.set('page[size]', String(pageSize));
+    } else {
+      params.set('page[number]', String(pageNumber));
+      params.set('page[size]', String(pageSize));
+    }
+    const response = await fetch(`${this.baseUrl}/query/api/v1/saved-searches?${params.toString()}`, {
+      credentials: 'include',
+      headers: { 'Accept': 'application/vnd.api+json' },
+    });
+    if (!response.ok) throw new Error('Failed to list saved searches');
+    return response.json();
+  }
+
+  async createSavedSearch(name: string, query: any, filters: any = {}, isGlobal = false): Promise<any> {
+    if (!this.csrfToken) { await this.getCSRFToken(); }
+    const body = { data: { type: 'saved-search', attributes: { name, query, filters, is_global: isGlobal }}};
+    const response = await fetch(`${this.baseUrl}/query/api/v1/saved-searches`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/vnd.api+json', 'X-CSRF-Token': this.csrfToken! },
+      credentials: 'include',
+      body: JSON.stringify(body),
+    });
+    if (!response.ok) throw new Error('Failed to create saved search');
+    return response.json();
+  }
+
+  async updateSavedSearch(id: string, attrs: any): Promise<any> {
+    if (!this.csrfToken) { await this.getCSRFToken(); }
+    const body = { data: { id, type: 'saved-search', attributes: attrs }};
+    const response = await fetch(`${this.baseUrl}/query/api/v1/saved-searches/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/vnd.api+json', 'X-CSRF-Token': this.csrfToken! },
+      credentials: 'include',
+      body: JSON.stringify(body),
+    });
+    if (!response.ok) throw new Error('Failed to update saved search');
+    return response.json();
+  }
+
+  async savedSearchAction(id: string, action: 'disable'|'enable'|'hide'|'unhide'|'run'): Promise<any> {
+    if (!this.csrfToken) { await this.getCSRFToken(); }
+    const response = await fetch(`${this.baseUrl}/query/api/v1/saved-searches/${id}/${action}`, {
+      method: 'POST',
+      headers: { 'X-CSRF-Token': this.csrfToken!, 'Accept': 'application/vnd.api+json' },
+      credentials: 'include',
+    });
+    if (action === 'run') {
+      if (response.status === 409) throw new Error('Search disabled');
+      if (!response.ok) throw new Error('Run failed');
+      const json = await response.json();
+      const items = Array.isArray(json?.data) ? json.data : [];
+      const events = items.map((r: any) => r.attributes || {});
+      const meta = json?.meta || {};
+      return { events, total: meta.total || events.length, latency_ms: meta.latency_ms || 0 };
+    }
+    if (!response.ok) throw new Error(`${action} failed`);
     return response.json();
   }
 
@@ -142,6 +225,9 @@ class ApiClient {
     });
 
     if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error('Please log in to view dashboard metrics');
+      }
       throw new Error('Failed to fetch dashboard metrics');
     }
 
@@ -158,7 +244,37 @@ class ApiClient {
       throw new Error('Failed to list users');
     }
 
-    return response.json();
+    const data = await response.json();
+    // Backward compatibility: API may omit `enabled`; default to true
+    return (data as any[]).map((u) => ({ enabled: true, updated_at: '', ...u }));
+  }
+
+  // Events API (JSON:API)
+  async listEvents(params?: { query?: string; sort?: string; page?: number; size?: number; cursor?: string }): Promise<{ events: any[]; total: number; nextCursor?: string; took?: number }> {
+    const search = new URLSearchParams();
+    if (params?.query) search.set('filter[query]', params.query);
+    if (params?.sort) search.set('sort', params.sort);
+    if (params?.cursor) {
+      search.set('page[cursor]', params.cursor);
+      if (params?.size) search.set('page[size]', String(params.size));
+    } else {
+      if (params?.page) search.set('page[number]', String(params.page));
+      if (params?.size) search.set('page[size]', String(params.size));
+    }
+    const response = await fetch(`${this.baseUrl}/query/api/v1/events?${search.toString()}`, {
+      method: 'GET',
+      headers: { 'Accept': 'application/vnd.api+json' },
+      credentials: 'include',
+    });
+    if (!response.ok) {
+      if (response.status === 401) throw new Error('Please log in to view events');
+      throw new Error('Failed to list events');
+    }
+    const json = await response.json();
+    const items = Array.isArray(json?.data) ? json.data : [];
+    const events = items.map((r: any) => r.attributes || {});
+    const meta = json?.meta || {};
+    return { events, total: meta.total || events.length, nextCursor: meta.next_cursor, took: meta.latency_ms };
   }
 
   async getUser(id: string): Promise<UserDetails> {
@@ -170,7 +286,8 @@ class ApiClient {
       throw new Error('Failed to get user');
     }
 
-    return response.json();
+    const u = await response.json();
+    return { enabled: true, updated_at: '', ...u } as UserDetails;
   }
 
   async updateUser(id: string, updates: Partial<UserDetails>): Promise<UserDetails> {
