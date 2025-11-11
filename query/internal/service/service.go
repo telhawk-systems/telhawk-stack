@@ -12,8 +12,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/telhawk-systems/telhawk-stack/query/internal/auth"
 	"github.com/telhawk-systems/telhawk-stack/query/internal/client"
 	"github.com/telhawk-systems/telhawk-stack/query/internal/models"
+	"github.com/telhawk-systems/telhawk-stack/query/internal/repository"
 	"github.com/telhawk-systems/telhawk-stack/query/internal/translator"
 	"github.com/telhawk-systems/telhawk-stack/query/internal/validator"
 	"github.com/telhawk-systems/telhawk-stack/query/pkg/model"
@@ -32,6 +34,10 @@ type QueryService struct {
 	alerts     map[string]models.Alert
 	dashboards map[string]models.Dashboard
 	osClient   *client.OpenSearchClient
+
+	// saved searches backing store + auth
+	repo       *repository.PostgresRepository
+	authClient *auth.Client
 }
 
 // NewQueryService seeds in-memory data used by the HTTP handlers.
@@ -84,6 +90,25 @@ func NewQueryService(version string, osClient *client.OpenSearchClient) *QuerySe
 			},
 		},
 	}
+}
+
+// WithDependencies wires the optional repo and auth client.
+func (s *QueryService) WithDependencies(repo *repository.PostgresRepository, authClient *auth.Client) *QueryService {
+	s.repo = repo
+	s.authClient = authClient
+	return s
+}
+
+// ValidateToken returns a durable user ID for a given bearer token.
+func (s *QueryService) ValidateToken(ctx context.Context, token string) (string, error) {
+	if s.authClient == nil {
+		return "", fmt.Errorf("auth client not configured")
+	}
+	vr, err := s.authClient.Validate(ctx, token)
+	if err != nil {
+		return "", err
+	}
+	return vr.UserID, nil
 }
 
 // ExecuteSearch executes a search query against OpenSearch.
@@ -526,6 +551,249 @@ func (s *QueryService) Health(ctx context.Context) *models.HealthResponse {
 		Version:       s.version,
 		UptimeSeconds: int64(uptime),
 	}
+}
+
+// Saved Searches API (temporary in-memory impl; schema exists for Postgres)
+
+func (s *QueryService) ListSavedSearches(ctx context.Context) ([]models.SavedSearch, error) {
+	if s.repo == nil {
+		return nil, fmt.Errorf("repository not configured")
+	}
+	// Default: do not show hidden
+	return s.repo.ListLatest(ctx, false)
+}
+
+func (s *QueryService) ListSavedSearchesWithOptions(ctx context.Context, showAll bool) ([]models.SavedSearch, error) {
+	if s.repo == nil {
+		return nil, fmt.Errorf("repository not configured")
+	}
+	return s.repo.ListLatest(ctx, showAll)
+}
+
+func (s *QueryService) ListSavedSearchesPaged(ctx context.Context, showAll bool, page, size int) ([]models.SavedSearch, int, error) {
+	if s.repo == nil {
+		return nil, 0, fmt.Errorf("repository not configured")
+	}
+	return s.repo.ListLatestPaged(ctx, showAll, page, size)
+}
+
+func (s *QueryService) ListSavedSearchesAfter(ctx context.Context, showAll bool, cursorCreatedAt *time.Time, cursorVersionID string, size int) ([]models.SavedSearch, error) {
+	if s.repo == nil {
+		return nil, fmt.Errorf("repository not configured")
+	}
+	return s.repo.ListLatestAfter(ctx, showAll, cursorCreatedAt, cursorVersionID, size)
+}
+
+func (s *QueryService) CreateSavedSearch(ctx context.Context, req *models.SavedSearchCreateRequest) (*models.SavedSearch, error) {
+	if s.repo == nil {
+		return nil, fmt.Errorf("repository not configured")
+	}
+	id := generateID()
+	versionID := generateID()
+	now := time.Now().UTC()
+	var owner *string
+	if !req.IsGlobal {
+		// owner is the creator by default
+		owner = &req.CreatedBy
+	}
+	saved := models.SavedSearch{
+		ID:        id,
+		VersionID: versionID,
+		OwnerID:   owner,
+		CreatedBy: req.CreatedBy,
+		Name:      req.Name,
+		Query:     req.Query,
+		Filters:   req.Filters,
+		IsGlobal:  req.IsGlobal,
+		CreatedAt: now,
+	}
+	if err := s.repo.InsertVersion(ctx, &saved); err != nil {
+		return nil, err
+	}
+	return &saved, nil
+}
+
+func (s *QueryService) GetSavedSearch(ctx context.Context, id string) (*models.SavedSearch, error) {
+	if s.repo == nil {
+		return nil, fmt.Errorf("repository not configured")
+	}
+	return s.repo.GetLatest(ctx, id)
+}
+
+func (s *QueryService) UpdateSavedSearch(ctx context.Context, id string, req *models.SavedSearchUpdateRequest) (*models.SavedSearch, error) {
+	if s.repo == nil {
+		return nil, fmt.Errorf("repository not configured")
+	}
+	latest, err := s.repo.GetLatest(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if req.Name != nil {
+		latest.Name = *req.Name
+	}
+	if req.Query != nil {
+		latest.Query = req.Query
+	}
+	if req.Filters != nil {
+		latest.Filters = req.Filters
+	}
+	latest.VersionID = generateID()
+	latest.CreatedBy = req.CreatedBy
+	latest.CreatedAt = time.Now().UTC()
+	latest.DisabledAt = nil
+	// Do not change hidden state on update
+	if err := s.repo.InsertVersion(ctx, latest); err != nil {
+		return nil, err
+	}
+	return latest, nil
+}
+
+func (s *QueryService) DeleteSavedSearch(ctx context.Context, id string) error {
+	if s.repo == nil {
+		return fmt.Errorf("repository not configured")
+	}
+	latest, err := s.repo.GetLatest(ctx, id)
+	if err != nil {
+		return err
+	}
+	now := time.Now().UTC()
+	latest.VersionID = generateID()
+	latest.HiddenAt = &now
+	latest.CreatedAt = now
+	if err := s.repo.InsertVersion(ctx, latest); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *QueryService) DisableSavedSearch(ctx context.Context, id, userID string) (*models.SavedSearch, error) {
+	if s.repo == nil {
+		return nil, fmt.Errorf("repository not configured")
+	}
+	latest, err := s.repo.GetLatest(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	now := time.Now().UTC()
+	latest.VersionID = generateID()
+	latest.CreatedBy = userID
+	latest.CreatedAt = now
+	latest.DisabledAt = &now
+	if err := s.repo.InsertVersion(ctx, latest); err != nil {
+		return nil, err
+	}
+	return latest, nil
+}
+
+func (s *QueryService) EnableSavedSearch(ctx context.Context, id, userID string) (*models.SavedSearch, error) {
+	if s.repo == nil {
+		return nil, fmt.Errorf("repository not configured")
+	}
+	latest, err := s.repo.GetLatest(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	now := time.Now().UTC()
+	latest.VersionID = generateID()
+	latest.CreatedBy = userID
+	latest.CreatedAt = now
+	latest.DisabledAt = nil
+	if err := s.repo.InsertVersion(ctx, latest); err != nil {
+		return nil, err
+	}
+	return latest, nil
+}
+
+func (s *QueryService) HideSavedSearch(ctx context.Context, id, userID string) (*models.SavedSearch, error) {
+	if s.repo == nil {
+		return nil, fmt.Errorf("repository not configured")
+	}
+	latest, err := s.repo.GetLatest(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	now := time.Now().UTC()
+	latest.VersionID = generateID()
+	latest.CreatedBy = userID
+	latest.CreatedAt = now
+	latest.HiddenAt = &now
+	if err := s.repo.InsertVersion(ctx, latest); err != nil {
+		return nil, err
+	}
+	return latest, nil
+}
+
+func (s *QueryService) UnhideSavedSearch(ctx context.Context, id, userID string) (*models.SavedSearch, error) {
+	if s.repo == nil {
+		return nil, fmt.Errorf("repository not configured")
+	}
+	latest, err := s.repo.GetLatest(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	now := time.Now().UTC()
+	latest.VersionID = generateID()
+	latest.CreatedBy = userID
+	latest.CreatedAt = now
+	latest.HiddenAt = nil
+	if err := s.repo.InsertVersion(ctx, latest); err != nil {
+		return nil, err
+	}
+	return latest, nil
+}
+
+func (s *QueryService) RunSavedSearch(ctx context.Context, id string) (*models.SearchResponse, error) {
+	saved, err := s.GetSavedSearch(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if saved.DisabledAt != nil {
+		return nil, fmt.Errorf("search_disabled")
+	}
+	// Execute directly using OpenSearch client
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(saved.Query); err != nil {
+		return nil, fmt.Errorf("encode saved query: %w", err)
+	}
+	res, err := s.osClient.Client().Search(
+		s.osClient.Client().Search.WithContext(ctx),
+		s.osClient.Client().Search.WithIndex(s.osClient.Index()+"*"),
+		s.osClient.Client().Search.WithBody(&buf),
+		s.osClient.Client().Search.WithTrackTotalHits(true),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("search request: %w", err)
+	}
+	defer res.Body.Close()
+	if res.IsError() {
+		return nil, fmt.Errorf("search error: %s", res.String())
+	}
+	var searchResult struct {
+		Hits struct {
+			Total struct {
+				Value int `json:"value"`
+			} `json:"total"`
+			Hits []struct {
+				Source map[string]interface{} `json:"_source"`
+			} `json:"hits"`
+		} `json:"hits"`
+		Aggregations map[string]interface{} `json:"aggregations,omitempty"`
+	}
+	if err := json.NewDecoder(res.Body).Decode(&searchResult); err != nil {
+		return nil, fmt.Errorf("decode response: %w", err)
+	}
+	results := make([]map[string]interface{}, 0, len(searchResult.Hits.Hits))
+	for _, hit := range searchResult.Hits.Hits {
+		results = append(results, hit.Source)
+	}
+	return &models.SearchResponse{
+		RequestID:    generateID(),
+		LatencyMS:    0,
+		ResultCount:  len(results),
+		TotalMatches: searchResult.Hits.Total.Value,
+		Results:      results,
+		Aggregations: searchResult.Aggregations,
+	}, nil
 }
 
 func generateID() string {

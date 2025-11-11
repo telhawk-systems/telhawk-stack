@@ -10,10 +10,15 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
+	qauth "github.com/telhawk-systems/telhawk-stack/query/internal/auth"
 	"github.com/telhawk-systems/telhawk-stack/query/internal/client"
 	"github.com/telhawk-systems/telhawk-stack/query/internal/config"
 	"github.com/telhawk-systems/telhawk-stack/query/internal/handlers"
 	"github.com/telhawk-systems/telhawk-stack/query/internal/notification"
+	"github.com/telhawk-systems/telhawk-stack/query/internal/repository"
 	"github.com/telhawk-systems/telhawk-stack/query/internal/scheduler"
 	"github.com/telhawk-systems/telhawk-stack/query/internal/server"
 	"github.com/telhawk-systems/telhawk-stack/query/internal/service"
@@ -40,19 +45,43 @@ func main() {
 	}
 	log.Printf("connected to opensearch at %s", cfg.OpenSearch.URL)
 
-	svc := service.NewQueryService("0.1.0", osClient)
+	// Run DB migrations if configured
+	if cfg.DatabaseURL != "" {
+		log.Println("running database migrations...")
+		m, err := migrate.New("file://migrations", cfg.DatabaseURL)
+		if err != nil {
+			log.Fatalf("init migrations: %v", err)
+		}
+		if err := m.Up(); err != nil && err != migrate.ErrNoChange {
+			log.Fatalf("run migrations: %v", err)
+		}
+		log.Println("database migrations completed")
+	}
+
+	// Initialize repo + auth client
+	var repo *repository.PostgresRepository
+	if cfg.DatabaseURL != "" {
+		repo, err = repository.NewPostgresRepository(context.Background(), cfg.DatabaseURL)
+		if err != nil {
+			log.Fatalf("connect postgres: %v", err)
+		}
+		defer repo.Close()
+	}
+	authClient := qauth.NewClient(cfg.AuthURL)
+
+	svc := service.NewQueryService("0.1.0", osClient).WithDependencies(repo, authClient)
 	h := handlers.New(svc)
 
 	var alertScheduler *scheduler.Scheduler
 	schedulerCtx, schedulerStop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	
+
 	if cfg.Alerting.Enabled {
 		notifChannel := buildNotificationChannel(cfg)
 		schedulerCfg := scheduler.Config{
 			CheckInterval: time.Duration(cfg.Alerting.CheckIntervalSeconds) * time.Second,
 		}
 		alertScheduler = scheduler.NewScheduler(svc, svc, notifChannel, schedulerCfg)
-		
+
 		if err := alertScheduler.Start(schedulerCtx); err != nil {
 			log.Fatalf("failed to start alert scheduler: %v", err)
 		}
@@ -83,7 +112,7 @@ func main() {
 
 	<-shutdownCtx.Done()
 	log.Println("shutdown signal received")
-	
+
 	if alertScheduler != nil {
 		log.Println("stopping alert scheduler")
 		if err := alertScheduler.Stop(); err != nil {
@@ -102,22 +131,22 @@ func buildNotificationChannel(cfg *config.Config) notification.Channel {
 	channels := []notification.Channel{
 		notification.NewLogChannel(log.Printf),
 	}
-	
+
 	timeout := time.Duration(cfg.Alerting.NotificationTimeout) * time.Second
-	
+
 	if cfg.Alerting.WebhookURL != "" {
 		channels = append(channels, notification.NewWebhookChannel(cfg.Alerting.WebhookURL, timeout))
 		log.Printf("webhook notifications enabled: %s", cfg.Alerting.WebhookURL)
 	}
-	
+
 	if cfg.Alerting.SlackWebhookURL != "" {
 		channels = append(channels, notification.NewSlackChannel(cfg.Alerting.SlackWebhookURL, timeout))
 		log.Printf("slack notifications enabled")
 	}
-	
+
 	if len(channels) == 1 {
 		return channels[0]
 	}
-	
+
 	return notification.NewMultiChannel(channels...)
 }

@@ -51,6 +51,26 @@ export function Layout({ children }: LayoutProps) {
                   Search
                 </Link>
                 <Link
+                  to="/events"
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                    location.pathname === '/events'
+                      ? 'bg-blue-600 text-white shadow-md'
+                      : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                  }`}
+                >
+                  Events
+                </Link>
+                <Link
+                  to="/saved-searches"
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                    location.pathname === '/saved-searches'
+                      ? 'bg-blue-600 text-white shadow-md'
+                      : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                  }`}
+                >
+                  Saved Searches
+                </Link>
+                <Link
                   to="/rules"
                   className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                     location.pathname === '/rules'

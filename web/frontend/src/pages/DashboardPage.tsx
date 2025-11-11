@@ -13,6 +13,7 @@ export function DashboardPage() {
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [results, setResults] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [saveBusy, setSaveBusy] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState('');
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
@@ -51,6 +52,19 @@ export function DashboardPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSave = async (query: Query) => {
+    const name = window.prompt('Name for this saved search?');
+    if (!name) return;
+    try {
+      setSaveBusy(true);
+      await apiClient.createSavedSearch(name, query as any);
+      alert('Saved search created');
+    } catch (e) {
+      console.error(e);
+      alert('Failed to save search');
+    } finally { setSaveBusy(false); }
   };
 
   const handleLoadMore = async () => {
@@ -127,7 +141,14 @@ export function DashboardPage() {
       ) : (
         <div className="space-y-6">
           {/* Search Console */}
-          <SearchConsole onSearch={handleSearch} loading={loading} />
+          <div className="space-y-3">
+            <SearchConsole onSearch={handleSearch} loading={loading} />
+            <div>
+              <button onClick={() => handleSave(currentQuery as any)} disabled={!currentQuery || saveBusy} className={`px-3 py-1 rounded ${currentQuery? 'bg-gray-800 text-white':'bg-gray-300 text-gray-500 cursor-not-allowed'}`}>
+                {saveBusy? 'Saving…' : 'Save as Saved Search'}
+              </button>
+            </div>
+          </div>
 
           {/* Error Message */}
           {error && (

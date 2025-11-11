@@ -45,6 +45,13 @@ func (p *Proxy) Handler() http.Handler {
 			}
 		}
 
+		// Inject Authorization header from access_token cookie if not present
+		if proxyReq.Header.Get("Authorization") == "" {
+			if c, err := r.Cookie("access_token"); err == nil && c.Value != "" {
+				proxyReq.Header.Set("Authorization", "Bearer "+c.Value)
+			}
+		}
+
 		userID := auth.GetUserID(r.Context())
 		if userID != "" {
 			proxyReq.Header.Set("X-User-ID", userID)

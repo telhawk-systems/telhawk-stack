@@ -15,6 +15,7 @@ RUN apk --no-cache add ca-certificates
 WORKDIR /app
 
 COPY --from=builder /build/query .
+COPY --from=builder /build/migrations ./migrations
 COPY config.yaml /etc/telhawk/query/config.yaml
 
 EXPOSE 8082

@@ -5,10 +5,13 @@ import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { UsersPage } from './pages/UsersPage';
 import { TokensPage } from './pages/TokensPage';
+import { EventsPage } from './pages/EventsPage';
 import { RulesPage } from './pages/RulesPage';
 import { RuleDetailPage } from './pages/RuleDetailPage';
 import { AlertsPage } from './pages/AlertsPage';
 import { EntityDetailPage } from './pages/EntityDetailPage';
+import { SavedSearchesPage } from './pages/SavedSearchesPage';
+import { SavedSearchDetailPage } from './pages/SavedSearchDetailPage';
 
 function App() {
   return (
@@ -41,6 +44,14 @@ function App() {
             }
           />
           <Route
+            path="/events"
+            element={
+              <ProtectedRoute>
+                <EventsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/rules"
             element={
               <ProtectedRoute>
@@ -61,6 +72,22 @@ function App() {
             element={
               <ProtectedRoute>
                 <AlertsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/saved-searches"
+            element={
+              <ProtectedRoute>
+                <SavedSearchesPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/saved-searches/:id"
+            element={
+              <ProtectedRoute>
+                <SavedSearchDetailPage />
               </ProtectedRoute>
             }
           />

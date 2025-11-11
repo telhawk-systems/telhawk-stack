@@ -20,6 +20,9 @@ func NewQueryClient(baseURL string) *QueryClient {
 	}
 }
 
+// Client exposes the underlying http.Client for specialized calls.
+func (c *QueryClient) Client() *http.Client { return c.client }
+
 func (c *QueryClient) Search(accessToken, query, earliest, latest, last string) ([]map[string]interface{}, error) {
 	payload := map[string]interface{}{
 		"query":    query,
