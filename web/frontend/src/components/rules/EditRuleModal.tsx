@@ -98,7 +98,7 @@ export function EditRuleModal({ isOpen, schema, onClose, onSuccess }: EditRuleMo
       };
 
       // PUT to create a new version of the existing rule
-      const response = await fetch(`/api/rules/api/v1/schemas/${schema.id}`, {
+      const response = await fetch(`/api/rules/schemas/${schema.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '../components/Layout';
-import { DetectionSchema, DetectionSchemaListResponse } from '../types/rules';
+import { DetectionSchema } from '../types/rules';
 import { CreateRuleModal } from '../components/rules/CreateRuleModal';
 import { EditRuleModal } from '../components/rules/EditRuleModal';
 
@@ -36,9 +36,14 @@ export function RulesPage() {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const data: DetectionSchemaListResponse = await response.json();
-      setSchemas(data.schemas || []);
-      setTotalPages(data.pagination?.total_pages || 1);
+      const json = await response.json();
+      // Parse JSON:API format
+      const schemas = (json.data || []).map((resource: any) => ({
+        id: resource.id,
+        ...resource.attributes,
+      }));
+      setSchemas(schemas);
+      setTotalPages(json.meta?.pagination?.total_pages || 1);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch detection schemas');
       console.error('Error fetching schemas:', err);

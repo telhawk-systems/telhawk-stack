@@ -38,7 +38,9 @@ export function RuleDetailPage() {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const data: DetectionSchema = await response.json();
+      const json = await response.json();
+      // Parse JSON:API format
+      const data = { id: json.data.id, ...json.data.attributes };
       setSchema(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch schema details');
@@ -58,7 +60,9 @@ export function RuleDetailPage() {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const data: DetectionSchema = await response.json();
+      const json = await response.json();
+      // Parse JSON:API format
+      const data = { id: json.data.id, ...json.data.attributes };
       setSchema(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch version details');
@@ -76,8 +80,13 @@ export function RuleDetailPage() {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const data: DetectionSchemaVersionHistory = await response.json();
-      setVersionHistory(data);
+      const json = await response.json();
+      // Parse JSON:API format
+      const versions = (json.data || []).map((resource: any) => ({
+        version_id: resource.id,
+        ...resource.attributes,
+      }));
+      setVersionHistory({ id: id!, title: '', versions });
     } catch (err) {
       console.error('Error fetching version history:', err);
     }

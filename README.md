@@ -286,6 +286,3 @@ Contact: **sales@telhawk.com**
 ## Contact
 
 - **Issues & Bugs**: Open an issue on GitHub
-- **Commercial Licensing**: licensing@telhawk.com
-- **Sales & Support**: sales@telhawk.com
-- **General Inquiries**: hello@telhawk.com
