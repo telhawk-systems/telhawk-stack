@@ -67,7 +67,7 @@ export function CreateRuleModal({ isOpen, onClose, onSuccess }: CreateRuleModalP
         },
       };
 
-      const response = await fetch('/api/rules/api/v1/schemas', {
+      const response = await fetch('/api/rules/schemas', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -47,12 +47,14 @@ func (h *Handler) CreateSchema(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Type", "application/vnd.api+json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(schema)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"data": toJSONAPIResource(schema),
+	})
 }
 
-// UpdateSchema handles PUT /api/v1/schemas/:id
+// UpdateSchema handles PUT /schemas/:id
 func (h *Handler) UpdateSchema(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPut {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -60,7 +62,7 @@ func (h *Handler) UpdateSchema(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Extract ID from path
-	id := r.URL.Path[len("/api/v1/schemas/"):]
+	id := r.URL.Path[len("/schemas/"):]
 	if id == "" {
 		http.Error(w, "Schema ID required", http.StatusBadRequest)
 		return
@@ -82,8 +84,10 @@ func (h *Handler) UpdateSchema(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(schema)
+	w.Header().Set("Content-Type", "application/vnd.api+json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"data": toJSONAPIResource(schema),
+	})
 }
 
 // ListSchemas handles GET /api/v1/schemas
@@ -111,11 +115,11 @@ func (h *Handler) ListSchemas(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	w.Header().Set("Content-Type", "application/vnd.api+json")
+	json.NewEncoder(w).Encode(toJSONAPICollection(response.Schemas, &response.Pagination))
 }
 
-// GetSchema handles GET /api/v1/schemas/:id
+// GetSchema handles GET /schemas/:id
 func (h *Handler) GetSchema(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -123,7 +127,7 @@ func (h *Handler) GetSchema(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Extract ID from path (simple implementation)
-	id := r.URL.Path[len("/api/v1/schemas/"):]
+	id := r.URL.Path[len("/schemas/"):]
 	if id == "" {
 		http.Error(w, "Schema ID required", http.StatusBadRequest)
 		return
@@ -144,11 +148,13 @@ func (h *Handler) GetSchema(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(schema)
+	w.Header().Set("Content-Type", "application/vnd.api+json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"data": toJSONAPIResource(schema),
+	})
 }
 
-// GetVersionHistory handles GET /api/v1/schemas/:id/versions
+// GetVersionHistory handles GET /schemas/:id/versions
 func (h *Handler) GetVersionHistory(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -157,7 +163,7 @@ func (h *Handler) GetVersionHistory(w http.ResponseWriter, r *http.Request) {
 
 	// Extract ID from path
 	path := r.URL.Path
-	id := path[len("/api/v1/schemas/"):]
+	id := path[len("/schemas/"):]
 	if len(id) > len("/versions") {
 		id = id[:len(id)-len("/versions")]
 	}
@@ -169,11 +175,11 @@ func (h *Handler) GetVersionHistory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	w.Header().Set("Content-Type", "application/vnd.api+json")
+	json.NewEncoder(w).Encode(toJSONAPIVersionCollection(response.Versions))
 }
 
-// DisableSchema handles PUT /api/v1/schemas/:id/disable
+// DisableSchema handles PUT /schemas/:id/disable
 func (h *Handler) DisableSchema(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPut {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -182,7 +188,7 @@ func (h *Handler) DisableSchema(w http.ResponseWriter, r *http.Request) {
 
 	// Extract version ID from path
 	path := r.URL.Path
-	versionID := path[len("/api/v1/schemas/"):]
+	versionID := path[len("/schemas/"):]
 	if len(versionID) > len("/disable") {
 		versionID = versionID[:len(versionID)-len("/disable")]
 	}
@@ -200,7 +206,7 @@ func (h *Handler) DisableSchema(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"status": "disabled"})
 }
 
-// EnableSchema handles PUT /api/v1/schemas/:id/enable
+// EnableSchema handles PUT /schemas/:id/enable
 func (h *Handler) EnableSchema(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPut {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -209,7 +215,7 @@ func (h *Handler) EnableSchema(w http.ResponseWriter, r *http.Request) {
 
 	// Extract version ID from path
 	path := r.URL.Path
-	versionID := path[len("/api/v1/schemas/"):]
+	versionID := path[len("/schemas/"):]
 	if len(versionID) > len("/enable") {
 		versionID = versionID[:len(versionID)-len("/enable")]
 	}
@@ -224,7 +230,7 @@ func (h *Handler) EnableSchema(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"status": "enabled"})
 }
 
-// HideSchema handles DELETE /api/v1/schemas/:id
+// HideSchema handles DELETE /schemas/:id
 func (h *Handler) HideSchema(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodDelete {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -232,7 +238,7 @@ func (h *Handler) HideSchema(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Extract version ID from path
-	versionID := r.URL.Path[len("/api/v1/schemas/"):]
+	versionID := r.URL.Path[len("/schemas/"):]
 
 	// TODO: Extract user ID from JWT token
 	userID := "00000000-0000-0000-0000-000000000001"
@@ -256,4 +262,66 @@ func parseInt(s string, defaultVal int) int {
 		return v
 	}
 	return defaultVal
+}
+
+// JSON:API response helpers
+func toJSONAPIResource(schema *models.DetectionSchema) map[string]interface{} {
+	return map[string]interface{}{
+		"type": "detection-schema",
+		"id":   schema.ID,
+		"attributes": map[string]interface{}{
+			"version_id":  schema.VersionID,
+			"model":       schema.Model,
+			"view":        schema.View,
+			"controller":  schema.Controller,
+			"created_by":  schema.CreatedBy,
+			"created_at":  schema.CreatedAt,
+			"disabled_at": schema.DisabledAt,
+			"disabled_by": schema.DisabledBy,
+			"hidden_at":   schema.HiddenAt,
+			"hidden_by":   schema.HiddenBy,
+			"version":     schema.Version,
+		},
+	}
+}
+
+func toJSONAPICollection(schemas []*models.DetectionSchema, pagination *models.Pagination) map[string]interface{} {
+	data := make([]map[string]interface{}, len(schemas))
+	for i, schema := range schemas {
+		data[i] = toJSONAPIResource(schema)
+	}
+
+	response := map[string]interface{}{
+		"data": data,
+	}
+
+	if pagination != nil {
+		response["meta"] = map[string]interface{}{
+			"pagination": pagination,
+		}
+	}
+
+	return response
+}
+
+func toJSONAPIVersionCollection(versions []*models.DetectionSchemaVersion) map[string]interface{} {
+	data := make([]map[string]interface{}, len(versions))
+	for i, version := range versions {
+		data[i] = map[string]interface{}{
+			"type": "detection-schema-version",
+			"id":   version.VersionID,
+			"attributes": map[string]interface{}{
+				"version":     version.Version,
+				"title":       version.Title,
+				"created_by":  version.CreatedBy,
+				"created_at":  version.CreatedAt,
+				"disabled_at": version.DisabledAt,
+				"changes":     version.Changes,
+			},
+		}
+	}
+
+	return map[string]interface{}{
+		"data": data,
+	}
 }

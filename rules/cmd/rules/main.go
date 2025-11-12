@@ -71,8 +71,8 @@ func main() {
 	// Health check
 	mux.HandleFunc("/healthz", handler.HealthCheck)
 
-	// API routes
-	mux.HandleFunc("/api/v1/schemas", func(w http.ResponseWriter, r *http.Request) {
+	// API routes (proxied from /api/rules/schemas via web backend)
+	mux.HandleFunc("/schemas", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
 			handler.CreateSchema(w, r)
 		} else if r.Method == http.MethodGet {
@@ -83,25 +83,25 @@ func main() {
 	})
 
 	// Note: These are simplified routes. In production, use a proper router like chi or gorilla/mux
-	mux.HandleFunc("/api/v1/schemas/", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/schemas/", func(w http.ResponseWriter, r *http.Request) {
 		path := r.URL.Path
 
-		// GET /api/v1/schemas/:id/versions
+		// GET /schemas/:id/versions
 		if len(path) > len("/versions") && path[len(path)-len("/versions"):] == "/versions" {
 			handler.GetVersionHistory(w, r)
-			// PUT /api/v1/schemas/:id/disable
+			// PUT /schemas/:id/disable
 		} else if len(path) > len("/disable") && path[len(path)-len("/disable"):] == "/disable" {
 			handler.DisableSchema(w, r)
-			// PUT /api/v1/schemas/:id/enable
+			// PUT /schemas/:id/enable
 		} else if len(path) > len("/enable") && path[len(path)-len("/enable"):] == "/enable" {
 			handler.EnableSchema(w, r)
-			// DELETE /api/v1/schemas/:id
+			// DELETE /schemas/:id
 		} else if r.Method == http.MethodDelete {
 			handler.HideSchema(w, r)
-			// PUT /api/v1/schemas/:id (update = create new version)
+			// PUT /schemas/:id (update = create new version)
 		} else if r.Method == http.MethodPut {
 			handler.UpdateSchema(w, r)
-			// GET /api/v1/schemas/:id
+			// GET /schemas/:id
 		} else if r.Method == http.MethodGet {
 			handler.GetSchema(w, r)
 		} else {
