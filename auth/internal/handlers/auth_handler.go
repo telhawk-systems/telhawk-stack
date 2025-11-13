@@ -447,27 +447,60 @@ func (h *AuthHandler) ListHECTokens(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tokens, err := h.service.ListHECTokensByUser(userID)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	roles := r.Header.Get("X-User-Roles")
+	isAdmin := strings.Contains(roles, "admin")
 
-	// Convert to JSON:API format with masked tokens
-	data := make([]map[string]interface{}, len(tokens))
-	for i, token := range tokens {
-		resp := token.ToMaskedResponse()
-		data[i] = map[string]interface{}{
-			"type": "hec-token",
-			"id":   resp.ID,
-			"attributes": map[string]interface{}{
-				"token":      resp.Token,
-				"name":       resp.Name,
-				"user_id":    resp.UserID,
-				"enabled":    resp.Enabled,
-				"created_at": resp.CreatedAt,
-				"expires_at": resp.ExpiresAt,
-			},
+	var data []map[string]interface{}
+
+	if isAdmin {
+		// Admin users see all tokens with usernames
+		usernames, tokens, err := h.service.ListAllHECTokensWithUsernames()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		data = make([]map[string]interface{}, len(tokens))
+		for i, token := range tokens {
+			username := usernames[token.UserID]
+			resp := token.ToMaskedResponseWithUsername(username)
+			data[i] = map[string]interface{}{
+				"type": "hec-token",
+				"id":   resp.ID,
+				"attributes": map[string]interface{}{
+					"token":      resp.Token,
+					"name":       resp.Name,
+					"user_id":    resp.UserID,
+					"username":   resp.Username,
+					"enabled":    resp.Enabled,
+					"created_at": resp.CreatedAt,
+					"expires_at": resp.ExpiresAt,
+				},
+			}
+		}
+	} else {
+		// Regular users only see their own tokens without usernames
+		tokens, err := h.service.ListHECTokensByUser(userID)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		data = make([]map[string]interface{}, len(tokens))
+		for i, token := range tokens {
+			resp := token.ToMaskedResponse()
+			data[i] = map[string]interface{}{
+				"type": "hec-token",
+				"id":   resp.ID,
+				"attributes": map[string]interface{}{
+					"token":      resp.Token,
+					"name":       resp.Name,
+					"user_id":    resp.UserID,
+					"enabled":    resp.Enabled,
+					"created_at": resp.CreatedAt,
+					"expires_at": resp.ExpiresAt,
+				},
+			}
 		}
 	}
 

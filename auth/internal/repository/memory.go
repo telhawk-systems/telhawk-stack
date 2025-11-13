@@ -150,6 +150,17 @@ func (r *InMemoryRepository) ListHECTokensByUser(userID string) ([]*models.HECTo
 	return tokens, nil
 }
 
+func (r *InMemoryRepository) ListAllHECTokens() ([]*models.HECToken, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	var tokens []*models.HECToken
+	for _, token := range r.hecTokens {
+		tokens = append(tokens, token)
+	}
+	return tokens, nil
+}
+
 func (r *InMemoryRepository) RevokeHECToken(token string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()

@@ -42,6 +42,7 @@ export interface HECToken {
   token: string;
   name: string;
   user_id: string;
+  username?: string; // Only present for admin users
   enabled: boolean;
   created_at: string;
   expires_at?: string;

@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -420,6 +421,31 @@ func (s *AuthService) CreateHECToken(userID, name, expiresIn, ipAddress, userAge
 
 func (s *AuthService) ListHECTokensByUser(userID string) ([]*models.HECToken, error) {
 	return s.repo.ListHECTokensByUser(userID)
+}
+
+func (s *AuthService) ListAllHECTokensWithUsernames() (map[string]string, []*models.HECToken, error) {
+	tokens, err := s.repo.ListAllHECTokens()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Get unique user IDs
+	userIDs := make(map[string]bool)
+	for _, token := range tokens {
+		userIDs[token.UserID] = true
+	}
+
+	// Fetch usernames for all user IDs
+	usernames := make(map[string]string)
+	for userID := range userIDs {
+		user, err := s.repo.GetUserByID(userID)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to get username for user %s: %w", userID, err)
+		}
+		usernames[userID] = user.Username
+	}
+
+	return usernames, tokens, nil
 }
 
 func (s *AuthService) RevokeHECTokenByUser(token, userID, ipAddress, userAgent string) error {
