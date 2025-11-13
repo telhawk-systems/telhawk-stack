@@ -30,18 +30,18 @@ func (n *ProcessActivityNormalizer) Supports(format, sourceType string) bool {
 		return false
 	}
 	st := strings.ToLower(sourceType)
-	return strings.Contains(st, "process") || 
-	       strings.Contains(st, "exec") || 
-	       strings.Contains(st, "sysmon") || 
-	       strings.Contains(st, "procmon") || 
-	       strings.Contains(st, "endpoint")
+	return strings.Contains(st, "process") ||
+		strings.Contains(st, "exec") ||
+		strings.Contains(st, "sysmon") ||
+		strings.Contains(st, "procmon") ||
+		strings.Contains(st, "endpoint")
 }
 
 // Normalize converts raw event to OCSF process_activity
 func (n *ProcessActivityNormalizer) Normalize(ctx context.Context, envelope *model.RawEventEnvelope) (*ocsf.Event, error) {
 	var payload map[string]interface{}
 	if err := json.Unmarshal(envelope.Payload, &payload); err != nil {
-		return nil, fmt.Errorf("decode payload: %%w", err)
+		return nil, fmt.Errorf("decode payload: %w", err)
 	}
 
 	activityID := n.determineActivityID(payload)
@@ -74,4 +74,3 @@ func (n *ProcessActivityNormalizer) determineActivityID(payload map[string]inter
 	}
 	return 0 // Unknown
 }
-

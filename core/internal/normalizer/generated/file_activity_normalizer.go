@@ -30,18 +30,18 @@ func (n *FileActivityNormalizer) Supports(format, sourceType string) bool {
 		return false
 	}
 	st := strings.ToLower(sourceType)
-	return strings.Contains(st, "file") || 
-	       strings.Contains(st, "fmon") || 
-	       strings.Contains(st, "fsmon") || 
-	       strings.Contains(st, "filesystem") || 
-	       strings.Contains(st, "audit")
+	return strings.Contains(st, "file") ||
+		strings.Contains(st, "fmon") ||
+		strings.Contains(st, "fsmon") ||
+		strings.Contains(st, "filesystem") ||
+		strings.Contains(st, "audit")
 }
 
 // Normalize converts raw event to OCSF file_activity
 func (n *FileActivityNormalizer) Normalize(ctx context.Context, envelope *model.RawEventEnvelope) (*ocsf.Event, error) {
 	var payload map[string]interface{}
 	if err := json.Unmarshal(envelope.Payload, &payload); err != nil {
-		return nil, fmt.Errorf("decode payload: %%w", err)
+		return nil, fmt.Errorf("decode payload: %w", err)
 	}
 
 	activityID := 0 // Default activity
@@ -63,4 +63,3 @@ func (n *FileActivityNormalizer) Normalize(ctx context.Context, envelope *model.
 
 	return &event.Event, nil
 }
-

@@ -30,15 +30,15 @@ func (n *StartupItemQueryNormalizer) Supports(format, sourceType string) bool {
 		return false
 	}
 	st := strings.ToLower(sourceType)
-	return strings.Contains(st, "startup_item_query") || 
-	       strings.Contains(st, "startup")
+	return strings.Contains(st, "startup_item_query") ||
+		strings.Contains(st, "startup")
 }
 
 // Normalize converts raw event to OCSF startup_item_query
 func (n *StartupItemQueryNormalizer) Normalize(ctx context.Context, envelope *model.RawEventEnvelope) (*ocsf.Event, error) {
 	var payload map[string]interface{}
 	if err := json.Unmarshal(envelope.Payload, &payload); err != nil {
-		return nil, fmt.Errorf("decode payload: %%w", err)
+		return nil, fmt.Errorf("decode payload: %w", err)
 	}
 
 	activityID := 0 // Default activity
@@ -60,4 +60,3 @@ func (n *StartupItemQueryNormalizer) Normalize(ctx context.Context, envelope *mo
 
 	return &event.Event, nil
 }
-

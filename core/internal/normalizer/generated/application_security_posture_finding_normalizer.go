@@ -30,15 +30,15 @@ func (n *ApplicationSecurityPostureFindingNormalizer) Supports(format, sourceTyp
 		return false
 	}
 	st := strings.ToLower(sourceType)
-	return strings.Contains(st, "application_security_posture_finding") || 
-	       strings.Contains(st, "application")
+	return strings.Contains(st, "application_security_posture_finding") ||
+		strings.Contains(st, "application")
 }
 
 // Normalize converts raw event to OCSF application_security_posture_finding
 func (n *ApplicationSecurityPostureFindingNormalizer) Normalize(ctx context.Context, envelope *model.RawEventEnvelope) (*ocsf.Event, error) {
 	var payload map[string]interface{}
 	if err := json.Unmarshal(envelope.Payload, &payload); err != nil {
-		return nil, fmt.Errorf("decode payload: %%w", err)
+		return nil, fmt.Errorf("decode payload: %w", err)
 	}
 
 	activityID := 0 // Default activity
@@ -60,4 +60,3 @@ func (n *ApplicationSecurityPostureFindingNormalizer) Normalize(ctx context.Cont
 
 	return &event.Event, nil
 }
-

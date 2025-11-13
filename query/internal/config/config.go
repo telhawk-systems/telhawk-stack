@@ -14,6 +14,7 @@ type Config struct {
 	Server      ServerConfig     `yaml:"server"`
 	OpenSearch  OpenSearchConfig `yaml:"opensearch"`
 	Alerting    AlertingConfig   `yaml:"alerting"`
+	Logging     LoggingConfig    `yaml:"logging"`
 	DatabaseURL string           `yaml:"database_url"`
 	AuthURL     string           `yaml:"auth_url"`
 }
@@ -42,6 +43,12 @@ type AlertingConfig struct {
 	WebhookURL           string `yaml:"webhook_url"`
 	SlackWebhookURL      string `yaml:"slack_webhook_url"`
 	NotificationTimeout  int    `yaml:"notification_timeout_seconds"`
+}
+
+// LoggingConfig captures logging settings.
+type LoggingConfig struct {
+	Level  string `yaml:"level"`  // debug, info, warn, error
+	Format string `yaml:"format"` // json or text
 }
 
 // ReadTimeout returns the configured read timeout as a duration.
@@ -79,6 +86,10 @@ func Default() Config {
 			Enabled:              false,
 			CheckIntervalSeconds: 30,
 			NotificationTimeout:  10,
+		},
+		Logging: LoggingConfig{
+			Level:  "info",
+			Format: "json",
 		},
 		DatabaseURL: "",
 		AuthURL:     "http://auth:8080",

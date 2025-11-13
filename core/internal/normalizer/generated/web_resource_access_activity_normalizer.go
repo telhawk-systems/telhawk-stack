@@ -30,16 +30,16 @@ func (n *WebResourceAccessActivityNormalizer) Supports(format, sourceType string
 		return false
 	}
 	st := strings.ToLower(sourceType)
-	return strings.Contains(st, "web_resource_access_activity") || 
-	       strings.Contains(st, "web") || 
-	       strings.Contains(st, "web_resource_access")
+	return strings.Contains(st, "web_resource_access_activity") ||
+		strings.Contains(st, "web") ||
+		strings.Contains(st, "web_resource_access")
 }
 
 // Normalize converts raw event to OCSF web_resource_access_activity
 func (n *WebResourceAccessActivityNormalizer) Normalize(ctx context.Context, envelope *model.RawEventEnvelope) (*ocsf.Event, error) {
 	var payload map[string]interface{}
 	if err := json.Unmarshal(envelope.Payload, &payload); err != nil {
-		return nil, fmt.Errorf("decode payload: %%w", err)
+		return nil, fmt.Errorf("decode payload: %w", err)
 	}
 
 	activityID := 0 // Default activity
@@ -61,4 +61,3 @@ func (n *WebResourceAccessActivityNormalizer) Normalize(ctx context.Context, env
 
 	return &event.Event, nil
 }
-

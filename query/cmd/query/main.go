@@ -5,7 +5,9 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"log/slog"
 	"net/http"
+	"os"
 	"os/signal"
 	"syscall"
 	"time"
@@ -13,6 +15,7 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/telhawk-systems/telhawk-stack/common/logging"
 	qauth "github.com/telhawk-systems/telhawk-stack/query/internal/auth"
 	"github.com/telhawk-systems/telhawk-stack/query/internal/client"
 	"github.com/telhawk-systems/telhawk-stack/query/internal/config"
@@ -34,6 +37,19 @@ func main() {
 		log.Fatalf("load config: %v", err)
 	}
 
+	// Initialize structured logging
+	logger := logging.New(
+		logging.ParseLevel(cfg.Logging.Level),
+		cfg.Logging.Format,
+	).With(logging.Service("query"))
+	logging.SetDefault(logger)
+
+	slog.Info("Starting Query service",
+		slog.Int("port", cfg.Server.Port),
+		slog.String("log_level", cfg.Logging.Level),
+		slog.String("log_format", cfg.Logging.Format),
+	)
+
 	listenAddr := fmt.Sprintf(":%d", cfg.Server.Port)
 	if *addr != "" {
 		listenAddr = *addr
@@ -41,21 +57,24 @@ func main() {
 
 	osClient, err := client.NewOpenSearchClient(cfg.OpenSearch)
 	if err != nil {
-		log.Fatalf("create opensearch client: %v", err)
+		slog.Error("Failed to create OpenSearch client", slog.String("error", err.Error()))
+		os.Exit(1)
 	}
-	log.Printf("connected to opensearch at %s", cfg.OpenSearch.URL)
+	slog.Info("Connected to OpenSearch", slog.String("url", cfg.OpenSearch.URL))
 
 	// Run DB migrations if configured
 	if cfg.DatabaseURL != "" {
-		log.Println("running database migrations...")
+		slog.Info("Running database migrations")
 		m, err := migrate.New("file://migrations", cfg.DatabaseURL)
 		if err != nil {
-			log.Fatalf("init migrations: %v", err)
+			slog.Error("Failed to initialize migrations", slog.String("error", err.Error()))
+			os.Exit(1)
 		}
 		if err := m.Up(); err != nil && err != migrate.ErrNoChange {
-			log.Fatalf("run migrations: %v", err)
+			slog.Error("Failed to run migrations", slog.String("error", err.Error()))
+			os.Exit(1)
 		}
-		log.Println("database migrations completed")
+		slog.Info("Database migrations completed")
 	}
 
 	// Initialize repo + auth client

@@ -30,15 +30,15 @@ func (n *EntityManagementNormalizer) Supports(format, sourceType string) bool {
 		return false
 	}
 	st := strings.ToLower(sourceType)
-	return strings.Contains(st, "entity_management") || 
-	       strings.Contains(st, "entity")
+	return strings.Contains(st, "entity_management") ||
+		strings.Contains(st, "entity")
 }
 
 // Normalize converts raw event to OCSF entity_management
 func (n *EntityManagementNormalizer) Normalize(ctx context.Context, envelope *model.RawEventEnvelope) (*ocsf.Event, error) {
 	var payload map[string]interface{}
 	if err := json.Unmarshal(envelope.Payload, &payload); err != nil {
-		return nil, fmt.Errorf("decode payload: %%w", err)
+		return nil, fmt.Errorf("decode payload: %w", err)
 	}
 
 	activityID := 0 // Default activity
@@ -60,4 +60,3 @@ func (n *EntityManagementNormalizer) Normalize(ctx context.Context, envelope *mo
 
 	return &event.Event, nil
 }
-

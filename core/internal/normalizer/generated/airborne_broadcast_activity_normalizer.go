@@ -30,16 +30,16 @@ func (n *AirborneBroadcastActivityNormalizer) Supports(format, sourceType string
 		return false
 	}
 	st := strings.ToLower(sourceType)
-	return strings.Contains(st, "airborne_broadcast_activity") || 
-	       strings.Contains(st, "airborne") || 
-	       strings.Contains(st, "airborne_broadcast")
+	return strings.Contains(st, "airborne_broadcast_activity") ||
+		strings.Contains(st, "airborne") ||
+		strings.Contains(st, "airborne_broadcast")
 }
 
 // Normalize converts raw event to OCSF airborne_broadcast_activity
 func (n *AirborneBroadcastActivityNormalizer) Normalize(ctx context.Context, envelope *model.RawEventEnvelope) (*ocsf.Event, error) {
 	var payload map[string]interface{}
 	if err := json.Unmarshal(envelope.Payload, &payload); err != nil {
-		return nil, fmt.Errorf("decode payload: %%w", err)
+		return nil, fmt.Errorf("decode payload: %w", err)
 	}
 
 	activityID := 0 // Default activity
@@ -61,4 +61,3 @@ func (n *AirborneBroadcastActivityNormalizer) Normalize(ctx context.Context, env
 
 	return &event.Event, nil
 }
-

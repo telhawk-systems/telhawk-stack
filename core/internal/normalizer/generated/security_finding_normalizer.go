@@ -30,15 +30,15 @@ func (n *SecurityFindingNormalizer) Supports(format, sourceType string) bool {
 		return false
 	}
 	st := strings.ToLower(sourceType)
-	return strings.Contains(st, "security_finding") || 
-	       strings.Contains(st, "security")
+	return strings.Contains(st, "security_finding") ||
+		strings.Contains(st, "security")
 }
 
 // Normalize converts raw event to OCSF security_finding
 func (n *SecurityFindingNormalizer) Normalize(ctx context.Context, envelope *model.RawEventEnvelope) (*ocsf.Event, error) {
 	var payload map[string]interface{}
 	if err := json.Unmarshal(envelope.Payload, &payload); err != nil {
-		return nil, fmt.Errorf("decode payload: %%w", err)
+		return nil, fmt.Errorf("decode payload: %w", err)
 	}
 
 	activityID := 0 // Default activity
@@ -60,4 +60,3 @@ func (n *SecurityFindingNormalizer) Normalize(ctx context.Context, envelope *mod
 
 	return &event.Event, nil
 }
-

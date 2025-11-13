@@ -30,16 +30,16 @@ func (n *EmailFileActivityNormalizer) Supports(format, sourceType string) bool {
 		return false
 	}
 	st := strings.ToLower(sourceType)
-	return strings.Contains(st, "email_file_activity") || 
-	       strings.Contains(st, "email") || 
-	       strings.Contains(st, "email_file")
+	return strings.Contains(st, "email_file_activity") ||
+		strings.Contains(st, "email") ||
+		strings.Contains(st, "email_file")
 }
 
 // Normalize converts raw event to OCSF email_file_activity
 func (n *EmailFileActivityNormalizer) Normalize(ctx context.Context, envelope *model.RawEventEnvelope) (*ocsf.Event, error) {
 	var payload map[string]interface{}
 	if err := json.Unmarshal(envelope.Payload, &payload); err != nil {
-		return nil, fmt.Errorf("decode payload: %%w", err)
+		return nil, fmt.Errorf("decode payload: %w", err)
 	}
 
 	activityID := 0 // Default activity
@@ -61,4 +61,3 @@ func (n *EmailFileActivityNormalizer) Normalize(ctx context.Context, envelope *m
 
 	return &event.Event, nil
 }
-

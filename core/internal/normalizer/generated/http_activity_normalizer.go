@@ -30,20 +30,20 @@ func (n *HttpActivityNormalizer) Supports(format, sourceType string) bool {
 		return false
 	}
 	st := strings.ToLower(sourceType)
-	return strings.Contains(st, "http") || 
-	       strings.Contains(st, "https") || 
-	       strings.Contains(st, "web") || 
-	       strings.Contains(st, "apache") || 
-	       strings.Contains(st, "nginx") || 
-	       strings.Contains(st, "iis") || 
-	       strings.Contains(st, "access_log")
+	return strings.Contains(st, "http") ||
+		strings.Contains(st, "https") ||
+		strings.Contains(st, "web") ||
+		strings.Contains(st, "apache") ||
+		strings.Contains(st, "nginx") ||
+		strings.Contains(st, "iis") ||
+		strings.Contains(st, "access_log")
 }
 
 // Normalize converts raw event to OCSF http_activity
 func (n *HttpActivityNormalizer) Normalize(ctx context.Context, envelope *model.RawEventEnvelope) (*ocsf.Event, error) {
 	var payload map[string]interface{}
 	if err := json.Unmarshal(envelope.Payload, &payload); err != nil {
-		return nil, fmt.Errorf("decode payload: %%w", err)
+		return nil, fmt.Errorf("decode payload: %w", err)
 	}
 
 	activityID := 0 // Default activity
@@ -65,4 +65,3 @@ func (n *HttpActivityNormalizer) Normalize(ctx context.Context, envelope *model.
 
 	return &event.Event, nil
 }
-

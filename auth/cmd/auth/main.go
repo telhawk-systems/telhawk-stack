@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -19,6 +20,7 @@ import (
 	"github.com/telhawk-systems/telhawk-stack/auth/internal/repository"
 	"github.com/telhawk-systems/telhawk-stack/auth/internal/server"
 	"github.com/telhawk-systems/telhawk-stack/auth/internal/service"
+	"github.com/telhawk-systems/telhawk-stack/common/logging"
 )
 
 func main() {
@@ -32,9 +34,20 @@ func main() {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 
-	log.Printf("Starting Auth service on port %d", cfg.Server.Port)
+	// Initialize structured logging
+	logger := logging.New(
+		logging.ParseLevel(cfg.Logging.Level),
+		cfg.Logging.Format,
+	).With(logging.Service("auth"))
+	logging.SetDefault(logger)
+
+	slog.Info("Starting Auth service",
+		slog.Int("port", cfg.Server.Port),
+		slog.String("log_level", cfg.Logging.Level),
+		slog.String("log_format", cfg.Logging.Format),
+	)
 	if *configPath != "" {
-		log.Printf("Loaded config from: %s", *configPath)
+		slog.Info("Loaded configuration", slog.String("config_path", *configPath))
 	}
 
 	// Initialize repository based on config
@@ -50,45 +63,53 @@ func main() {
 			cfg.Database.Postgres.SSLMode,
 		)
 
-		log.Printf("Connecting to PostgreSQL at %s:%d/%s",
-			cfg.Database.Postgres.Host,
-			cfg.Database.Postgres.Port,
-			cfg.Database.Postgres.Database,
+		slog.Info("Connecting to PostgreSQL",
+			slog.String("host", cfg.Database.Postgres.Host),
+			slog.Int("port", cfg.Database.Postgres.Port),
+			slog.String("database", cfg.Database.Postgres.Database),
 		)
 
 		pgRepo, err := repository.NewPostgresRepository(context.Background(), connString)
 		if err != nil {
-			log.Fatalf("Failed to connect to PostgreSQL: %v", err)
+			slog.Error("Failed to connect to PostgreSQL", slog.String("error", err.Error()))
+			os.Exit(1)
 		}
 		defer pgRepo.Close()
 		repo = pgRepo
-		log.Println("Connected to PostgreSQL")
+		slog.Info("Connected to PostgreSQL")
 
 		// Run database migrations
-		log.Println("Running database migrations...")
+		slog.Info("Running database migrations")
 		m, err := migrate.New(
 			"file://migrations",
 			connString,
 		)
 		if err != nil {
-			log.Fatalf("Failed to initialize migrations: %v", err)
+			slog.Error("Failed to initialize migrations", slog.String("error", err.Error()))
+			os.Exit(1)
 		}
 
 		if err := m.Up(); err != nil && err != migrate.ErrNoChange {
-			log.Fatalf("Failed to run migrations: %v", err)
+			slog.Error("Failed to run migrations", slog.String("error", err.Error()))
+			os.Exit(1)
 		}
 
 		version, dirty, _ := m.Version()
-		log.Printf("Database migration complete (version: %d, dirty: %v)", version, dirty)
+		slog.Info("Database migration complete",
+			slog.Uint64("version", uint64(version)),
+			slog.Bool("dirty", dirty),
+		)
 	} else {
-		log.Println("Using in-memory repository (development only)")
+		slog.Warn("Using in-memory repository (development only)")
 		repo = repository.NewInMemoryRepository()
 	}
 
 	// Initialize service layer
 	var ingestClient *audit.IngestClient
 	if cfg.Ingest.Enabled && cfg.Ingest.URL != "" && cfg.Ingest.HECToken != "" {
-		log.Printf("Enabling auth event forwarding to ingest service at %s", cfg.Ingest.URL)
+		slog.Info("Enabling auth event forwarding",
+			slog.String("ingest_url", cfg.Ingest.URL),
+		)
 		ingestClient = audit.NewIngestClient(cfg.Ingest.URL, cfg.Ingest.HECToken)
 	}
 
@@ -109,9 +130,10 @@ func main() {
 
 	// Start server in goroutine
 	go func() {
-		log.Printf("Auth service listening on %s", srv.Addr)
+		slog.Info("Auth service listening", slog.String("addr", srv.Addr))
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("Server error: %v", err)
+			slog.Error("Server error", slog.String("error", err.Error()))
+			os.Exit(1)
 		}
 	}()
 
@@ -120,13 +142,14 @@ func main() {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
-	log.Println("Shutting down server...")
+	slog.Info("Shutting down server")
 	ctx, cancel := context.WithTimeout(context.Background(), cfg.Server.WriteTimeout)
 	defer cancel()
 
 	if err := srv.Shutdown(ctx); err != nil {
-		log.Fatalf("Server forced to shutdown: %v", err)
+		slog.Error("Server forced to shutdown", slog.String("error", err.Error()))
+		os.Exit(1)
 	}
 
-	log.Println("Server stopped")
+	slog.Info("Server stopped gracefully")
 }
