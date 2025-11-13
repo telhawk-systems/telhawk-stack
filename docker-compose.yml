@@ -150,8 +150,8 @@ services:
 
   auth:
     build:
-      context: ./auth
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: auth/Dockerfile
     container_name: telhawk-auth
     # SECURITY: Internal service only - no external exposure
     # Access via web UI or thawk CLI
@@ -196,8 +196,8 @@ services:
 
   rules:
     build:
-      context: ./rules
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: rules/Dockerfile
     container_name: telhawk-rules
     # SECURITY: Internal service only - no external exposure
     # Access via web UI
@@ -235,7 +235,7 @@ services:
   alerting:
     build:
       context: .
-      dockerfile: ./alerting/Dockerfile
+      dockerfile: alerting/Dockerfile
     container_name: telhawk-alerting
     # SECURITY: Internal service only - no external exposure
     # Access via web UI
@@ -287,8 +287,8 @@ services:
 
   storage:
     build:
-      context: ./storage
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: storage/Dockerfile
     container_name: telhawk-storage
     # SECURITY: Internal service only - no external exposure
     expose:
@@ -319,8 +319,8 @@ services:
 
   query:
     build:
-      context: ./query
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: query/Dockerfile
     container_name: telhawk-query
     # SECURITY: Internal service only - no external exposure
     # Access via web UI
@@ -359,8 +359,8 @@ services:
 
   core:
     build:
-      context: ./core
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: core/Dockerfile
     container_name: telhawk-core
     # SECURITY: Internal service only - no external exposure
     expose:
@@ -391,8 +391,8 @@ services:
 
   ingest:
     build:
-      context: ./ingest
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ingest/Dockerfile
     container_name: telhawk-ingest
     ports:
       - "8088:8088"
@@ -441,8 +441,8 @@ services:
 
   web:
     build:
-      context: ./web
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: web/Dockerfile
     container_name: telhawk-web
     ports:
       - "3000:3000"

@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"github.com/telhawk-systems/telhawk-stack/common/httputil"
 	"io"
 	"log"
 	"net/http"
@@ -103,7 +104,7 @@ func (h *HECHandler) HandleEvent(w http.ResponseWriter, r *http.Request) {
 
 	// Try to parse as single event or batch
 	var events []models.HECEvent
-	
+
 	// Try single event first
 	var singleEvent models.HECEvent
 	if err := json.Unmarshal(body, &singleEvent); err == nil {
@@ -208,12 +209,12 @@ func (h *HECHandler) HandleRaw(w http.ResponseWriter, r *http.Request) {
 	if source == "" {
 		source = r.Header.Get("X-Splunk-Request-Source")
 	}
-	
+
 	sourceType := r.URL.Query().Get("sourcetype")
 	if sourceType == "" {
 		sourceType = r.Header.Get("X-Splunk-Request-Sourcetype")
 	}
-	
+
 	host := r.URL.Query().Get("host")
 	if host == "" {
 		host = r.Header.Get("X-Splunk-Request-Host")
@@ -258,7 +259,7 @@ func (h *HECHandler) Health(w http.ResponseWriter, r *http.Request) {
 
 func (h *HECHandler) Ready(w http.ResponseWriter, r *http.Request) {
 	stats := h.service.GetStats()
-	
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"status": "ready",
@@ -290,8 +291,7 @@ func (h *HECHandler) Ack(w http.ResponseWriter, r *http.Request) {
 
 func (h *HECHandler) sendSuccess(w http.ResponseWriter) {
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(models.HECResponse{
+	httputil.WriteJSON(w, http.StatusOK, models.HECResponse{
 		Text: "Success",
 		Code: 0,
 	})
@@ -299,8 +299,7 @@ func (h *HECHandler) sendSuccess(w http.ResponseWriter) {
 
 func (h *HECHandler) sendSuccessWithAck(w http.ResponseWriter, ackID string) {
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(models.HECResponse{
+	httputil.WriteJSON(w, http.StatusOK, models.HECResponse{
 		Text:  "Success",
 		Code:  0,
 		AckID: ackID,
@@ -309,8 +308,7 @@ func (h *HECHandler) sendSuccessWithAck(w http.ResponseWriter, ackID string) {
 
 func (h *HECHandler) sendError(w http.ResponseWriter, hecErr *hec.HECError, httpStatus int) {
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(httpStatus)
-	json.NewEncoder(w).Encode(models.HECResponse{
+	httputil.WriteJSON(w, httpStatus, models.HECResponse{
 		Text: hecErr.Text,
 		Code: hecErr.Code,
 	})

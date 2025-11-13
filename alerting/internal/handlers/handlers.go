@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"github.com/telhawk-systems/telhawk-stack/common/httputil"
 	"log"
 	"net/http"
 	"strconv"
@@ -29,8 +30,7 @@ func NewHandler(service *service.Service, storageClient StorageClient) *Handler 
 
 // HealthCheck handles health check requests
 func (h *Handler) HealthCheck(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"status": "healthy"})
+	httputil.WriteJSON(w, http.StatusOK, map[string]string{"status": "healthy"})
 }
 
 // CreateCase handles POST /api/v1/cases
@@ -57,8 +57,7 @@ func (h *Handler) CreateCase(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(c)
+	httputil.WriteJSON(w, http.StatusCreated, c)
 }
 
 // GetCase handles GET /api/v1/cases/:id
@@ -170,8 +169,7 @@ func (h *Handler) CloseCase(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"status": "closed"})
+	httputil.WriteJSON(w, http.StatusOK, map[string]string{"status": "closed"})
 }
 
 // ReopenCase handles PUT /api/v1/cases/:id/reopen
@@ -194,8 +192,7 @@ func (h *Handler) ReopenCase(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"status": "reopened"})
+	httputil.WriteJSON(w, http.StatusOK, map[string]string{"status": "reopened"})
 }
 
 // AddAlertsToCase handles POST /api/v1/cases/:id/alerts
@@ -227,8 +224,7 @@ func (h *Handler) AddAlertsToCase(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"status": "alerts added"})
+	httputil.WriteJSON(w, http.StatusOK, map[string]string{"status": "alerts added"})
 }
 
 // GetCaseAlerts handles GET /api/v1/cases/:id/alerts

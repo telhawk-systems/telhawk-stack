@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/telhawk-systems/telhawk-stack/common/httputil"
 	"io"
 	"net/http"
 	"strings"
@@ -167,8 +168,7 @@ func (h *StorageHandler) indexEvents(ctx context.Context, events []map[string]in
 
 func (h *StorageHandler) Health(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+	httputil.WriteJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
 func (h *StorageHandler) Ready(w http.ResponseWriter, r *http.Request) {
@@ -177,13 +177,11 @@ func (h *StorageHandler) Ready(w http.ResponseWriter, r *http.Request) {
 
 	info, err := h.client.Client().Info(h.client.Client().Info.WithContext(ctx))
 	if err != nil || info.IsError() {
-		w.WriteHeader(http.StatusServiceUnavailable)
-		json.NewEncoder(w).Encode(map[string]string{"status": "not ready", "reason": "opensearch unavailable"})
+		httputil.WriteJSON(w, http.StatusServiceUnavailable, map[string]string{"status": "not ready", "reason": "opensearch unavailable"})
 		return
 	}
 	defer info.Body.Close()
 
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"status": "ready"})
+	httputil.WriteJSON(w, http.StatusOK, map[string]string{"status": "ready"})
 }

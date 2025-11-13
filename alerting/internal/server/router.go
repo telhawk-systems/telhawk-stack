@@ -1,6 +1,7 @@
 package server
 
 import (
+	"github.com/telhawk-systems/telhawk-stack/common/middleware"
 	"net/http"
 
 	"github.com/telhawk-systems/telhawk-stack/alerting/internal/handlers"
@@ -68,5 +69,5 @@ func NewRouter(h *handlers.Handler) http.Handler {
 		}
 	})
 
-	return mux
+	return middleware.RequestID(mux)
 }

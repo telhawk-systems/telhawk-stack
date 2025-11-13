@@ -2,10 +2,11 @@ package handlers
 
 import (
 	"encoding/json"
+	"github.com/telhawk-systems/telhawk-stack/common/httputil"
 	"log"
 	"net/http"
 
-	"github.com/telhawk/web/internal/auth"
+	"github.com/telhawk-systems/telhawk-stack/web/backend/internal/auth"
 )
 
 type AuthHandler struct {
@@ -44,7 +45,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		csrfToken = csrfToken[:20] + "..."
 	}
 	log.Printf("Login attempt from %s with CSRF header: %s", r.RemoteAddr, csrfToken)
-	
+
 	var req LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid request", http.StatusBadRequest)

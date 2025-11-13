@@ -1,6 +1,7 @@
 package server
 
 import (
+	"github.com/telhawk-systems/telhawk-stack/common/middleware"
 	"net/http"
 
 	"github.com/telhawk-systems/telhawk-stack/core/internal/handlers"
@@ -13,5 +14,5 @@ func NewRouter(h *handlers.ProcessorHandler) http.Handler {
 	mux.HandleFunc("/api/v1/dlq", h.ListDLQ)
 	mux.HandleFunc("/api/v1/dlq/purge", h.PurgeDLQ)
 	mux.HandleFunc("/healthz", h.Health)
-	return mux
+	return middleware.RequestID(mux)
 }

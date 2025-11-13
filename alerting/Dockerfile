@@ -2,6 +2,11 @@
 FROM golang:1.25-alpine AS builder
 
 WORKDIR /build/alerting
+# Copy root go.mod
+COPY go.mod go.sum ../
+
+# Copy common module
+COPY common/ ../common/
 
 # Install build dependencies
 RUN apk add --no-cache git
@@ -10,8 +15,10 @@ RUN apk add --no-cache git
 COPY query/ ../query/
 
 # Copy go mod files
-COPY alerting/go.mod alerting/go.sum ./
+# Service files copied below
+WORKDIR /build
 RUN go mod download
+WORKDIR /build/alerting
 
 # Copy source code
 COPY alerting/ ./
@@ -28,13 +35,13 @@ WORKDIR /app
 COPY --from=builder /build/alerting/alerting .
 
 # Copy config file
-COPY alerting/config.yaml /etc/telhawk/alerting/config.yaml
+COPY --from=builder /build/alerting/config.yaml /etc/telhawk/alerting/config.yaml
 
 # Copy builtin detection rules
-COPY alerting/rules /etc/telhawk/alerting/rules
+COPY --from=builder /build/alerting/rules /etc/telhawk/alerting/rules
 
 # Copy migrations
-COPY alerting/migrations /app/migrations
+COPY --from=builder /build/alerting/migrations /app/migrations
 
 # Expose port
 EXPOSE 8085

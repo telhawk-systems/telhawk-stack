@@ -2,11 +2,12 @@ package server
 
 import (
 	"fmt"
+	"github.com/telhawk-systems/telhawk-stack/common/middleware"
 	"net/http"
 
-	"github.com/telhawk/web/internal/auth"
-	"github.com/telhawk/web/internal/handlers"
-	"github.com/telhawk/web/internal/proxy"
+	"github.com/telhawk-systems/telhawk-stack/web/backend/internal/auth"
+	"github.com/telhawk-systems/telhawk-stack/web/backend/internal/handlers"
+	"github.com/telhawk-systems/telhawk-stack/web/backend/internal/proxy"
 )
 
 // RouterConfig holds dependencies needed to configure routes
@@ -71,5 +72,5 @@ func NewRouter(cfg RouterConfig) http.Handler {
 	fs := http.FileServer(http.Dir(cfg.StaticDir))
 	mux.Handle("/", handlers.NewSPAHandler(cfg.StaticDir, fs))
 
-	return mux
+	return middleware.RequestID(mux)
 }
