@@ -405,7 +405,13 @@ class ApiClient {
       throw new Error('Failed to create HEC token');
     }
 
-    return response.json();
+    // Parse JSON:API response format
+    const json = await response.json();
+    const attrs = json?.data?.attributes || {};
+    return {
+      id: json?.data?.id || '',
+      ...attrs,
+    };
   }
 
   async listHECTokens(): Promise<HECToken[]> {
@@ -417,7 +423,13 @@ class ApiClient {
       throw new Error('Failed to list HEC tokens');
     }
 
-    return response.json();
+    // Parse JSON:API response format
+    const json = await response.json();
+    const items = Array.isArray(json?.data) ? json.data : [];
+    return items.map((item: any) => ({
+      id: item.id,
+      ...item.attributes,
+    }));
   }
 
   async revokeHECToken(id: string): Promise<void> {

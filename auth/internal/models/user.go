@@ -44,6 +44,51 @@ func (t *HECToken) IsActive() bool {
 	return true
 }
 
+// HECTokenResponse is the API response format that includes the computed enabled field
+type HECTokenResponse struct {
+	ID        string     `json:"id"`
+	Token     string     `json:"token"`
+	Name      string     `json:"name"`
+	UserID    string     `json:"user_id"`
+	Enabled   bool       `json:"enabled"`
+	CreatedAt time.Time  `json:"created_at"`
+	ExpiresAt *time.Time `json:"expires_at,omitempty"`
+}
+
+// ToResponse converts a HECToken to an API response format with full token (only use at creation)
+func (t *HECToken) ToResponse() *HECTokenResponse {
+	return &HECTokenResponse{
+		ID:        t.ID,
+		Token:     t.Token,
+		Name:      t.Name,
+		UserID:    t.UserID,
+		Enabled:   t.IsActive(),
+		CreatedAt: t.CreatedAt,
+		ExpiresAt: t.ExpiresAt,
+	}
+}
+
+// MaskToken masks a token showing only first and last 8 characters
+func MaskToken(token string) string {
+	if len(token) <= 16 {
+		return token // Don't mask very short tokens
+	}
+	return token[:8] + "..." + token[len(token)-8:]
+}
+
+// ToMaskedResponse converts a HECToken to an API response format with masked token
+func (t *HECToken) ToMaskedResponse() *HECTokenResponse {
+	return &HECTokenResponse{
+		ID:        t.ID,
+		Token:     MaskToken(t.Token),
+		Name:      t.Name,
+		UserID:    t.UserID,
+		Enabled:   t.IsActive(),
+		CreatedAt: t.CreatedAt,
+		ExpiresAt: t.ExpiresAt,
+	}
+}
+
 type Session struct {
 	ID           string     `json:"id"`
 	UserID       string     `json:"user_id"`
