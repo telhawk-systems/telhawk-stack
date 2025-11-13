@@ -19,7 +19,7 @@ import (
 type IngestServiceInterface interface {
 	IngestEvent(event *models.HECEvent, sourceIP, hecTokenID string) (string, error)
 	IngestRaw(data []byte, sourceIP, hecTokenID, source, sourceType, host string) (string, error)
-	ValidateHECToken(token string) error
+	ValidateHECToken(ctx context.Context, token string) error
 	GetStats() models.IngestionStats
 	QueryAcks(ackIDs []string) map[string]bool
 }
@@ -47,7 +47,7 @@ func (h *HECHandler) HandleEvent(w http.ResponseWriter, r *http.Request) {
 
 	// Apply IP-based rate limiting BEFORE expensive operations
 	if h.rateLimiter != nil {
-		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+		ctx, cancel := context.WithTimeout(r.Context(), 1*time.Second)
 		defer cancel()
 
 		allowed, err := h.rateLimiter.Allow(ctx, "ip:"+sourceIP)
@@ -68,7 +68,7 @@ func (h *HECHandler) HandleEvent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validate token with auth service
-	if err := h.service.ValidateHECToken(token); err != nil {
+	if err := h.service.ValidateHECToken(r.Context(), token); err != nil {
 		log.Printf("HEC token validation failed: %v", err)
 		h.sendError(w, hec.ErrUnauthorized, http.StatusUnauthorized)
 		return
@@ -76,7 +76,7 @@ func (h *HECHandler) HandleEvent(w http.ResponseWriter, r *http.Request) {
 
 	// Optional: Apply per-token rate limiting after authentication
 	if h.rateLimiter != nil {
-		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+		ctx, cancel := context.WithTimeout(r.Context(), 1*time.Second)
 		defer cancel()
 
 		allowed, err := h.rateLimiter.Allow(ctx, "token:"+token)
@@ -162,7 +162,7 @@ func (h *HECHandler) HandleRaw(w http.ResponseWriter, r *http.Request) {
 
 	// Apply IP-based rate limiting BEFORE expensive operations
 	if h.rateLimiter != nil {
-		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+		ctx, cancel := context.WithTimeout(r.Context(), 1*time.Second)
 		defer cancel()
 
 		allowed, err := h.rateLimiter.Allow(ctx, "ip:"+sourceIP)
@@ -183,7 +183,7 @@ func (h *HECHandler) HandleRaw(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validate token with auth service
-	if err := h.service.ValidateHECToken(token); err != nil {
+	if err := h.service.ValidateHECToken(r.Context(), token); err != nil {
 		log.Printf("HEC token validation failed: %v", err)
 		h.sendError(w, hec.ErrUnauthorized, http.StatusUnauthorized)
 		return
@@ -191,7 +191,7 @@ func (h *HECHandler) HandleRaw(w http.ResponseWriter, r *http.Request) {
 
 	// Optional: Apply per-token rate limiting after authentication
 	if h.rateLimiter != nil {
-		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+		ctx, cancel := context.WithTimeout(r.Context(), 1*time.Second)
 		defer cancel()
 
 		allowed, err := h.rateLimiter.Allow(ctx, "token:"+token)

@@ -167,12 +167,12 @@ func (s *IngestService) processEvents() {
 		case event := <-s.eventQueue:
 			metrics.QueueDepth.Set(float64(len(s.eventQueue)))
 			log.Printf("Processing event: id=%s source=%s", event.ID, event.Source)
-			
+
 			// Normalize event via Core service
 			startTime := time.Now()
 			normalizedEvent, err := s.normalizeEvent(event)
 			metrics.NormalizationDuration.Observe(time.Since(startTime).Seconds())
-			
+
 			if err != nil {
 				log.Printf("failed to normalize event %s: %v", event.ID, err)
 				metrics.NormalizationErrors.Inc()
@@ -181,12 +181,12 @@ func (s *IngestService) processEvents() {
 				}
 				continue
 			}
-			
+
 			// Forward to Storage service
 			startTime = time.Now()
 			err = s.forwardToStorage(normalizedEvent)
 			metrics.StorageDuration.Observe(time.Since(startTime).Seconds())
-			
+
 			if err != nil {
 				log.Printf("failed to forward event %s to storage: %v", event.ID, err)
 				metrics.StorageErrors.Inc()
@@ -195,9 +195,9 @@ func (s *IngestService) processEvents() {
 				}
 				continue
 			}
-			
+
 			log.Printf("event %s successfully stored", event.ID)
-			
+
 			// Complete ack if manager is configured
 			if s.ackManager != nil && event.AckID != "" {
 				s.ackManager.Complete(event.AckID)
@@ -216,21 +216,21 @@ func (s *IngestService) normalizeEvent(event *models.Event) (map[string]interfac
 		// Return basic event structure without normalization
 		return s.eventToMap(event), nil
 	}
-	
+
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	
+
 	result, err := s.coreClient.Normalize(ctx, event)
 	if err != nil {
 		return nil, fmt.Errorf("normalization failed: %w", err)
 	}
-	
+
 	// Parse normalized event
 	var normalizedEvent map[string]interface{}
 	if err := json.Unmarshal(result.Event, &normalizedEvent); err != nil {
 		return nil, fmt.Errorf("failed to parse normalized event: %w", err)
 	}
-	
+
 	log.Printf("event %s normalized via core service", event.ID)
 	return normalizedEvent, nil
 }
@@ -240,46 +240,46 @@ func (s *IngestService) forwardToStorage(event map[string]interface{}) error {
 		log.Println("storage client not configured; skipping storage")
 		return nil
 	}
-	
+
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	
+
 	events := []map[string]interface{}{event}
 	resp, err := s.storageClient.Ingest(ctx, events)
 	if err != nil {
 		return fmt.Errorf("storage ingest failed: %w", err)
 	}
-	
+
 	if resp.Failed > 0 {
 		return fmt.Errorf("storage reported %d failures: %v", resp.Failed, resp.Errors)
 	}
-	
+
 	return nil
 }
 
 func (s *IngestService) eventToMap(event *models.Event) map[string]interface{} {
 	return map[string]interface{}{
-		"id":          event.ID,
-		"timestamp":   event.Timestamp,
-		"host":        event.Host,
-		"source":      event.Source,
-		"sourcetype":  event.SourceType,
-		"source_ip":   event.SourceIP,
-		"index":       event.Index,
-		"event":       event.Event,
-		"fields":      event.Fields,
+		"id":           event.ID,
+		"timestamp":    event.Timestamp,
+		"host":         event.Host,
+		"source":       event.Source,
+		"sourcetype":   event.SourceType,
+		"source_ip":    event.SourceIP,
+		"index":        event.Index,
+		"event":        event.Event,
+		"fields":       event.Fields,
 		"hec_token_id": event.HECTokenID,
-		"signature":   event.Signature,
+		"signature":    event.Signature,
 	}
 }
 
-func (s *IngestService) ValidateHECToken(token string) error {
+func (s *IngestService) ValidateHECToken(ctx context.Context, token string) error {
 	if s.authClient == nil {
 		log.Println("auth client not configured; skipping token validation")
 		return nil
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
 
 	resp, err := s.authClient.ValidateHECToken(ctx, token)
