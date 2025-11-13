@@ -30,15 +30,15 @@ func (n *DeviceConfigStateChangeNormalizer) Supports(format, sourceType string) 
 		return false
 	}
 	st := strings.ToLower(sourceType)
-	return strings.Contains(st, "device_config_state_change") || 
-	       strings.Contains(st, "device")
+	return strings.Contains(st, "device_config_state_change") ||
+		strings.Contains(st, "device")
 }
 
 // Normalize converts raw event to OCSF device_config_state_change
 func (n *DeviceConfigStateChangeNormalizer) Normalize(ctx context.Context, envelope *model.RawEventEnvelope) (*ocsf.Event, error) {
 	var payload map[string]interface{}
 	if err := json.Unmarshal(envelope.Payload, &payload); err != nil {
-		return nil, fmt.Errorf("decode payload: %%w", err)
+		return nil, fmt.Errorf("decode payload: %w", err)
 	}
 
 	activityID := 0 // Default activity
@@ -60,4 +60,3 @@ func (n *DeviceConfigStateChangeNormalizer) Normalize(ctx context.Context, envel
 
 	return &event.Event, nil
 }
-

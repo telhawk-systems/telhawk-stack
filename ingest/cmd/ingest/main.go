@@ -5,12 +5,14 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
+	"github.com/telhawk-systems/telhawk-stack/common/logging"
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/ack"
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/authclient"
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/config"
@@ -33,14 +35,27 @@ func main() {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 
-	log.Printf("Starting Ingest service on port %d", cfg.Server.Port)
+	// Initialize structured logging
+	logger := logging.New(
+		logging.ParseLevel(cfg.Logging.Level),
+		cfg.Logging.Format,
+	).With(logging.Service("ingest"))
+	logging.SetDefault(logger)
+
+	slog.Info("Starting Ingest service",
+		slog.Int("port", cfg.Server.Port),
+		slog.String("log_level", cfg.Logging.Level),
+		slog.String("log_format", cfg.Logging.Format),
+	)
 	if *configPath != "" {
-		log.Printf("Loaded config from: %s", *configPath)
+		slog.Info("Loaded configuration", slog.String("config_path", *configPath))
 	}
-	log.Printf("Auth URL: %s", cfg.Auth.URL)
-	log.Printf("Core URL: %s", cfg.Core.URL)
-	log.Printf("Storage URL: %s", cfg.Storage.URL)
-	log.Printf("OpenSearch URL: %s", cfg.OpenSearch.URL)
+	slog.Info("Service URLs configured",
+		slog.String("auth_url", cfg.Auth.URL),
+		slog.String("core_url", cfg.Core.URL),
+		slog.String("storage_url", cfg.Storage.URL),
+		slog.String("opensearch_url", cfg.OpenSearch.URL),
+	)
 
 	// Initialize rate limiter
 	var rateLimiter ratelimit.RateLimiter

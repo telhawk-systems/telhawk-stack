@@ -30,16 +30,16 @@ func (n *ScanActivityNormalizer) Supports(format, sourceType string) bool {
 		return false
 	}
 	st := strings.ToLower(sourceType)
-	return strings.Contains(st, "scan_activity") || 
-	       strings.Contains(st, "scan") || 
-	       strings.Contains(st, "scan")
+	return strings.Contains(st, "scan_activity") ||
+		strings.Contains(st, "scan") ||
+		strings.Contains(st, "scan")
 }
 
 // Normalize converts raw event to OCSF scan_activity
 func (n *ScanActivityNormalizer) Normalize(ctx context.Context, envelope *model.RawEventEnvelope) (*ocsf.Event, error) {
 	var payload map[string]interface{}
 	if err := json.Unmarshal(envelope.Payload, &payload); err != nil {
-		return nil, fmt.Errorf("decode payload: %%w", err)
+		return nil, fmt.Errorf("decode payload: %w", err)
 	}
 
 	activityID := 0 // Default activity
@@ -61,4 +61,3 @@ func (n *ScanActivityNormalizer) Normalize(ctx context.Context, envelope *model.
 
 	return &event.Event, nil
 }
-

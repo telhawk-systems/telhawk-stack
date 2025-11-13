@@ -30,16 +30,16 @@ func (n *KernelActivityNormalizer) Supports(format, sourceType string) bool {
 		return false
 	}
 	st := strings.ToLower(sourceType)
-	return strings.Contains(st, "kernel_activity") || 
-	       strings.Contains(st, "kernel") || 
-	       strings.Contains(st, "kernel")
+	return strings.Contains(st, "kernel_activity") ||
+		strings.Contains(st, "kernel") ||
+		strings.Contains(st, "kernel")
 }
 
 // Normalize converts raw event to OCSF kernel_activity
 func (n *KernelActivityNormalizer) Normalize(ctx context.Context, envelope *model.RawEventEnvelope) (*ocsf.Event, error) {
 	var payload map[string]interface{}
 	if err := json.Unmarshal(envelope.Payload, &payload); err != nil {
-		return nil, fmt.Errorf("decode payload: %%w", err)
+		return nil, fmt.Errorf("decode payload: %w", err)
 	}
 
 	activityID := 0 // Default activity
@@ -61,4 +61,3 @@ func (n *KernelActivityNormalizer) Normalize(ctx context.Context, envelope *mode
 
 	return &event.Event, nil
 }
-

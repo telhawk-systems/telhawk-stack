@@ -30,16 +30,16 @@ func (n *DnsActivityNormalizer) Supports(format, sourceType string) bool {
 		return false
 	}
 	st := strings.ToLower(sourceType)
-	return strings.Contains(st, "dns") || 
-	       strings.Contains(st, "bind") || 
-	       strings.Contains(st, "named")
+	return strings.Contains(st, "dns") ||
+		strings.Contains(st, "bind") ||
+		strings.Contains(st, "named")
 }
 
 // Normalize converts raw event to OCSF dns_activity
 func (n *DnsActivityNormalizer) Normalize(ctx context.Context, envelope *model.RawEventEnvelope) (*ocsf.Event, error) {
 	var payload map[string]interface{}
 	if err := json.Unmarshal(envelope.Payload, &payload); err != nil {
-		return nil, fmt.Errorf("decode payload: %%w", err)
+		return nil, fmt.Errorf("decode payload: %w", err)
 	}
 
 	activityID := 0 // Default activity
@@ -61,4 +61,3 @@ func (n *DnsActivityNormalizer) Normalize(ctx context.Context, envelope *model.R
 
 	return &event.Event, nil
 }
-

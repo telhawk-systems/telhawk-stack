@@ -30,20 +30,20 @@ func (n *NetworkActivityNormalizer) Supports(format, sourceType string) bool {
 		return false
 	}
 	st := strings.ToLower(sourceType)
-	return strings.Contains(st, "network") || 
-	       strings.Contains(st, "traffic") || 
-	       strings.Contains(st, "connection") || 
-	       strings.Contains(st, "flow") || 
-	       strings.Contains(st, "firewall") || 
-	       strings.Contains(st, "proxy") || 
-	       strings.Contains(st, "netflow")
+	return strings.Contains(st, "network") ||
+		strings.Contains(st, "traffic") ||
+		strings.Contains(st, "connection") ||
+		strings.Contains(st, "flow") ||
+		strings.Contains(st, "firewall") ||
+		strings.Contains(st, "proxy") ||
+		strings.Contains(st, "netflow")
 }
 
 // Normalize converts raw event to OCSF network_activity
 func (n *NetworkActivityNormalizer) Normalize(ctx context.Context, envelope *model.RawEventEnvelope) (*ocsf.Event, error) {
 	var payload map[string]interface{}
 	if err := json.Unmarshal(envelope.Payload, &payload); err != nil {
-		return nil, fmt.Errorf("decode payload: %%w", err)
+		return nil, fmt.Errorf("decode payload: %w", err)
 	}
 
 	activityID := n.determineActivityID(payload)
@@ -78,4 +78,3 @@ func (n *NetworkActivityNormalizer) determineActivityID(payload map[string]inter
 	}
 	return 0 // Unknown
 }
-

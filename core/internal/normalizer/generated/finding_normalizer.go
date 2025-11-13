@@ -37,7 +37,7 @@ func (n *FindingNormalizer) Supports(format, sourceType string) bool {
 func (n *FindingNormalizer) Normalize(ctx context.Context, envelope *model.RawEventEnvelope) (*ocsf.Event, error) {
 	var payload map[string]interface{}
 	if err := json.Unmarshal(envelope.Payload, &payload); err != nil {
-		return nil, fmt.Errorf("decode payload: %%w", err)
+		return nil, fmt.Errorf("decode payload: %w", err)
 	}
 
 	activityID := 0 // Default activity
@@ -59,4 +59,3 @@ func (n *FindingNormalizer) Normalize(ctx context.Context, envelope *model.RawEv
 
 	return &event.Event, nil
 }
-

@@ -30,15 +30,15 @@ func (n *SessionQueryNormalizer) Supports(format, sourceType string) bool {
 		return false
 	}
 	st := strings.ToLower(sourceType)
-	return strings.Contains(st, "session_query") || 
-	       strings.Contains(st, "session")
+	return strings.Contains(st, "session_query") ||
+		strings.Contains(st, "session")
 }
 
 // Normalize converts raw event to OCSF session_query
 func (n *SessionQueryNormalizer) Normalize(ctx context.Context, envelope *model.RawEventEnvelope) (*ocsf.Event, error) {
 	var payload map[string]interface{}
 	if err := json.Unmarshal(envelope.Payload, &payload); err != nil {
-		return nil, fmt.Errorf("decode payload: %%w", err)
+		return nil, fmt.Errorf("decode payload: %w", err)
 	}
 
 	activityID := 0 // Default activity
@@ -60,4 +60,3 @@ func (n *SessionQueryNormalizer) Normalize(ctx context.Context, envelope *model.
 
 	return &event.Event, nil
 }
-

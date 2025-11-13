@@ -30,16 +30,16 @@ func (n *SmbActivityNormalizer) Supports(format, sourceType string) bool {
 		return false
 	}
 	st := strings.ToLower(sourceType)
-	return strings.Contains(st, "smb_activity") || 
-	       strings.Contains(st, "smb") || 
-	       strings.Contains(st, "smb")
+	return strings.Contains(st, "smb_activity") ||
+		strings.Contains(st, "smb") ||
+		strings.Contains(st, "smb")
 }
 
 // Normalize converts raw event to OCSF smb_activity
 func (n *SmbActivityNormalizer) Normalize(ctx context.Context, envelope *model.RawEventEnvelope) (*ocsf.Event, error) {
 	var payload map[string]interface{}
 	if err := json.Unmarshal(envelope.Payload, &payload); err != nil {
-		return nil, fmt.Errorf("decode payload: %%w", err)
+		return nil, fmt.Errorf("decode payload: %w", err)
 	}
 
 	activityID := 0 // Default activity
@@ -61,4 +61,3 @@ func (n *SmbActivityNormalizer) Normalize(ctx context.Context, envelope *model.R
 
 	return &event.Event, nil
 }
-

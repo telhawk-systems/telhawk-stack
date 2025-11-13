@@ -30,15 +30,15 @@ func (n *PeripheralDeviceQueryNormalizer) Supports(format, sourceType string) bo
 		return false
 	}
 	st := strings.ToLower(sourceType)
-	return strings.Contains(st, "peripheral_device_query") || 
-	       strings.Contains(st, "peripheral")
+	return strings.Contains(st, "peripheral_device_query") ||
+		strings.Contains(st, "peripheral")
 }
 
 // Normalize converts raw event to OCSF peripheral_device_query
 func (n *PeripheralDeviceQueryNormalizer) Normalize(ctx context.Context, envelope *model.RawEventEnvelope) (*ocsf.Event, error) {
 	var payload map[string]interface{}
 	if err := json.Unmarshal(envelope.Payload, &payload); err != nil {
-		return nil, fmt.Errorf("decode payload: %%w", err)
+		return nil, fmt.Errorf("decode payload: %w", err)
 	}
 
 	activityID := 0 // Default activity
@@ -60,4 +60,3 @@ func (n *PeripheralDeviceQueryNormalizer) Normalize(ctx context.Context, envelop
 
 	return &event.Event, nil
 }
-

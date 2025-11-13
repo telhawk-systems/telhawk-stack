@@ -30,16 +30,16 @@ func (n *MemoryActivityNormalizer) Supports(format, sourceType string) bool {
 		return false
 	}
 	st := strings.ToLower(sourceType)
-	return strings.Contains(st, "memory_activity") || 
-	       strings.Contains(st, "memory") || 
-	       strings.Contains(st, "memory")
+	return strings.Contains(st, "memory_activity") ||
+		strings.Contains(st, "memory") ||
+		strings.Contains(st, "memory")
 }
 
 // Normalize converts raw event to OCSF memory_activity
 func (n *MemoryActivityNormalizer) Normalize(ctx context.Context, envelope *model.RawEventEnvelope) (*ocsf.Event, error) {
 	var payload map[string]interface{}
 	if err := json.Unmarshal(envelope.Payload, &payload); err != nil {
-		return nil, fmt.Errorf("decode payload: %%w", err)
+		return nil, fmt.Errorf("decode payload: %w", err)
 	}
 
 	activityID := 0 // Default activity
@@ -61,4 +61,3 @@ func (n *MemoryActivityNormalizer) Normalize(ctx context.Context, envelope *mode
 
 	return &event.Event, nil
 }
-

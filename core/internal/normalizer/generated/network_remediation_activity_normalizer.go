@@ -30,16 +30,16 @@ func (n *NetworkRemediationActivityNormalizer) Supports(format, sourceType strin
 		return false
 	}
 	st := strings.ToLower(sourceType)
-	return strings.Contains(st, "network_remediation_activity") || 
-	       strings.Contains(st, "network") || 
-	       strings.Contains(st, "network_remediation")
+	return strings.Contains(st, "network_remediation_activity") ||
+		strings.Contains(st, "network") ||
+		strings.Contains(st, "network_remediation")
 }
 
 // Normalize converts raw event to OCSF network_remediation_activity
 func (n *NetworkRemediationActivityNormalizer) Normalize(ctx context.Context, envelope *model.RawEventEnvelope) (*ocsf.Event, error) {
 	var payload map[string]interface{}
 	if err := json.Unmarshal(envelope.Payload, &payload); err != nil {
-		return nil, fmt.Errorf("decode payload: %%w", err)
+		return nil, fmt.Errorf("decode payload: %w", err)
 	}
 
 	activityID := 0 // Default activity
@@ -61,4 +61,3 @@ func (n *NetworkRemediationActivityNormalizer) Normalize(ctx context.Context, en
 
 	return &event.Event, nil
 }
-

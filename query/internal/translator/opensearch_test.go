@@ -239,27 +239,28 @@ func TestTranslateOperators(t *testing.T) {
 		name     string
 		operator string
 		value    interface{}
+		field    string // Field to use for test
 		expected string // Expected OpenSearch operator/clause type
 	}{
-		{"Equals", model.OpEq, "test", "term"},
-		{"NotEquals", model.OpNe, "test", "must_not"},
-		{"GreaterThan", model.OpGt, 100, "range"},
-		{"GreaterThanEqual", model.OpGte, 100, "range"},
-		{"LessThan", model.OpLt, 100, "range"},
-		{"LessThanEqual", model.OpLte, 100, "range"},
-		{"In", model.OpIn, []interface{}{"a", "b"}, "terms"},
-		{"Contains", model.OpContains, "test", "wildcard"},
-		{"StartsWith", model.OpStartsWith, "test", "wildcard"},
-		{"EndsWith", model.OpEndsWith, "test", "wildcard"},
-		{"Regex", model.OpRegex, "^test.*", "regexp"},
-		{"Exists", model.OpExists, true, "exists"},
+		{"Equals", model.OpEq, "test", ".test_id", "term"}, // Use _id suffix for exact match
+		{"NotEquals", model.OpNe, "test", ".test_id", "must_not"},
+		{"GreaterThan", model.OpGt, 100, ".test_field", "range"},
+		{"GreaterThanEqual", model.OpGte, 100, ".test_field", "range"},
+		{"LessThan", model.OpLt, 100, ".test_field", "range"},
+		{"LessThanEqual", model.OpLte, 100, ".test_field", "range"},
+		{"In", model.OpIn, []interface{}{"a", "b"}, ".test_field", "terms"},
+		{"Contains", model.OpContains, "test", ".test_field", "wildcard"},
+		{"StartsWith", model.OpStartsWith, "test", ".test_field", "wildcard"},
+		{"EndsWith", model.OpEndsWith, "test", ".test_field", "wildcard"},
+		{"Regex", model.OpRegex, "^test.*", ".test_field", "regexp"},
+		{"Exists", model.OpExists, true, ".test_field", "exists"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			query := &model.Query{
 				Filter: &model.FilterExpr{
-					Field:    ".test_field",
+					Field:    tt.field,
 					Operator: tt.operator,
 					Value:    tt.value,
 				},

@@ -27,12 +27,12 @@ type SourceTypePatterns struct {
 }
 
 type Pattern struct {
-	ClassUID            int                 `json:"class_uid"`
-	Category            string              `json:"category"`
-	SourceTypePatterns  []string            `json:"sourcetype_patterns"`
-	ContentPatterns     []string            `json:"content_patterns"`
-	Priority            int                 `json:"priority"`
-	ActivityKeywords    map[string][]string `json:"activity_keywords,omitempty"`
+	ClassUID           int                 `json:"class_uid"`
+	Category           string              `json:"category"`
+	SourceTypePatterns []string            `json:"sourcetype_patterns"`
+	ContentPatterns    []string            `json:"content_patterns"`
+	Priority           int                 `json:"priority"`
+	ActivityKeywords   map[string][]string `json:"activity_keywords,omitempty"`
 }
 
 type EventClass struct {
@@ -74,10 +74,10 @@ type ValidationRules struct {
 }
 
 var (
-	schemaDir  = flag.String("schema", "../../ocsf-schema", "Path to OCSF schema directory")
-	outputDir  = flag.String("output", "../../core/internal/normalizer/generated", "Output directory for generated code")
-	verbose    = flag.Bool("v", false, "Verbose output")
-	
+	schemaDir = flag.String("schema", "../../ocsf-schema", "Path to OCSF schema directory")
+	outputDir = flag.String("output", "../../core/internal/normalizer/generated", "Output directory for generated code")
+	verbose   = flag.Bool("v", false, "Verbose output")
+
 	fieldMappings      FieldMappings
 	sourceTypePatterns SourceTypePatterns
 	categories         Categories
@@ -199,20 +199,20 @@ func getPatternForClass(class *EventClass) Pattern {
 
 func generateDefaultPatterns(className string) []string {
 	patterns := []string{className}
-	
+
 	// Add common variations
 	parts := strings.Split(className, "_")
 	if len(parts) > 1 {
 		// Add first part (e.g., "auth" from "authentication")
 		patterns = append(patterns, parts[0])
 	}
-	
+
 	// Add simplified version without "_activity" suffix
 	simplified := strings.TrimSuffix(className, "_activity")
 	if simplified != className {
 		patterns = append(patterns, simplified)
 	}
-	
+
 	return patterns
 }
 
@@ -323,7 +323,7 @@ func generateFromEventClasses(generatedEventsDir string) (int, error) {
 
 		categoryName := categoryDir.Name()
 		categoryPath := filepath.Join(generatedEventsDir, categoryName)
-		
+
 		eventFiles, err := os.ReadDir(categoryPath)
 		if err != nil {
 			if *verbose {
@@ -339,7 +339,7 @@ func generateFromEventClasses(generatedEventsDir string) (int, error) {
 
 			// Extract class name from filename (e.g., "authentication.go" → "authentication")
 			className := strings.TrimSuffix(eventFile.Name(), ".go")
-			
+
 			// Create a minimal EventClass for pattern generation
 			class := &EventClass{
 				Name:     className,
@@ -354,7 +354,7 @@ func generateFromEventClasses(generatedEventsDir string) (int, error) {
 				}
 				continue
 			}
-			
+
 			totalGenerated++
 			if *verbose {
 				fmt.Printf("Generated: %s_normalizer.go (category=%s)\n", class.Name, categoryName)
@@ -378,7 +378,7 @@ func generateNormalizer(className string, pattern Pattern) error {
 	buf.WriteString("\t\"strings\"\n\n")
 	buf.WriteString("\t\"github.com/telhawk-systems/telhawk-stack/core/internal/model\"\n")
 	buf.WriteString("\t\"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf\"\n")
-	
+
 	// Add category-specific imports
 	if pattern.Category != "" {
 		buf.WriteString(fmt.Sprintf("\t\"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf/events/%s\"\n", pattern.Category))
@@ -452,7 +452,7 @@ func generateNormalizeMethod(structName, className string, pattern Pattern) stri
 	buf.WriteString(fmt.Sprintf("func (n *%s) Normalize(ctx context.Context, envelope *model.RawEventEnvelope) (*ocsf.Event, error) {\n", structName))
 	buf.WriteString("\tvar payload map[string]interface{}\n")
 	buf.WriteString("\tif err := json.Unmarshal(envelope.Payload, &payload); err != nil {\n")
-	buf.WriteString("\t\treturn nil, fmt.Errorf(\"decode payload: %%w\", err)\n")
+	buf.WriteString("\t\treturn nil, fmt.Errorf(\"decode payload: %w\", err)\n")
 	buf.WriteString("\t}\n\n")
 
 	// Determine activity ID if keywords defined
@@ -476,7 +476,7 @@ func generateNormalizeMethod(structName, className string, pattern Pattern) stri
 	buf.WriteString("\tif user := ExtractUser(payload); user != nil {\n")
 	buf.WriteString("\t\tevent.Actor = &objects.Actor{User: user}\n")
 	buf.WriteString("\t}\n\n")
-	
+
 	buf.WriteString("\tevent.StatusID, event.Status = ExtractStatus(payload)\n")
 	buf.WriteString("\tevent.SeverityID, event.Severity = ExtractSeverity(payload)\n\n")
 
@@ -851,18 +851,18 @@ func generateEnumValidation(buf *strings.Builder, fieldName string, validValues 
 func mapFieldToGoPath(fieldName string) string {
 	// This is a simplified mapping - real implementation would need complete mapping
 	fieldMap := map[string]string{
-		"user":           "Actor.User",
-		"src_endpoint":   "SrcEndpoint",
-		"dst_endpoint":   "DstEndpoint",
-		"activity_id":    "ActivityID",
-		"category_uid":   "CategoryUID",
-		"class_uid":      "ClassUID",
-		"severity_id":    "SeverityID",
-		"status_id":      "StatusID",
-		"time":           "Time",
-		"metadata":       "Metadata",
+		"user":         "Actor.User",
+		"src_endpoint": "SrcEndpoint",
+		"dst_endpoint": "DstEndpoint",
+		"activity_id":  "ActivityID",
+		"category_uid": "CategoryUID",
+		"class_uid":    "ClassUID",
+		"severity_id":  "SeverityID",
+		"status_id":    "StatusID",
+		"time":         "Time",
+		"metadata":     "Metadata",
 	}
-	
+
 	if path, ok := fieldMap[fieldName]; ok {
 		return path
 	}

@@ -531,6 +531,8 @@ func (t *OpenSearchTranslator) shouldUseTermQuery(field string, value interface{
 		"type_uid":     true,
 		"severity_id":  true,
 		"status_id":    true,
+		"severity":     true, // String severity values (High, Critical, etc.)
+		"status":       true, // String status values (Success, Failure, etc.)
 		"observables":  true,
 	}
 	if exactMatchFields[field] {

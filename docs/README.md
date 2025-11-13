@@ -4,6 +4,7 @@
 
 ## Guides
 - Configuration — `docs/CONFIGURATION.md` (enterprise config and quick config)
+- Logging — `docs/LOGGING.md` (structured logging with slog, request IDs, best practices)
 - Production — `docs/PRODUCTION.md` (deployment considerations, security, scaling)
 - Local Development — `docs/LOCAL_DEVELOPMENT.md`
 - Services — `docs/SERVICES.md` (microservice descriptions and endpoints)

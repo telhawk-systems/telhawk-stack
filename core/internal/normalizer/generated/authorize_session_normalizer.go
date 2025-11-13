@@ -30,15 +30,15 @@ func (n *AuthorizeSessionNormalizer) Supports(format, sourceType string) bool {
 		return false
 	}
 	st := strings.ToLower(sourceType)
-	return strings.Contains(st, "authorize_session") || 
-	       strings.Contains(st, "authorize")
+	return strings.Contains(st, "authorize_session") ||
+		strings.Contains(st, "authorize")
 }
 
 // Normalize converts raw event to OCSF authorize_session
 func (n *AuthorizeSessionNormalizer) Normalize(ctx context.Context, envelope *model.RawEventEnvelope) (*ocsf.Event, error) {
 	var payload map[string]interface{}
 	if err := json.Unmarshal(envelope.Payload, &payload); err != nil {
-		return nil, fmt.Errorf("decode payload: %%w", err)
+		return nil, fmt.Errorf("decode payload: %w", err)
 	}
 
 	activityID := 0 // Default activity
@@ -60,4 +60,3 @@ func (n *AuthorizeSessionNormalizer) Normalize(ctx context.Context, envelope *mo
 
 	return &event.Event, nil
 }
-

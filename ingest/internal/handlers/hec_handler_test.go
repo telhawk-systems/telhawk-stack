@@ -2,8 +2,8 @@ package handlers
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
-	"github.com/telhawk-systems/telhawk-stack/common/httputil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -28,7 +28,7 @@ func (m *mockIngestService) IngestRaw(data []byte, sourceIP, token, source, sour
 	return m.ingestRawAckID, m.ingestRawErr
 }
 
-func (m *mockIngestService) ValidateHECToken(token string) error {
+func (m *mockIngestService) ValidateHECToken(ctx context.Context, token string) error {
 	return m.validateTokenErr
 }
 

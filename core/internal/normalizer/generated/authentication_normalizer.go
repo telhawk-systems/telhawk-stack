@@ -30,23 +30,23 @@ func (n *AuthenticationNormalizer) Supports(format, sourceType string) bool {
 		return false
 	}
 	st := strings.ToLower(sourceType)
-	return strings.Contains(st, "auth") || 
-	       strings.Contains(st, "login") || 
-	       strings.Contains(st, "logon") || 
-	       strings.Contains(st, "session") || 
-	       strings.Contains(st, "sso") || 
-	       strings.Contains(st, "oauth") || 
-	       strings.Contains(st, "saml") || 
-	       strings.Contains(st, "ldap") || 
-	       strings.Contains(st, "kerberos") || 
-	       strings.Contains(st, "ad_auth")
+	return strings.Contains(st, "auth") ||
+		strings.Contains(st, "login") ||
+		strings.Contains(st, "logon") ||
+		strings.Contains(st, "session") ||
+		strings.Contains(st, "sso") ||
+		strings.Contains(st, "oauth") ||
+		strings.Contains(st, "saml") ||
+		strings.Contains(st, "ldap") ||
+		strings.Contains(st, "kerberos") ||
+		strings.Contains(st, "ad_auth")
 }
 
 // Normalize converts raw event to OCSF authentication
 func (n *AuthenticationNormalizer) Normalize(ctx context.Context, envelope *model.RawEventEnvelope) (*ocsf.Event, error) {
 	var payload map[string]interface{}
 	if err := json.Unmarshal(envelope.Payload, &payload); err != nil {
-		return nil, fmt.Errorf("decode payload: %%w", err)
+		return nil, fmt.Errorf("decode payload: %w", err)
 	}
 
 	activityID := n.determineActivityID(payload)
@@ -79,4 +79,3 @@ func (n *AuthenticationNormalizer) determineActivityID(payload map[string]interf
 	}
 	return 0 // Unknown
 }
-

@@ -30,15 +30,15 @@ func (n *SoftwareInfoNormalizer) Supports(format, sourceType string) bool {
 		return false
 	}
 	st := strings.ToLower(sourceType)
-	return strings.Contains(st, "software_info") || 
-	       strings.Contains(st, "software")
+	return strings.Contains(st, "software_info") ||
+		strings.Contains(st, "software")
 }
 
 // Normalize converts raw event to OCSF software_info
 func (n *SoftwareInfoNormalizer) Normalize(ctx context.Context, envelope *model.RawEventEnvelope) (*ocsf.Event, error) {
 	var payload map[string]interface{}
 	if err := json.Unmarshal(envelope.Payload, &payload); err != nil {
-		return nil, fmt.Errorf("decode payload: %%w", err)
+		return nil, fmt.Errorf("decode payload: %w", err)
 	}
 
 	activityID := 0 // Default activity
@@ -60,4 +60,3 @@ func (n *SoftwareInfoNormalizer) Normalize(ctx context.Context, envelope *model.
 
 	return &event.Event, nil
 }
-
