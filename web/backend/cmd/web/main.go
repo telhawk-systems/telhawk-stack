@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -13,6 +12,7 @@ import (
 	"github.com/telhawk/web/internal/handlers"
 	"github.com/telhawk/web/internal/middleware"
 	"github.com/telhawk/web/internal/proxy"
+	"github.com/telhawk/web/internal/server"
 )
 
 type Config struct {
@@ -70,54 +70,20 @@ func main() {
 	rulesProxy := proxy.NewProxy(cfg.RulesServiceURL, authClient)
 	alertingProxy := proxy.NewProxy(cfg.AlertingServiceURL, authClient)
 
-	mux := http.NewServeMux()
-
-	// Auth endpoints
 	authHandler := handlers.NewAuthHandler(authClient, cfg.CookieDomain, cfg.CookieSecure)
-	mux.HandleFunc("GET /api/auth/csrf-token", authHandler.GetCSRFToken)
-	mux.HandleFunc("POST /api/auth/login", authHandler.Login)
-	mux.HandleFunc("POST /api/auth/logout", authHandler.Logout)
-	mux.Handle("GET /api/auth/me", authMiddleware.Protect(http.HandlerFunc(authHandler.Me)))
-
-	// Dashboard metrics endpoint with caching (protected)
 	dashboardHandler := handlers.NewDashboardHandler(cfg.QueryServiceURL)
-	mux.Handle("GET /api/dashboard/metrics", authMiddleware.Protect(http.HandlerFunc(dashboardHandler.GetMetrics)))
 
-	// User management endpoints (protected)
-	mux.Handle("/api/auth/", authMiddleware.Protect(
-		http.StripPrefix("/api/auth", authProxy.Handler()),
-	))
-
-	// Query service proxy (protected)
-	mux.Handle("/api/query/", authMiddleware.Protect(
-		http.StripPrefix("/api/query", queryProxy.Handler()),
-	))
-
-	// Core service proxy (protected)
-	mux.Handle("/api/core/", authMiddleware.Protect(
-		http.StripPrefix("/api/core", coreProxy.Handler()),
-	))
-
-	// Rules service proxy (protected)
-	mux.Handle("/api/rules/", authMiddleware.Protect(
-		http.StripPrefix("/api/rules", rulesProxy.Handler()),
-	))
-
-	// Alerting service proxy (protected)
-	mux.Handle("/api/alerting/", authMiddleware.Protect(
-		http.StripPrefix("/api/alerting", alertingProxy.Handler()),
-	))
-
-	// Health check
-	mux.HandleFunc("GET /api/health", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, `{"status":"ok","service":"web"}`)
+	mux := server.NewRouter(server.RouterConfig{
+		AuthHandler:      authHandler,
+		DashboardHandler: dashboardHandler,
+		AuthMiddleware:   authMiddleware,
+		AuthProxy:        authProxy,
+		QueryProxy:       queryProxy,
+		CoreProxy:        coreProxy,
+		RulesProxy:       rulesProxy,
+		AlertingProxy:    alertingProxy,
+		StaticDir:        cfg.StaticDir,
 	})
-
-	// Serve React static files (must be last)
-	fs := http.FileServer(http.Dir(cfg.StaticDir))
-	mux.Handle("/", handlers.NewSPAHandler(cfg.StaticDir, fs))
 
 	// CORS configuration
 	corsHandler := cors.New(cors.Options{

@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 
 	"github.com/golang-migrate/migrate/v4"
@@ -18,6 +17,7 @@ import (
 	"github.com/telhawk-systems/telhawk-stack/auth/internal/config"
 	"github.com/telhawk-systems/telhawk-stack/auth/internal/handlers"
 	"github.com/telhawk-systems/telhawk-stack/auth/internal/repository"
+	"github.com/telhawk-systems/telhawk-stack/auth/internal/server"
 	"github.com/telhawk-systems/telhawk-stack/auth/internal/service"
 )
 
@@ -96,56 +96,12 @@ func main() {
 
 	// Initialize HTTP handlers
 	handler := handlers.NewAuthHandler(authService)
-
-	// Setup HTTP router
-	mux := http.NewServeMux()
-	mux.HandleFunc("/api/v1/auth/login", handler.Login)
-	mux.HandleFunc("/api/v1/auth/refresh", handler.RefreshToken)
-	mux.HandleFunc("/api/v1/auth/validate", handler.ValidateToken)
-	mux.HandleFunc("/api/v1/auth/validate-hec", handler.ValidateHECToken)
-	mux.HandleFunc("/api/v1/auth/revoke", handler.RevokeToken)
-
-	// User management endpoints (admin-only, requires authentication)
-	// Use Go 1.22+ method routing for explicit path matching
-	mux.HandleFunc("POST /api/v1/users/create", handler.CreateUser)
-	mux.HandleFunc("GET /api/v1/users/get", handler.GetUser)
-	mux.HandleFunc("PUT /api/v1/users/update", handler.UpdateUser)
-	mux.HandleFunc("PATCH /api/v1/users/update", handler.UpdateUser)
-	mux.HandleFunc("DELETE /api/v1/users/delete", handler.DeleteUser)
-	mux.HandleFunc("POST /api/v1/users/reset-password", handler.ResetPassword)
-	mux.HandleFunc("GET /api/v1/users", handler.ListUsers)
-
-	// HEC token management endpoints
-	mux.HandleFunc("/api/v1/hec/tokens", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodPost {
-			handler.CreateHECToken(w, r)
-		} else if r.Method == http.MethodGet {
-			handler.ListHECTokens(w, r)
-		} else {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		}
-	})
-	mux.HandleFunc("/api/v1/hec/tokens/revoke", handler.RevokeHECTokenHandler)
-
-	// RESTful endpoint for revoking specific token by ID: /api/v1/hec/tokens/{id}/revoke
-	mux.HandleFunc("/api/v1/hec/tokens/", func(w http.ResponseWriter, r *http.Request) {
-		path := r.URL.Path
-		// Check if path matches /api/v1/hec/tokens/{id}/revoke
-		if strings.HasPrefix(path, "/api/v1/hec/tokens/") && strings.HasSuffix(path, "/revoke") {
-			if r.Method == http.MethodDelete || r.Method == http.MethodPost {
-				handler.RevokeHECTokenByIDHandler(w, r)
-				return
-			}
-		}
-		http.Error(w, "Not found", http.StatusNotFound)
-	})
-
-	mux.HandleFunc("/healthz", handler.HealthCheck)
+	router := server.NewRouter(handler)
 
 	// Create server with config values
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.Server.Port),
-		Handler:      mux,
+		Handler:      router,
 		ReadTimeout:  cfg.Server.ReadTimeout,
 		WriteTimeout: cfg.Server.WriteTimeout,
 		IdleTimeout:  cfg.Server.IdleTimeout,

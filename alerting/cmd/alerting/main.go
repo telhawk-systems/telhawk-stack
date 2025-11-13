@@ -21,6 +21,7 @@ import (
 	"github.com/telhawk-systems/telhawk-stack/alerting/internal/handlers"
 	"github.com/telhawk-systems/telhawk-stack/alerting/internal/importer"
 	"github.com/telhawk-systems/telhawk-stack/alerting/internal/repository"
+	"github.com/telhawk-systems/telhawk-stack/alerting/internal/server"
 	"github.com/telhawk-systems/telhawk-stack/alerting/internal/service"
 )
 
@@ -135,70 +136,12 @@ func main() {
 	go eval.Run(evalCtx, 1*time.Minute) // Evaluate every minute
 
 	// Setup HTTP router
-	mux := http.NewServeMux()
-
-	// Health check
-	mux.HandleFunc("/healthz", handler.HealthCheck)
-
-	// Alerts API routes
-	mux.HandleFunc("/api/v1/alerts", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodGet {
-			handler.ListAlerts(w, r)
-		} else {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		}
-	})
-
-	mux.HandleFunc("/api/v1/alerts/", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodGet {
-			handler.GetAlert(w, r)
-		} else {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		}
-	})
-
-	// Cases API routes
-	mux.HandleFunc("/api/v1/cases", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodPost {
-			handler.CreateCase(w, r)
-		} else if r.Method == http.MethodGet {
-			handler.ListCases(w, r)
-		} else {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		}
-	})
-
-	// Note: These are simplified routes. In production, use a proper router like chi or gorilla/mux
-	mux.HandleFunc("/api/v1/cases/", func(w http.ResponseWriter, r *http.Request) {
-		path := r.URL.Path
-
-		// POST /api/v1/cases/:id/alerts
-		if r.Method == http.MethodPost && len(path) > len("/alerts") && path[len(path)-len("/alerts"):] == "/alerts" {
-			handler.AddAlertsToCase(w, r)
-			// GET /api/v1/cases/:id/alerts
-		} else if r.Method == http.MethodGet && len(path) > len("/alerts") && path[len(path)-len("/alerts"):] == "/alerts" {
-			handler.GetCaseAlerts(w, r)
-			// PUT /api/v1/cases/:id/close
-		} else if len(path) > len("/close") && path[len(path)-len("/close"):] == "/close" {
-			handler.CloseCase(w, r)
-			// PUT /api/v1/cases/:id/reopen
-		} else if len(path) > len("/reopen") && path[len(path)-len("/reopen"):] == "/reopen" {
-			handler.ReopenCase(w, r)
-			// PUT /api/v1/cases/:id
-		} else if r.Method == http.MethodPut {
-			handler.UpdateCase(w, r)
-			// GET /api/v1/cases/:id
-		} else if r.Method == http.MethodGet {
-			handler.GetCase(w, r)
-		} else {
-			http.Error(w, "Not found", http.StatusNotFound)
-		}
-	})
+	router := server.NewRouter(handler)
 
 	// Create HTTP server
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.Server.Port),
-		Handler:      mux,
+		Handler:      router,
 		ReadTimeout:  cfg.Server.ReadTimeout,
 		WriteTimeout: cfg.Server.WriteTimeout,
 		IdleTimeout:  cfg.Server.IdleTimeout,
