@@ -344,9 +344,26 @@ func (h *AuthHandler) CreateHECToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	// Return full token in JSON:API format (only shown once at creation)
+	resp := token.ToResponse()
+	response := map[string]interface{}{
+		"data": map[string]interface{}{
+			"type": "hec-token",
+			"id":   resp.ID,
+			"attributes": map[string]interface{}{
+				"token":      resp.Token,
+				"name":       resp.Name,
+				"user_id":    resp.UserID,
+				"enabled":    resp.Enabled,
+				"created_at": resp.CreatedAt,
+				"expires_at": resp.ExpiresAt,
+			},
+		},
+	}
+
+	w.Header().Set("Content-Type", "application/vnd.api+json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(token)
+	json.NewEncoder(w).Encode(response)
 }
 
 func (h *AuthHandler) ListHECTokens(w http.ResponseWriter, r *http.Request) {
@@ -367,8 +384,30 @@ func (h *AuthHandler) ListHECTokens(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(tokens)
+	// Convert to JSON:API format with masked tokens
+	data := make([]map[string]interface{}, len(tokens))
+	for i, token := range tokens {
+		resp := token.ToMaskedResponse()
+		data[i] = map[string]interface{}{
+			"type": "hec-token",
+			"id":   resp.ID,
+			"attributes": map[string]interface{}{
+				"token":      resp.Token,
+				"name":       resp.Name,
+				"user_id":    resp.UserID,
+				"enabled":    resp.Enabled,
+				"created_at": resp.CreatedAt,
+				"expires_at": resp.ExpiresAt,
+			},
+		}
+	}
+
+	response := map[string]interface{}{
+		"data": data,
+	}
+
+	w.Header().Set("Content-Type", "application/vnd.api+json")
+	json.NewEncoder(w).Encode(response)
 }
 
 func (h *AuthHandler) RevokeHECTokenHandler(w http.ResponseWriter, r *http.Request) {
