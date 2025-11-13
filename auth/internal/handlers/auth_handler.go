@@ -51,9 +51,25 @@ func (h *AuthHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	// Convert to JSON:API format
+	resp := user.ToResponse()
+	response := map[string]interface{}{
+		"data": map[string]interface{}{
+			"type": "user",
+			"id":   resp.ID,
+			"attributes": map[string]interface{}{
+				"username":   resp.Username,
+				"email":      resp.Email,
+				"roles":      resp.Roles,
+				"enabled":    resp.Enabled,
+				"created_at": resp.CreatedAt,
+			},
+		},
+	}
+
+	w.Header().Set("Content-Type", "application/vnd.api+json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(user)
+	json.NewEncoder(w).Encode(response)
 }
 
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
@@ -205,8 +221,29 @@ func (h *AuthHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(users)
+	// Convert to JSON:API format
+	data := make([]map[string]interface{}, len(users))
+	for i, user := range users {
+		resp := user.ToResponse()
+		data[i] = map[string]interface{}{
+			"type": "user",
+			"id":   resp.ID,
+			"attributes": map[string]interface{}{
+				"username":   resp.Username,
+				"email":      resp.Email,
+				"roles":      resp.Roles,
+				"enabled":    resp.Enabled,
+				"created_at": resp.CreatedAt,
+			},
+		}
+	}
+
+	response := map[string]interface{}{
+		"data": data,
+	}
+
+	w.Header().Set("Content-Type", "application/vnd.api+json")
+	json.NewEncoder(w).Encode(response)
 }
 
 func (h *AuthHandler) GetUser(w http.ResponseWriter, r *http.Request) {
@@ -227,8 +264,24 @@ func (h *AuthHandler) GetUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(user)
+	// Convert to JSON:API format
+	resp := user.ToResponse()
+	response := map[string]interface{}{
+		"data": map[string]interface{}{
+			"type": "user",
+			"id":   resp.ID,
+			"attributes": map[string]interface{}{
+				"username":   resp.Username,
+				"email":      resp.Email,
+				"roles":      resp.Roles,
+				"enabled":    resp.Enabled,
+				"created_at": resp.CreatedAt,
+			},
+		},
+	}
+
+	w.Header().Set("Content-Type", "application/vnd.api+json")
+	json.NewEncoder(w).Encode(response)
 }
 
 func (h *AuthHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
@@ -259,8 +312,24 @@ func (h *AuthHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(user)
+	// Convert to JSON:API format
+	resp := user.ToResponse()
+	response := map[string]interface{}{
+		"data": map[string]interface{}{
+			"type": "user",
+			"id":   resp.ID,
+			"attributes": map[string]interface{}{
+				"username":   resp.Username,
+				"email":      resp.Email,
+				"roles":      resp.Roles,
+				"enabled":    resp.Enabled,
+				"created_at": resp.CreatedAt,
+			},
+		},
+	}
+
+	w.Header().Set("Content-Type", "application/vnd.api+json")
+	json.NewEncoder(w).Encode(response)
 }
 
 func (h *AuthHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
