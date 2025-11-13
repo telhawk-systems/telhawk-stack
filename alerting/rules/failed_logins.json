@@ -1,0 +1,52 @@
+{
+  "name": "failed_logins",
+  "description": "Detects multiple failed login attempts from the same user or source IP",
+  "model": {
+    "correlation_type": "event_count",
+    "parameters": {
+      "time_window": "5m",
+      "query": {
+        "filter": {
+          "type": "and",
+          "conditions": [
+            {
+              "field": ".class_uid",
+              "operator": "eq",
+              "value": 3002
+            },
+            {
+              "field": ".status_id",
+              "operator": "eq",
+              "value": 2
+            }
+          ]
+        }
+      },
+      "threshold": {
+        "value": 5,
+        "operator": "gte"
+      },
+      "group_by": [".actor.user.name", ".src_endpoint.ip"]
+    }
+  },
+  "view": {
+    "title": "Multiple Failed Login Attempts",
+    "severity": "medium",
+    "description": "User {{actor.user.name}} from {{src_endpoint.ip}} had {{event_count}} failed login attempts in the last 5 minutes",
+    "category": "Authentication",
+    "tags": ["authentication", "brute-force", "failed-login"],
+    "mitre_attack": {
+      "tactics": ["Credential Access"],
+      "techniques": ["T1110.001 - Brute Force: Password Guessing"]
+    }
+  },
+  "controller": {
+    "detection": {
+      "suppression_window": "10m"
+    },
+    "response": {
+      "actions": [],
+      "severity_threshold": "medium"
+    }
+  }
+}

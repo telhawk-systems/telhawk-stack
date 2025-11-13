@@ -27,7 +27,7 @@
     "correlation_type": "event_count",
     "parameters": {
       "time_window": "5m",
-      "group_by": ["user.name", "src_endpoint.ip"]
+      "group_by": [".actor.user.name", ".src_endpoint.ip"]
     },
     "parameter_sets": [
       {"name": "dev", "threshold": 5},
@@ -37,7 +37,15 @@
   },
   "controller": {
     "detection": {
-      "query": "class_uid:3002 AND status_id:2",
+      "query": {
+        "filter": {
+          "type": "and",
+          "conditions": [
+            {"field": ".class_uid", "operator": "eq", "value": 3002},
+            {"field": ".status_id", "operator": "eq", "value": 2}
+          ]
+        }
+      },
       "threshold": 10,
       "operator": "gt"
     }
@@ -45,7 +53,7 @@
   "view": {
     "title": "Brute Force Login Attempts",
     "severity": "high",
-    "description": "User {{user.name}} from {{src_endpoint.ip}} had {{event_count}} failed logins in {{time_window}}"
+    "description": "User {{actor.user.name}} from {{src_endpoint.ip}} had {{event_count}} failed logins in {{time_window}}"
   }
 }
 ```
@@ -78,13 +86,19 @@
     "correlation_type": "value_count",
     "parameters": {
       "time_window": "10m",
-      "field": "dst_endpoint.port",
-      "group_by": ["src_endpoint.ip"]
+      "field": ".dst_endpoint.port",
+      "group_by": [".src_endpoint.ip"]
     }
   },
   "controller": {
     "detection": {
-      "query": "class_uid:4001",
+      "query": {
+        "filter": {
+          "field": ".class_uid",
+          "operator": "eq",
+          "value": 4001
+        }
+      },
       "threshold": 100,
       "operator": "gt"
     }
@@ -124,11 +138,44 @@
     "correlation_type": "temporal",
     "parameters": {
       "time_window": "5m",
-      "group_by": ["user.name"],
+      "group_by": [".actor.user.name"],
       "queries": [
-        {"name": "failed_auth", "query": "class_uid:3002 AND status_id:2"},
-        {"name": "file_delete", "query": "class_uid:4005 AND activity_id:5"},
-        {"name": "external_conn", "query": "class_uid:4001 AND dst_endpoint.type:Internet"}
+        {
+          "name": "failed_auth",
+          "query": {
+            "filter": {
+              "type": "and",
+              "conditions": [
+                {"field": ".class_uid", "operator": "eq", "value": 3002},
+                {"field": ".status_id", "operator": "eq", "value": 2}
+              ]
+            }
+          }
+        },
+        {
+          "name": "file_delete",
+          "query": {
+            "filter": {
+              "type": "and",
+              "conditions": [
+                {"field": ".class_uid", "operator": "eq", "value": 4005},
+                {"field": ".activity_id", "operator": "eq", "value": 5}
+              ]
+            }
+          }
+        },
+        {
+          "name": "external_conn",
+          "query": {
+            "filter": {
+              "type": "and",
+              "conditions": [
+                {"field": ".class_uid", "operator": "eq", "value": 4001},
+                {"field": ".dst_endpoint.type", "operator": "eq", "value": "Internet"}
+              ]
+            }
+          }
+        }
       ]
     }
   },
@@ -140,7 +187,7 @@
   "view": {
     "title": "Suspicious Activity Cluster",
     "severity": "critical",
-    "description": "User {{user.name}} exhibited multiple suspicious behaviors in {{time_window}}"
+    "description": "User {{actor.user.name}} exhibited multiple suspicious behaviors in {{time_window}}"
   }
 }
 ```
@@ -173,11 +220,29 @@
     "parameters": {
       "time_window": "30m",
       "max_gap": "10m",
-      "group_by": ["user.name"],
+      "group_by": [".actor.user.name"],
       "sequence": [
-        {"step": 1, "name": "recon", "query": "class_uid:6003"},
-        {"step": 2, "name": "exploit", "query": "class_uid:2004"},
-        {"step": 3, "name": "persistence", "query": "class_uid:1003"}
+        {
+          "step": 1,
+          "name": "recon",
+          "query": {
+            "filter": {"field": ".class_uid", "operator": "eq", "value": 6003}
+          }
+        },
+        {
+          "step": 2,
+          "name": "exploit",
+          "query": {
+            "filter": {"field": ".class_uid", "operator": "eq", "value": 2004}
+          }
+        },
+        {
+          "step": 3,
+          "name": "persistence",
+          "query": {
+            "filter": {"field": ".class_uid", "operator": "eq", "value": 1003}
+          }
+        }
       ]
     }
   },
@@ -189,7 +254,7 @@
   "view": {
     "title": "Attack Chain Detected",
     "severity": "critical",
-    "description": "User {{user.name}} executed attack sequence: recon → exploit → persistence"
+    "description": "User {{actor.user.name}} executed attack sequence: recon → exploit → persistence"
   }
 }
 ```
@@ -225,16 +290,32 @@
       "time_window": "10m",
       "left_query": {
         "name": "failed_auth",
-        "query": "class_uid:3002 AND status_id:2"
+        "query": {
+          "filter": {
+            "type": "and",
+            "conditions": [
+              {"field": ".class_uid", "operator": "eq", "value": 3002},
+              {"field": ".status_id", "operator": "eq", "value": 2}
+            ]
+          }
+        }
       },
       "right_query": {
         "name": "file_delete",
-        "query": "class_uid:4005 AND activity_id:5"
+        "query": {
+          "filter": {
+            "type": "and",
+            "conditions": [
+              {"field": ".class_uid", "operator": "eq", "value": 4005},
+              {"field": ".activity_id", "operator": "eq", "value": 5}
+            ]
+          }
+        }
       },
       "join_conditions": [
         {
-          "left_field": "user.name",
-          "right_field": "actor.user.name",
+          "left_field": ".user.name",
+          "right_field": ".actor.user.name",
           "operator": "eq"
         }
       ],
@@ -286,27 +367,35 @@
     "correlation_type": "event_count",
     "parameters": {
       "time_window": "5m",
-      "group_by": ["user.name"]
+      "group_by": [".actor.user.name"]
     }
   },
   "controller": {
     "detection": {
-      "query": "class_uid:3002 AND status_id:2",
+      "query": {
+        "filter": {
+          "type": "and",
+          "conditions": [
+            {"field": ".class_uid", "operator": "eq", "value": 3002},
+            {"field": ".status_id", "operator": "eq", "value": 2}
+          ]
+        }
+      },
       "threshold": 10,
       "operator": "gt"
     },
     "suppression": {
       "enabled": true,
       "window": "1h",
-      "key": ["user.name", "src_endpoint.ip"],
+      "key": [".actor.user.name", ".src_endpoint.ip"],
       "max_alerts": 1,
-      "reset_on_change": ["severity"]
+      "reset_on_change": [".severity"]
     }
   },
   "view": {
     "title": "Brute Force Login Attempts",
     "severity": "high",
-    "description": "User {{user.name}} had {{event_count}} failed logins (suppressed for 1h)"
+    "description": "User {{actor.user.name}} had {{event_count}} failed logins (suppressed for 1h)"
   }
 }
 ```
@@ -356,7 +445,7 @@ TTL: suppression.window duration
       "baseline_window": "7d",
       "comparison_window": "5m",
       "field": "event_count",
-      "group_by": ["user.name"],
+      "group_by": [".actor.user.name"],
       "min_baseline_samples": 50
     },
     "parameter_sets": [
@@ -367,14 +456,20 @@ TTL: suppression.window duration
   },
   "controller": {
     "detection": {
-      "query": "class_uid:4005",
+      "query": {
+        "filter": {
+          "field": ".class_uid",
+          "operator": "eq",
+          "value": 4005
+        }
+      },
       "deviation_threshold": 2.0
     }
   },
   "view": {
     "title": "Abnormal File Access Volume",
     "severity": "medium",
-    "description": "User {{user.name}} accessed {{current_count}} files vs baseline {{baseline_avg}} ({{deviation}}σ)"
+    "description": "User {{actor.user.name}} accessed {{current_count}} files vs baseline {{baseline_avg}} ({{deviation}}σ)"
   }
 }
 ```
@@ -423,7 +518,7 @@ TTL: baseline_window * 2
     "parameters": {
       "expected_interval": "5m",
       "grace_period": "30s",
-      "entity_field": "device.hostname",
+      "entity_field": ".device.hostname",
       "alert_after_missing": 2
     },
     "parameter_sets": [
@@ -433,7 +528,15 @@ TTL: baseline_window * 2
   },
   "controller": {
     "detection": {
-      "query": "metadata.product.name:'TelHawk Agent' AND class_uid:6001"
+      "query": {
+        "filter": {
+          "type": "and",
+          "conditions": [
+            {"field": ".metadata.product.name", "operator": "eq", "value": "TelHawk Agent"},
+            {"field": ".class_uid", "operator": "eq", "value": 6001}
+          ]
+        }
+      }
     }
   },
   "view": {

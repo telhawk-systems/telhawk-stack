@@ -2,11 +2,17 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/telhawk-systems/telhawk-stack/rules/internal/models"
 	"github.com/telhawk-systems/telhawk-stack/rules/internal/repository"
+)
+
+var (
+	// ErrBuiltinRuleProtected is returned when attempting to modify a builtin rule
+	ErrBuiltinRuleProtected = errors.New("builtin rules cannot be modified or deleted")
 )
 
 type Service struct {
@@ -41,9 +47,14 @@ func (s *Service) CreateSchema(ctx context.Context, req *models.CreateSchemaRequ
 // UpdateSchema creates a new version of an existing detection schema
 func (s *Service) UpdateSchema(ctx context.Context, id string, req *models.UpdateSchemaRequest, userID string) (*models.DetectionSchema, error) {
 	// Verify the rule exists
-	_, err := s.repo.GetLatestSchemaByID(ctx, id)
+	existingSchema, err := s.repo.GetLatestSchemaByID(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("rule not found: %w", err)
+	}
+
+	// Protect builtin rules from modification
+	if s.isBuiltinRule(existingSchema) {
+		return nil, ErrBuiltinRuleProtected
 	}
 
 	versionUUID, _ := uuid.NewV7()
@@ -138,6 +149,16 @@ func (s *Service) GetVersionHistory(ctx context.Context, id string) (*models.Ver
 
 // DisableSchema disables a specific version
 func (s *Service) DisableSchema(ctx context.Context, versionID, userID string) error {
+	// Check if this is a builtin rule
+	schema, err := s.repo.GetSchemaByVersionID(ctx, versionID)
+	if err != nil {
+		return err
+	}
+
+	if s.isBuiltinRule(schema) {
+		return ErrBuiltinRuleProtected
+	}
+
 	return s.repo.DisableSchema(ctx, versionID, userID)
 }
 
@@ -148,5 +169,36 @@ func (s *Service) EnableSchema(ctx context.Context, versionID string) error {
 
 // HideSchema hides (soft deletes) a specific version
 func (s *Service) HideSchema(ctx context.Context, versionID, userID string) error {
+	// Check if this is a builtin rule
+	schema, err := s.repo.GetSchemaByVersionID(ctx, versionID)
+	if err != nil {
+		return err
+	}
+
+	if s.isBuiltinRule(schema) {
+		return ErrBuiltinRuleProtected
+	}
+
 	return s.repo.HideSchema(ctx, versionID, userID)
+}
+
+// SetActiveParameterSet updates the active parameter set for a rule version
+// This is a tuning change and does not create a new version
+func (s *Service) SetActiveParameterSet(ctx context.Context, versionID, parameterSet string) error {
+	return s.repo.SetActiveParameterSet(ctx, versionID, parameterSet)
+}
+
+// isBuiltinRule checks if a rule is a builtin system rule
+func (s *Service) isBuiltinRule(schema *models.DetectionSchema) bool {
+	if schema.Controller == nil {
+		return false
+	}
+
+	metadata, ok := schema.Controller["metadata"].(map[string]interface{})
+	if !ok {
+		return false
+	}
+
+	source, ok := metadata["source"].(string)
+	return ok && source == "builtin"
 }

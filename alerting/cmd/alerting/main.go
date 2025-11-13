@@ -14,9 +14,12 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/redis/go-redis/v9"
 	"github.com/telhawk-systems/telhawk-stack/alerting/internal/config"
+	"github.com/telhawk-systems/telhawk-stack/alerting/internal/correlation"
 	"github.com/telhawk-systems/telhawk-stack/alerting/internal/evaluator"
 	"github.com/telhawk-systems/telhawk-stack/alerting/internal/handlers"
+	"github.com/telhawk-systems/telhawk-stack/alerting/internal/importer"
 	"github.com/telhawk-systems/telhawk-stack/alerting/internal/repository"
 	"github.com/telhawk-systems/telhawk-stack/alerting/internal/service"
 )
@@ -64,6 +67,34 @@ func main() {
 	// Initialize service
 	svc := service.NewService(repo)
 
+	// Initialize Redis for state management
+	var redisClient *redis.Client
+	var stateManager *correlation.StateManager
+	if cfg.Redis.Enabled {
+		log.Println("Connecting to Redis for correlation state management...")
+		redisOpts, err := redis.ParseURL(cfg.Redis.URL)
+		if err != nil {
+			log.Fatalf("Failed to parse Redis URL: %v", err)
+		}
+		redisOpts.MaxRetries = cfg.Redis.MaxRetries
+		redisOpts.PoolSize = cfg.Redis.PoolSize
+
+		redisClient = redis.NewClient(redisOpts)
+
+		// Test Redis connection
+		if err := redisClient.Ping(context.Background()).Err(); err != nil {
+			log.Printf("Warning: Redis connection failed: %v", err)
+			log.Println("Correlation features will be degraded without Redis")
+			stateManager = correlation.NewStateManager(nil, false)
+		} else {
+			log.Println("Redis connection successful")
+			stateManager = correlation.NewStateManager(redisClient, true)
+		}
+	} else {
+		log.Println("Redis disabled - correlation state management unavailable")
+		stateManager = correlation.NewStateManager(nil, false)
+	}
+
 	// Initialize evaluation engine and storage client
 	rulesClient := evaluator.NewHTTPRulesClient("http://rules:8084")
 	storageClient := evaluator.NewHTTPStorageClient(
@@ -72,7 +103,28 @@ func main() {
 		cfg.Storage.Password,
 		cfg.Storage.Insecure,
 	)
-	eval := evaluator.NewEvaluator(rulesClient, storageClient)
+
+	// Initialize query executor for correlation rules
+	queryExecutor := correlation.NewQueryExecutor(
+		cfg.Storage.URL,
+		cfg.Storage.Username,
+		cfg.Storage.Password,
+		cfg.Storage.Insecure,
+	)
+
+	// Initialize evaluator with correlation support
+	eval := evaluator.NewEvaluator(rulesClient, storageClient, stateManager, queryExecutor)
+
+	// Import builtin detection rules
+	log.Println("Importing builtin detection rules...")
+	ruleImporter := importer.NewImporter("/etc/telhawk/alerting/rules", "http://rules:8084/api/v1/schemas")
+	importCtx, importCancel := context.WithTimeout(context.Background(), 30*time.Second)
+	if err := ruleImporter.Import(importCtx); err != nil {
+		log.Printf("Warning: Rule import encountered errors: %v", err)
+		// Don't fail startup on import errors
+	}
+	importCancel()
+	log.Println("Rule import complete")
 
 	// Initialize handlers with storage client access
 	handler := handlers.NewHandler(svc, storageClient)
@@ -171,6 +223,14 @@ func main() {
 
 	if err := srv.Shutdown(ctx); err != nil {
 		log.Fatalf("Server forced to shutdown: %v", err)
+	}
+
+	// Close Redis connection if enabled
+	if redisClient != nil {
+		log.Println("Closing Redis connection...")
+		if err := redisClient.Close(); err != nil {
+			log.Printf("Error closing Redis connection: %v", err)
+		}
 	}
 
 	log.Println("Server stopped gracefully")

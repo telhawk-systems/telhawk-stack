@@ -27,6 +27,7 @@ type Repository interface {
 	DisableSchema(ctx context.Context, versionID, userID string) error
 	EnableSchema(ctx context.Context, versionID string) error
 	HideSchema(ctx context.Context, versionID, userID string) error
+	SetActiveParameterSet(ctx context.Context, versionID, parameterSet string) error
 	Close()
 }
 
@@ -433,6 +434,39 @@ func (r *PostgresRepository) HideSchema(ctx context.Context, versionID, userID s
 	result, err := r.pool.Exec(ctx, query, versionID, userID)
 	if err != nil {
 		return fmt.Errorf("failed to hide schema: %w", err)
+	}
+
+	if result.RowsAffected() == 0 {
+		return ErrSchemaNotFound
+	}
+
+	return nil
+}
+
+// SetActiveParameterSet updates the active parameter set for a schema version
+// This is a tuning parameter change and does NOT create a new version
+func (r *PostgresRepository) SetActiveParameterSet(ctx context.Context, versionID, parameterSet string) error {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	// Update the model JSONB field to set active_parameter_set
+	// Uses PostgreSQL's jsonb_set to update a specific key
+	query := `
+		UPDATE detection_schemas
+		SET model = jsonb_set(
+			COALESCE(model, '{}'::jsonb),
+			'{active_parameter_set}',
+			to_jsonb($2::text),
+			true
+		)
+		WHERE version_id = $1
+		AND disabled_at IS NULL
+		AND hidden_at IS NULL
+	`
+
+	result, err := r.pool.Exec(ctx, query, versionID, parameterSet)
+	if err != nil {
+		return fmt.Errorf("failed to set active parameter set: %w", err)
 	}
 
 	if result.RowsAffected() == 0 {

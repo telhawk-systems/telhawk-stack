@@ -1,0 +1,389 @@
+package correlation
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"time"
+)
+
+// Event represents a simplified OCSF event
+type Event struct {
+	Time      time.Time              `json:"time"`
+	Fields    map[string]interface{} `json:"fields"`
+	RawSource map[string]interface{} `json:"_source"`
+}
+
+// QueryOrchestrator executes correlation queries against OpenSearch
+type QueryOrchestrator struct {
+	storageURL string
+	username   string
+	password   string
+	insecure   bool
+	httpClient *http.Client
+}
+
+// NewQueryOrchestrator creates a new query orchestrator
+func NewQueryOrchestrator(storageURL, username, password string, insecure bool) *QueryOrchestrator {
+	return &QueryOrchestrator{
+		storageURL: storageURL,
+		username:   username,
+		password:   password,
+		insecure:   insecure,
+		httpClient: &http.Client{
+			Timeout: 30 * time.Second,
+		},
+	}
+}
+
+// QueryResult represents the result of a query execution
+type QueryResult struct {
+	Events     []*Event
+	TotalCount int64
+	Took       int64 // Milliseconds
+}
+
+// ExecuteQuery executes a single query with time window
+func (qo *QueryOrchestrator) ExecuteQuery(ctx context.Context, query string, timeWindow time.Duration) (*QueryResult, error) {
+	now := time.Now()
+	from := now.Add(-timeWindow)
+
+	// Build OpenSearch query
+	osQuery := map[string]interface{}{
+		"query": map[string]interface{}{
+			"bool": map[string]interface{}{
+				"must": []interface{}{
+					map[string]interface{}{
+						"query_string": map[string]interface{}{
+							"query": query,
+						},
+					},
+					map[string]interface{}{
+						"range": map[string]interface{}{
+							"time": map[string]interface{}{
+								"gte": from.UnixMilli(),
+								"lte": now.UnixMilli(),
+							},
+						},
+					},
+				},
+			},
+		},
+		"size": 10000, // Max results
+		"sort": []interface{}{
+			map[string]interface{}{
+				"time": map[string]interface{}{
+					"order": "desc",
+				},
+			},
+		},
+	}
+
+	return qo.executeOpenSearchQuery(ctx, osQuery)
+}
+
+// ExecuteCountQuery executes a count aggregation query
+func (qo *QueryOrchestrator) ExecuteCountQuery(ctx context.Context, query string, timeWindow time.Duration, groupBy []string) (map[string]int64, error) {
+	now := time.Now()
+	from := now.Add(-timeWindow)
+
+	// Build aggregation query
+	osQuery := map[string]interface{}{
+		"query": map[string]interface{}{
+			"bool": map[string]interface{}{
+				"must": []interface{}{
+					map[string]interface{}{
+						"query_string": map[string]interface{}{
+							"query": query,
+						},
+					},
+					map[string]interface{}{
+						"range": map[string]interface{}{
+							"time": map[string]interface{}{
+								"gte": from.UnixMilli(),
+								"lte": now.UnixMilli(),
+							},
+						},
+					},
+				},
+			},
+		},
+		"size": 0, // We only want aggregations
+	}
+
+	// Add aggregation if groupBy is specified
+	if len(groupBy) > 0 {
+		agg := buildTermsAggregation(groupBy)
+		osQuery["aggs"] = agg
+	}
+
+	// Execute query
+	result, err := qo.executeOpenSearchAggQuery(ctx, osQuery)
+	if err != nil {
+		return nil, err
+	}
+
+	// Parse aggregation results
+	counts := make(map[string]int64)
+	if len(groupBy) == 0 {
+		// No grouping - return total count
+		counts["_total"] = result["hits"].(map[string]interface{})["total"].(map[string]interface{})["value"].(int64)
+	} else {
+		// Parse grouped results
+		counts = parseAggregationBuckets(result, groupBy[0])
+	}
+
+	return counts, nil
+}
+
+// ExecuteCardinalityQuery executes a cardinality (distinct count) aggregation
+func (qo *QueryOrchestrator) ExecuteCardinalityQuery(ctx context.Context, query string, timeWindow time.Duration, field string, groupBy []string) (map[string]int64, error) {
+	now := time.Now()
+	from := now.Add(-timeWindow)
+
+	osQuery := map[string]interface{}{
+		"query": map[string]interface{}{
+			"bool": map[string]interface{}{
+				"must": []interface{}{
+					map[string]interface{}{
+						"query_string": map[string]interface{}{
+							"query": query,
+						},
+					},
+					map[string]interface{}{
+						"range": map[string]interface{}{
+							"time": map[string]interface{}{
+								"gte": from.UnixMilli(),
+								"lte": now.UnixMilli(),
+							},
+						},
+					},
+				},
+			},
+		},
+		"size": 0,
+		"aggs": map[string]interface{}{
+			"distinct_count": map[string]interface{}{
+				"cardinality": map[string]interface{}{
+					"field": field,
+				},
+			},
+		},
+	}
+
+	// Add grouping if specified
+	if len(groupBy) > 0 {
+		osQuery["aggs"] = map[string]interface{}{
+			"groups": buildCardinalityWithGrouping(groupBy[0], field),
+		}
+	}
+
+	result, err := qo.executeOpenSearchAggQuery(ctx, osQuery)
+	if err != nil {
+		return nil, err
+	}
+
+	// Parse results
+	counts := make(map[string]int64)
+	if len(groupBy) == 0 {
+		// No grouping
+		aggValue := result["aggregations"].(map[string]interface{})["distinct_count"].(map[string]interface{})["value"].(float64)
+		counts["_total"] = int64(aggValue)
+	} else {
+		// Grouped results
+		buckets := result["aggregations"].(map[string]interface{})["groups"].(map[string]interface{})["buckets"].([]interface{})
+		for _, bucket := range buckets {
+			b := bucket.(map[string]interface{})
+			key := b["key"].(string)
+			cardValue := b["distinct_count"].(map[string]interface{})["value"].(float64)
+			counts[key] = int64(cardValue)
+		}
+	}
+
+	return counts, nil
+}
+
+// executeOpenSearchQuery executes a query and returns events
+func (qo *QueryOrchestrator) executeOpenSearchQuery(ctx context.Context, query map[string]interface{}) (*QueryResult, error) {
+	// Serialize query
+	queryBytes, err := json.Marshal(query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal query: %w", err)
+	}
+
+	// Create request
+	url := fmt.Sprintf("%s/telhawk-events-*/_search", qo.storageURL)
+	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(queryBytes))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.SetBasicAuth(qo.username, qo.password)
+
+	// Execute request
+	resp, err := qo.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute query: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("query failed with status %d: %s", resp.StatusCode, string(body))
+	}
+
+	// Parse response
+	var result map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	// Extract events
+	hits := result["hits"].(map[string]interface{})
+	total := hits["total"].(map[string]interface{})["value"].(float64)
+	took := result["took"].(float64)
+	hitsList := hits["hits"].([]interface{})
+
+	events := make([]*Event, 0, len(hitsList))
+	for _, hit := range hitsList {
+		h := hit.(map[string]interface{})
+		source := h["_source"].(map[string]interface{})
+
+		event := &Event{
+			RawSource: source,
+			Fields:    source,
+		}
+
+		// Extract time field
+		if timeVal, ok := source["time"]; ok {
+			if timeInt, ok := timeVal.(float64); ok {
+				event.Time = time.UnixMilli(int64(timeInt))
+			}
+		}
+
+		events = append(events, event)
+	}
+
+	return &QueryResult{
+		Events:     events,
+		TotalCount: int64(total),
+		Took:       int64(took),
+	}, nil
+}
+
+// executeOpenSearchAggQuery executes an aggregation query and returns raw results
+func (qo *QueryOrchestrator) executeOpenSearchAggQuery(ctx context.Context, query map[string]interface{}) (map[string]interface{}, error) {
+	queryBytes, err := json.Marshal(query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal query: %w", err)
+	}
+
+	url := fmt.Sprintf("%s/telhawk-events-*/_search", qo.storageURL)
+	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(queryBytes))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.SetBasicAuth(qo.username, qo.password)
+
+	resp, err := qo.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute query: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("query failed with status %d: %s", resp.StatusCode, string(body))
+	}
+
+	var result map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	return result, nil
+}
+
+// buildTermsAggregation builds a nested terms aggregation for groupBy fields
+func buildTermsAggregation(groupBy []string) map[string]interface{} {
+	if len(groupBy) == 0 {
+		return nil
+	}
+
+	// Build innermost aggregation
+	agg := map[string]interface{}{
+		"terms": map[string]interface{}{
+			"field": groupBy[len(groupBy)-1],
+			"size":  1000,
+		},
+	}
+
+	// Wrap in outer aggregations for each groupBy field
+	for i := len(groupBy) - 2; i >= 0; i-- {
+		agg = map[string]interface{}{
+			"terms": map[string]interface{}{
+				"field": groupBy[i],
+				"size":  1000,
+			},
+			"aggs": map[string]interface{}{
+				"nested": agg,
+			},
+		}
+	}
+
+	return map[string]interface{}{
+		"groups": agg,
+	}
+}
+
+// buildCardinalityWithGrouping builds a terms aggregation with cardinality sub-aggregation
+func buildCardinalityWithGrouping(groupByField, cardinalityField string) map[string]interface{} {
+	return map[string]interface{}{
+		"terms": map[string]interface{}{
+			"field": groupByField,
+			"size":  1000,
+		},
+		"aggs": map[string]interface{}{
+			"distinct_count": map[string]interface{}{
+				"cardinality": map[string]interface{}{
+					"field": cardinalityField,
+				},
+			},
+		},
+	}
+}
+
+// parseAggregationBuckets parses aggregation buckets into a count map
+func parseAggregationBuckets(result map[string]interface{}, aggName string) map[string]int64 {
+	counts := make(map[string]int64)
+
+	aggs, ok := result["aggregations"].(map[string]interface{})
+	if !ok {
+		return counts
+	}
+
+	groups, ok := aggs["groups"].(map[string]interface{})
+	if !ok {
+		return counts
+	}
+
+	buckets, ok := groups["buckets"].([]interface{})
+	if !ok {
+		return counts
+	}
+
+	for _, bucket := range buckets {
+		b := bucket.(map[string]interface{})
+		key := fmt.Sprintf("%v", b["key"])
+		docCount := b["doc_count"].(float64)
+		counts[key] = int64(docCount)
+	}
+
+	return counts
+}

@@ -1,0 +1,43 @@
+{
+  "name": "port_scanning",
+  "description": "Detects port scanning activity (connections to many different ports)",
+  "model": {
+    "correlation_type": "value_count",
+    "parameters": {
+      "time_window": "10m",
+      "query": {
+        "filter": {
+          "field": ".class_uid",
+          "operator": "eq",
+          "value": 4001
+        }
+      },
+      "field": ".dst_endpoint.port",
+      "threshold": {
+        "value": 20,
+        "operator": "gt"
+      },
+      "group_by": [".src_endpoint.ip"]
+    }
+  },
+  "view": {
+    "title": "Port Scanning Detected",
+    "severity": "high",
+    "description": "Source IP {{src_endpoint.ip}} connected to {{distinct_count}} different ports in 10 minutes",
+    "category": "Network Security",
+    "tags": ["port-scan", "reconnaissance", "network"],
+    "mitre_attack": {
+      "tactics": ["Discovery"],
+      "techniques": ["T1046 - Network Service Scanning"]
+    }
+  },
+  "controller": {
+    "detection": {
+      "suppression_window": "30m"
+    },
+    "response": {
+      "actions": [],
+      "severity_threshold": "high"
+    }
+  }
+}

@@ -71,6 +71,9 @@ func main() {
 	// Health check
 	mux.HandleFunc("/healthz", handler.HealthCheck)
 
+	// Correlation types API
+	mux.HandleFunc("/correlation/types", handler.GetCorrelationTypes)
+
 	// API routes (proxied from /api/rules/schemas via web backend)
 	mux.HandleFunc("/schemas", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
@@ -89,6 +92,9 @@ func main() {
 		// GET /schemas/:id/versions
 		if len(path) > len("/versions") && path[len(path)-len("/versions"):] == "/versions" {
 			handler.GetVersionHistory(w, r)
+			// PUT /schemas/:id/parameters
+		} else if len(path) > len("/parameters") && path[len(path)-len("/parameters"):] == "/parameters" {
+			handler.SetActiveParameterSet(w, r)
 			// PUT /schemas/:id/disable
 		} else if len(path) > len("/disable") && path[len(path)-len("/disable"):] == "/disable" {
 			handler.DisableSchema(w, r)

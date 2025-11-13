@@ -13,8 +13,17 @@ database:
     database: telhawk_alerting
     sslmode: disable
 
+redis:
+  url: redis://redis:6379/0
+  enabled: true
+  max_retries: 3
+  pool_size: 10
+
 storage:
   url: https://opensearch:9200
   username: admin
   password: TelHawk123!
   insecure: true
+
+rules:
+  url: http://rules:8084

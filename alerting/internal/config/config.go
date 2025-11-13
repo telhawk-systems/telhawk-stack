@@ -11,7 +11,9 @@ import (
 type Config struct {
 	Server   ServerConfig   `mapstructure:"server"`
 	Database DatabaseConfig `mapstructure:"database"`
+	Redis    RedisConfig    `mapstructure:"redis"`
 	Storage  StorageConfig  `mapstructure:"storage"`
+	Rules    RulesConfig    `mapstructure:"rules"`
 }
 
 // ServerConfig holds HTTP server configuration
@@ -37,12 +39,25 @@ type PostgresConfig struct {
 	SSLMode  string `mapstructure:"sslmode"`
 }
 
+// RedisConfig holds Redis configuration for state management
+type RedisConfig struct {
+	URL        string `mapstructure:"url"`
+	Enabled    bool   `mapstructure:"enabled"`
+	MaxRetries int    `mapstructure:"max_retries"`
+	PoolSize   int    `mapstructure:"pool_size"`
+}
+
 // StorageConfig holds OpenSearch configuration
 type StorageConfig struct {
 	URL      string `mapstructure:"url"`
 	Username string `mapstructure:"username"`
 	Password string `mapstructure:"password"`
 	Insecure bool   `mapstructure:"insecure"`
+}
+
+// RulesConfig holds Rules service configuration
+type RulesConfig struct {
+	URL string `mapstructure:"url"`
 }
 
 // Load reads configuration from file and environment variables
@@ -62,10 +77,17 @@ func Load(configPath string) (*Config, error) {
 	v.SetDefault("database.postgres.database", "telhawk_alerting")
 	v.SetDefault("database.postgres.sslmode", "disable")
 
+	v.SetDefault("redis.url", "redis://localhost:6379/0")
+	v.SetDefault("redis.enabled", true)
+	v.SetDefault("redis.max_retries", 3)
+	v.SetDefault("redis.pool_size", 10)
+
 	v.SetDefault("storage.url", "https://localhost:9200")
 	v.SetDefault("storage.username", "admin")
 	v.SetDefault("storage.password", "")
 	v.SetDefault("storage.insecure", true)
+
+	v.SetDefault("rules.url", "http://localhost:8084")
 
 	// Read from config file if provided
 	if configPath != "" {
