@@ -27,6 +27,9 @@ COPY --from=builder /build/alerting .
 # Copy config file
 COPY config.yaml /etc/telhawk/alerting/config.yaml
 
+# Copy builtin detection rules
+COPY rules /etc/telhawk/alerting/rules
+
 # Copy migrations
 COPY migrations /app/migrations
 

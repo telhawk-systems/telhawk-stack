@@ -252,10 +252,15 @@ services:
       - ALERTING_DATABASE_POSTGRES_PASSWORD=${ALERTING_DB_PASSWORD:-telhawk-alerting-dev}
       - ALERTING_DATABASE_POSTGRES_DATABASE=telhawk_alerting
       - ALERTING_DATABASE_POSTGRES_SSLMODE=require
+      - ALERTING_REDIS_URL=redis://redis:6379/0
+      - ALERTING_REDIS_ENABLED=${ALERTING_REDIS_ENABLED:-true}
+      - ALERTING_REDIS_MAX_RETRIES=3
+      - ALERTING_REDIS_POOL_SIZE=10
       - ALERTING_STORAGE_URL=https://opensearch:9200
       - ALERTING_STORAGE_USERNAME=${OPENSEARCH_ADMIN_USER:-admin}
       - ALERTING_STORAGE_PASSWORD=${OPENSEARCH_PASSWORD:-TelHawk123!}
       - ALERTING_STORAGE_INSECURE=true
+      - ALERTING_RULES_URL=http://rules:8084
     volumes:
       - telhawk-certs:/certs:ro
     networks:
@@ -267,6 +272,10 @@ services:
       alerting-db:
         condition: service_healthy
       opensearch:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      rules:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "/busybox/wget", "-q", "-O", "-", "http://localhost:8085/healthz"]

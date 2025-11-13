@@ -1,0 +1,77 @@
+{
+  "name": "privilege_escalation_after_failed_login",
+  "description": "Detects privilege escalation shortly after failed login attempts",
+  "model": {
+    "correlation_type": "temporal_ordered",
+    "parameters": {
+      "time_window": "15m",
+      "max_gap": "10m",
+      "group_by": [".actor.user.name"],
+      "sequence": [
+        {
+          "step": 1,
+          "name": "failed_login",
+          "query": {
+            "filter": {
+              "type": "and",
+              "conditions": [
+                {
+                  "field": ".class_uid",
+                  "operator": "eq",
+                  "value": 3002
+                },
+                {
+                  "field": ".status_id",
+                  "operator": "eq",
+                  "value": 2
+                }
+              ]
+            }
+          }
+        },
+        {
+          "step": 2,
+          "name": "privilege_escalation",
+          "query": {
+            "filter": {
+              "type": "or",
+              "conditions": [
+                {
+                  "field": ".class_uid",
+                  "operator": "eq",
+                  "value": 3001
+                },
+                {
+                  "field": ".class_uid",
+                  "operator": "eq",
+                  "value": 1007
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  },
+  "view": {
+    "title": "Privilege Escalation After Failed Login",
+    "severity": "high",
+    "description": "User {{actor.user.name}} escalated privileges after failed login attempt",
+    "category": "Privilege Escalation",
+    "tags": ["privilege-escalation", "authentication", "suspicious-activity"],
+    "mitre_attack": {
+      "tactics": ["Privilege Escalation", "Persistence"],
+      "techniques": ["T1068 - Exploitation for Privilege Escalation", "T1078 - Valid Accounts"]
+    }
+  },
+  "controller": {
+    "detection": {
+      "suppression_window": "30m",
+      "strict_order": true
+    },
+    "response": {
+      "actions": [],
+      "severity_threshold": "high"
+    }
+  }
+}

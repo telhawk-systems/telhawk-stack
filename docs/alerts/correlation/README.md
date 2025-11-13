@@ -127,12 +127,20 @@ Start with **[CORE_TYPES.md](CORE_TYPES.md)** to understand the 8 essential corr
     "correlation_type": "event_count",
     "parameters": {
       "time_window": "5m",
-      "group_by": ["user.name"]
+      "group_by": [".actor.user.name"]
     }
   },
   "controller": {
     "detection": {
-      "query": "class_uid:3002 AND status_id:2",
+      "query": {
+        "filter": {
+          "type": "and",
+          "conditions": [
+            {"field": ".class_uid", "operator": "eq", "value": 3002},
+            {"field": ".status_id", "operator": "eq", "value": 2}
+          ]
+        }
+      },
       "threshold": 10,
       "operator": "gt"
     }
@@ -140,7 +148,7 @@ Start with **[CORE_TYPES.md](CORE_TYPES.md)** to understand the 8 essential corr
   "view": {
     "title": "Brute Force Login Attempts",
     "severity": "high",
-    "description": "User {{user.name}} had {{event_count}} failed logins in {{time_window}}"
+    "description": "User {{actor.user.name}} had {{event_count}} failed logins in {{time_window}}"
   }
 }
 ```
