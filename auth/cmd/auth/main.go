@@ -14,9 +14,9 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/telhawk-systems/telhawk-stack/auth/internal/audit"
 	"github.com/telhawk-systems/telhawk-stack/auth/internal/config"
 	"github.com/telhawk-systems/telhawk-stack/auth/internal/handlers"
-	"github.com/telhawk-systems/telhawk-stack/auth/internal/audit"
 	"github.com/telhawk-systems/telhawk-stack/auth/internal/repository"
 	"github.com/telhawk-systems/telhawk-stack/auth/internal/service"
 )
@@ -49,13 +49,13 @@ func main() {
 			cfg.Database.Postgres.Database,
 			cfg.Database.Postgres.SSLMode,
 		)
-		
+
 		log.Printf("Connecting to PostgreSQL at %s:%d/%s",
 			cfg.Database.Postgres.Host,
 			cfg.Database.Postgres.Port,
 			cfg.Database.Postgres.Database,
 		)
-		
+
 		pgRepo, err := repository.NewPostgresRepository(context.Background(), connString)
 		if err != nil {
 			log.Fatalf("Failed to connect to PostgreSQL: %v", err)
@@ -63,7 +63,7 @@ func main() {
 		defer pgRepo.Close()
 		repo = pgRepo
 		log.Println("Connected to PostgreSQL")
-		
+
 		// Run database migrations
 		log.Println("Running database migrations...")
 		m, err := migrate.New(
@@ -73,11 +73,11 @@ func main() {
 		if err != nil {
 			log.Fatalf("Failed to initialize migrations: %v", err)
 		}
-		
+
 		if err := m.Up(); err != nil && err != migrate.ErrNoChange {
 			log.Fatalf("Failed to run migrations: %v", err)
 		}
-		
+
 		version, dirty, _ := m.Version()
 		log.Printf("Database migration complete (version: %d, dirty: %v)", version, dirty)
 	} else {
@@ -99,21 +99,22 @@ func main() {
 
 	// Setup HTTP router
 	mux := http.NewServeMux()
-	// SECURITY: Public registration disabled - use admin-created users only
-	// mux.HandleFunc("/api/v1/auth/register", handler.Register)
 	mux.HandleFunc("/api/v1/auth/login", handler.Login)
 	mux.HandleFunc("/api/v1/auth/refresh", handler.RefreshToken)
 	mux.HandleFunc("/api/v1/auth/validate", handler.ValidateToken)
 	mux.HandleFunc("/api/v1/auth/validate-hec", handler.ValidateHECToken)
 	mux.HandleFunc("/api/v1/auth/revoke", handler.RevokeToken)
-	
-	// User management endpoints
-	mux.HandleFunc("/api/v1/users", handler.ListUsers)
-	mux.HandleFunc("/api/v1/users/get", handler.GetUser)
-	mux.HandleFunc("/api/v1/users/update", handler.UpdateUser)
-	mux.HandleFunc("/api/v1/users/delete", handler.DeleteUser)
-	mux.HandleFunc("/api/v1/users/reset-password", handler.ResetPassword)
-	
+
+	// User management endpoints (admin-only, requires authentication)
+	// Use Go 1.22+ method routing for explicit path matching
+	mux.HandleFunc("POST /api/v1/users/create", handler.CreateUser)
+	mux.HandleFunc("GET /api/v1/users/get", handler.GetUser)
+	mux.HandleFunc("PUT /api/v1/users/update", handler.UpdateUser)
+	mux.HandleFunc("PATCH /api/v1/users/update", handler.UpdateUser)
+	mux.HandleFunc("DELETE /api/v1/users/delete", handler.DeleteUser)
+	mux.HandleFunc("POST /api/v1/users/reset-password", handler.ResetPassword)
+	mux.HandleFunc("GET /api/v1/users", handler.ListUsers)
+
 	// HEC token management endpoints
 	mux.HandleFunc("/api/v1/hec/tokens", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {

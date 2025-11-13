@@ -19,13 +19,24 @@ func NewAuthHandler(service *service.AuthService) *AuthHandler {
 	}
 }
 
-func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+func (h *AuthHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
+	// Note: Method checking is handled by mux pattern "POST /api/v1/users/create"
+
+	// Authentication check: require X-User-ID header (set by auth middleware)
+	actorID := r.Header.Get("X-User-ID")
+	if actorID == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
-	var req models.RegisterRequest
+	// Authorization check: require admin role
+	roles := r.Header.Get("X-User-Roles")
+	if !strings.Contains(roles, "admin") {
+		http.Error(w, "Forbidden: admin role required", http.StatusForbidden)
+		return
+	}
+
+	var req models.CreateUserRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
@@ -34,7 +45,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	ipAddress := getClientIP(r)
 	userAgent := r.Header.Get("User-Agent")
 
-	user, err := h.service.Register(&req, ipAddress, userAgent)
+	user, err := h.service.CreateUser(&req, actorID, ipAddress, userAgent)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

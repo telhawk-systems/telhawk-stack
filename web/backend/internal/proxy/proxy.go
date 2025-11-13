@@ -57,6 +57,19 @@ func (p *Proxy) Handler() http.Handler {
 			proxyReq.Header.Set("X-User-ID", userID)
 		}
 
+		roles := auth.GetRoles(r.Context())
+		if len(roles) > 0 {
+			// Join roles with comma for X-User-Roles header
+			rolesStr := ""
+			for i, role := range roles {
+				if i > 0 {
+					rolesStr += ","
+				}
+				rolesStr += role
+			}
+			proxyReq.Header.Set("X-User-Roles", rolesStr)
+		}
+
 		resp, err := p.httpClient.Do(proxyReq)
 		if err != nil {
 			log.Printf("Proxy request error: %v", err)

@@ -38,12 +38,12 @@ func NewAuthService(repo repository.Repository, ingestClient *audit.IngestClient
 	}
 }
 
-func (s *AuthService) Register(req *models.RegisterRequest, ipAddress, userAgent string) (*models.User, error) {
+func (s *AuthService) CreateUser(req *models.CreateUserRequest, actorID, ipAddress, userAgent string) (*models.User, error) {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
 		s.auditLog.Log(
-			models.ActorTypeSystem, "", req.Username,
-			models.ActionRegister, "user", "",
+			models.ActorTypeUser, actorID, "",
+			models.ActionUserCreate, "user", "",
 			ipAddress, userAgent,
 			models.ResultFailure, "password hashing failed",
 			nil,
@@ -67,8 +67,8 @@ func (s *AuthService) Register(req *models.RegisterRequest, ipAddress, userAgent
 
 	if err := s.repo.CreateUser(user); err != nil {
 		s.auditLog.Log(
-			models.ActorTypeSystem, "", req.Username,
-			models.ActionRegister, "user", user.ID,
+			models.ActorTypeUser, actorID, "",
+			models.ActionUserCreate, "user", user.ID,
 			ipAddress, userAgent,
 			models.ResultFailure, err.Error(),
 			nil,
@@ -77,13 +77,14 @@ func (s *AuthService) Register(req *models.RegisterRequest, ipAddress, userAgent
 	}
 
 	s.auditLog.Log(
-		models.ActorTypeUser, user.ID, user.Username,
-		models.ActionRegister, "user", user.ID,
+		models.ActorTypeUser, actorID, "",
+		models.ActionUserCreate, "user", user.ID,
 		ipAddress, userAgent,
 		models.ResultSuccess, "",
 		map[string]interface{}{
-			"email": user.Email,
-			"roles": user.Roles,
+			"username": user.Username,
+			"email":    user.Email,
+			"roles":    user.Roles,
 		},
 	)
 

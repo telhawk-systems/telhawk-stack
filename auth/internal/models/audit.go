@@ -20,24 +20,25 @@ type AuditLog struct {
 }
 
 type AuditLogEntry struct {
-	Timestamp     time.Time
-	ActorType     string
-	ActorID       string
-	ActorName     string
-	Action        string
-	ResourceType  string
-	ResourceID    string
-	IPAddress     string
-	UserAgent     string
-	Result        string
-	ErrorMessage  string
-	Metadata      map[string]interface{}
+	Timestamp    time.Time
+	ActorType    string
+	ActorID      string
+	ActorName    string
+	Action       string
+	ResourceType string
+	ResourceID   string
+	IPAddress    string
+	UserAgent    string
+	Result       string
+	ErrorMessage string
+	Metadata     map[string]interface{}
 }
 
 const (
 	ActionLogin            = "login"
 	ActionLogout           = "logout"
 	ActionRegister         = "register"
+	ActionUserCreate       = "user_create"
 	ActionTokenRefresh     = "token_refresh"
 	ActionTokenValidate    = "token_validate"
 	ActionTokenRevoke      = "token_revoke"
