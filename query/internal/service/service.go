@@ -25,6 +25,8 @@ import (
 var (
 	ErrAlertNotFound     = errors.New("alert not found")
 	ErrDashboardNotFound = errors.New("dashboard not found")
+	ErrSearchDisabled    = errors.New("search_disabled")
+	ErrValidationFailed  = errors.New("validation failed")
 )
 
 // QueryService provides implementations for the query API surface.
@@ -211,7 +213,7 @@ func (s *QueryService) ExecuteQuery(ctx context.Context, q *model.Query) (*model
 	// Validate the query
 	validator := validator.NewQueryValidator()
 	if err := validator.Validate(q); err != nil {
-		return nil, fmt.Errorf("query validation failed: %w", err)
+		return nil, fmt.Errorf("%w: %w", ErrValidationFailed, err)
 	}
 
 	// Translate the canonical query to OpenSearch DSL
@@ -590,24 +592,24 @@ func validateSavedSearchInput(name string, queryMap map[string]interface{}) erro
 	// Validate name is not empty or whitespace
 	trimmedName := strings.TrimSpace(name)
 	if trimmedName == "" {
-		return fmt.Errorf("saved search name cannot be empty or whitespace")
+		return fmt.Errorf("%w: saved search name cannot be empty or whitespace", ErrValidationFailed)
 	}
 
 	// Validate query structure by unmarshaling into the Query model
 	queryJSON, err := json.Marshal(queryMap)
 	if err != nil {
-		return fmt.Errorf("invalid query format: %w", err)
+		return fmt.Errorf("%w: invalid query format: %w", ErrValidationFailed, err)
 	}
 
 	var query model.Query
 	if err := json.Unmarshal(queryJSON, &query); err != nil {
-		return fmt.Errorf("invalid query structure: %w", err)
+		return fmt.Errorf("%w: invalid query structure: %w", ErrValidationFailed, err)
 	}
 
 	// Validate query using the query validator
 	v := validator.NewQueryValidator()
 	if err := v.Validate(&query); err != nil {
-		return fmt.Errorf("query validation failed: %w", err)
+		return fmt.Errorf("%w: %w", ErrValidationFailed, err)
 	}
 
 	return nil
@@ -800,7 +802,7 @@ func (s *QueryService) RunSavedSearch(ctx context.Context, id string) (*models.S
 		return nil, err
 	}
 	if saved.DisabledAt != nil {
-		return nil, fmt.Errorf("search_disabled")
+		return nil, ErrSearchDisabled
 	}
 
 	// Unmarshal saved query into Query model

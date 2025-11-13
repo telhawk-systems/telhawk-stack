@@ -201,9 +201,7 @@ func (h *Handler) SavedSearches(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			log.Printf("Failed to create saved search: %v", err)
 			// Return validation errors with 400, other errors with 500
-			if strings.Contains(err.Error(), "validation failed") ||
-				strings.Contains(err.Error(), "cannot be empty") ||
-				strings.Contains(err.Error(), "invalid query") {
+			if errors.Is(err, service.ErrValidationFailed) {
 				h.writeJSONAPIError(w, http.StatusBadRequest, "validation_failed", err.Error())
 			} else {
 				h.writeJSONAPIError(w, http.StatusInternalServerError, "saved_search_create_failed", err.Error())
@@ -245,7 +243,7 @@ func (h *Handler) SavedSearchByID(w http.ResponseWriter, r *http.Request) {
 		resp, err := h.svc.RunSavedSearch(r.Context(), id)
 		if err != nil {
 			log.Printf("Failed to run saved search %s: %v", id, err)
-			if err.Error() == "search_disabled" {
+			if errors.Is(err, service.ErrSearchDisabled) {
 				h.writeJSONAPIConflict(w, "search_disabled", "Saved search is disabled")
 				return
 			}
@@ -403,9 +401,7 @@ func (h *Handler) SavedSearchByID(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			log.Printf("Failed to update saved search: %v", err)
 			// Return validation errors with 400, other errors with 500
-			if strings.Contains(err.Error(), "validation failed") ||
-				strings.Contains(err.Error(), "cannot be empty") ||
-				strings.Contains(err.Error(), "invalid query") {
+			if errors.Is(err, service.ErrValidationFailed) {
 				h.writeJSONAPIError(w, http.StatusBadRequest, "validation_failed", err.Error())
 			} else {
 				h.writeJSONAPIError(w, http.StatusInternalServerError, "saved_search_update_failed", err.Error())
@@ -659,7 +655,7 @@ func (h *Handler) EventsByAction(w http.ResponseWriter, r *http.Request) {
 		}
 		resp, err := h.svc.RunSavedSearch(r.Context(), id)
 		if err != nil {
-			if err.Error() == "search_disabled" {
+			if errors.Is(err, service.ErrSearchDisabled) {
 				h.writeJSONAPIConflict(w, "search_disabled", "Saved search is disabled")
 				return
 			}

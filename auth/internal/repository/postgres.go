@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/telhawk-systems/telhawk-stack/auth/internal/models"
 )
@@ -59,7 +60,9 @@ func (r *PostgresRepository) CreateUser(ctx context.Context, user *models.User) 
 	)
 
 	if err != nil {
-		if err.Error() == "duplicate key value violates unique constraint" {
+		// Check for unique constraint violation (23505)
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
 			return ErrUserExists
 		}
 		return fmt.Errorf("failed to create user: %w", err)
