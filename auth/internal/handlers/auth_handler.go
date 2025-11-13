@@ -46,7 +46,7 @@ func (h *AuthHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	ipAddress := getClientIP(r)
 	userAgent := r.Header.Get("User-Agent")
 
-	user, err := h.service.CreateUser(&req, actorID, ipAddress, userAgent)
+	user, err := h.service.CreateUser(r.Context(), &req, actorID, ipAddress, userAgent)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -87,7 +87,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	ipAddress := getClientIP(r)
 	userAgent := r.Header.Get("User-Agent")
 
-	resp, err := h.service.Login(&req, ipAddress, userAgent)
+	resp, err := h.service.Login(r.Context(), &req, ipAddress, userAgent)
 	if err != nil {
 		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
 		return
@@ -119,7 +119,7 @@ func (h *AuthHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp, err := h.service.RefreshToken(req.RefreshToken)
+	resp, err := h.service.RefreshToken(r.Context(), req.RefreshToken)
 	if err != nil {
 		http.Error(w, "Invalid token", http.StatusUnauthorized)
 		return
@@ -163,7 +163,7 @@ func (h *AuthHandler) RevokeToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.service.RevokeToken(req.Token); err != nil {
+	if err := h.service.RevokeToken(r.Context(), req.Token); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -186,7 +186,7 @@ func (h *AuthHandler) ValidateHECToken(w http.ResponseWriter, r *http.Request) {
 	ipAddress := getClientIP(r)
 	userAgent := r.Header.Get("User-Agent")
 
-	hecToken, err := h.service.ValidateHECToken(req.Token, ipAddress, userAgent)
+	hecToken, err := h.service.ValidateHECToken(r.Context(), req.Token, ipAddress, userAgent)
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(models.ValidateHECTokenResponse{
@@ -215,7 +215,7 @@ func (h *AuthHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	users, err := h.service.ListUsers()
+	users, err := h.service.ListUsers(r.Context())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -258,7 +258,7 @@ func (h *AuthHandler) GetUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := h.service.GetUser(userID)
+	user, err := h.service.GetUser(r.Context(), userID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
@@ -306,7 +306,7 @@ func (h *AuthHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	ipAddress := getClientIP(r)
 	userAgent := r.Header.Get("User-Agent")
 
-	user, err := h.service.UpdateUserDetails(userID, &req, actorID, ipAddress, userAgent)
+	user, err := h.service.UpdateUserDetails(r.Context(), userID, &req, actorID, ipAddress, userAgent)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -348,7 +348,7 @@ func (h *AuthHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	ipAddress := getClientIP(r)
 	userAgent := r.Header.Get("User-Agent")
 
-	if err := h.service.DeleteUser(userID, actorID, ipAddress, userAgent); err != nil {
+	if err := h.service.DeleteUser(r.Context(), userID, actorID, ipAddress, userAgent); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -378,7 +378,7 @@ func (h *AuthHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 	ipAddress := getClientIP(r)
 	userAgent := r.Header.Get("User-Agent")
 
-	if err := h.service.ResetPassword(userID, req.NewPassword, actorID, ipAddress, userAgent); err != nil {
+	if err := h.service.ResetPassword(r.Context(), userID, req.NewPassword, actorID, ipAddress, userAgent); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -407,7 +407,7 @@ func (h *AuthHandler) CreateHECToken(w http.ResponseWriter, r *http.Request) {
 	ipAddress := getClientIP(r)
 	userAgent := r.Header.Get("User-Agent")
 
-	token, err := h.service.CreateHECToken(userID, req.Name, req.ExpiresIn, ipAddress, userAgent)
+	token, err := h.service.CreateHECToken(r.Context(), userID, req.Name, req.ExpiresIn, ipAddress, userAgent)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -453,7 +453,7 @@ func (h *AuthHandler) ListHECTokens(w http.ResponseWriter, r *http.Request) {
 
 	if isAdmin {
 		// Admin users see all tokens with usernames
-		usernames, tokens, err := h.service.ListAllHECTokensWithUsernames()
+		usernames, tokens, err := h.service.ListAllHECTokensWithUsernames(r.Context())
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -479,7 +479,7 @@ func (h *AuthHandler) ListHECTokens(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		// Regular users only see their own tokens without usernames
-		tokens, err := h.service.ListHECTokensByUser(userID)
+		tokens, err := h.service.ListHECTokensByUser(r.Context(), userID)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -532,7 +532,7 @@ func (h *AuthHandler) RevokeHECTokenHandler(w http.ResponseWriter, r *http.Reque
 	ipAddress := getClientIP(r)
 	userAgent := r.Header.Get("User-Agent")
 
-	if err := h.service.RevokeHECTokenByUser(req.Token, userID, ipAddress, userAgent); err != nil {
+	if err := h.service.RevokeHECTokenByUser(r.Context(), req.Token, userID, ipAddress, userAgent); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -568,7 +568,7 @@ func (h *AuthHandler) RevokeHECTokenByIDHandler(w http.ResponseWriter, r *http.R
 	ipAddress := getClientIP(r)
 	userAgent := r.Header.Get("User-Agent")
 
-	if err := h.service.RevokeHECTokenByID(tokenID, userID, ipAddress, userAgent); err != nil {
+	if err := h.service.RevokeHECTokenByID(r.Context(), tokenID, userID, ipAddress, userAgent); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}

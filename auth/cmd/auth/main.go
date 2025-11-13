@@ -92,7 +92,7 @@ func main() {
 		ingestClient = audit.NewIngestClient(cfg.Ingest.URL, cfg.Ingest.HECToken)
 	}
 
-	authService := service.NewAuthService(repo, ingestClient)
+	authService := service.NewAuthService(repo, ingestClient, &cfg.Auth)
 
 	// Initialize HTTP handlers
 	handler := handlers.NewAuthHandler(authService)

@@ -44,8 +44,8 @@ func (r *PostgresRepository) Close() {
 	r.pool.Close()
 }
 
-func (r *PostgresRepository) CreateUser(user *models.User) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+func (r *PostgresRepository) CreateUser(ctx context.Context, user *models.User) error {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
 	query := `
@@ -68,8 +68,8 @@ func (r *PostgresRepository) CreateUser(user *models.User) error {
 	return nil
 }
 
-func (r *PostgresRepository) GetUserByUsername(username string) (*models.User, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+func (r *PostgresRepository) GetUserByUsername(ctx context.Context, username string) (*models.User, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
 	query := `
@@ -94,8 +94,8 @@ func (r *PostgresRepository) GetUserByUsername(username string) (*models.User, e
 	return &user, nil
 }
 
-func (r *PostgresRepository) GetUserByID(id string) (*models.User, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+func (r *PostgresRepository) GetUserByID(ctx context.Context, id string) (*models.User, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
 	query := `
@@ -120,8 +120,8 @@ func (r *PostgresRepository) GetUserByID(id string) (*models.User, error) {
 	return &user, nil
 }
 
-func (r *PostgresRepository) UpdateUser(user *models.User) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+func (r *PostgresRepository) UpdateUser(ctx context.Context, user *models.User) error {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
 	query := `
@@ -145,8 +145,8 @@ func (r *PostgresRepository) UpdateUser(user *models.User) error {
 	return nil
 }
 
-func (r *PostgresRepository) CreateSession(session *models.Session) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+func (r *PostgresRepository) CreateSession(ctx context.Context, session *models.Session) error {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
 	query := `
@@ -166,8 +166,8 @@ func (r *PostgresRepository) CreateSession(session *models.Session) error {
 	return nil
 }
 
-func (r *PostgresRepository) GetSession(refreshToken string) (*models.Session, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+func (r *PostgresRepository) GetSession(ctx context.Context, refreshToken string) (*models.Session, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
 	query := `
@@ -192,8 +192,8 @@ func (r *PostgresRepository) GetSession(refreshToken string) (*models.Session, e
 	return &session, nil
 }
 
-func (r *PostgresRepository) RevokeSession(refreshToken string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+func (r *PostgresRepository) RevokeSession(ctx context.Context, refreshToken string) error {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
 	query := `UPDATE sessions SET revoked = true WHERE refresh_token = $1`
@@ -210,8 +210,8 @@ func (r *PostgresRepository) RevokeSession(refreshToken string) error {
 	return nil
 }
 
-func (r *PostgresRepository) CreateHECToken(token *models.HECToken) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+func (r *PostgresRepository) CreateHECToken(ctx context.Context, token *models.HECToken) error {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
 	query := `
@@ -231,8 +231,8 @@ func (r *PostgresRepository) CreateHECToken(token *models.HECToken) error {
 	return nil
 }
 
-func (r *PostgresRepository) GetHECToken(token string) (*models.HECToken, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+func (r *PostgresRepository) GetHECToken(ctx context.Context, token string) (*models.HECToken, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
 	query := `
@@ -267,8 +267,8 @@ func (r *PostgresRepository) GetHECToken(token string) (*models.HECToken, error)
 }
 
 // GetHECTokenByID retrieves an HEC token by its ID
-func (r *PostgresRepository) GetHECTokenByID(id string) (*models.HECToken, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+func (r *PostgresRepository) GetHECTokenByID(ctx context.Context, id string) (*models.HECToken, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
 	query := `
@@ -302,8 +302,8 @@ func (r *PostgresRepository) GetHECTokenByID(id string) (*models.HECToken, error
 	return &hecToken, nil
 }
 
-func (r *PostgresRepository) ListHECTokensByUser(userID string) ([]*models.HECToken, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+func (r *PostgresRepository) ListHECTokensByUser(ctx context.Context, userID string) ([]*models.HECToken, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
 	query := `
@@ -345,8 +345,8 @@ func (r *PostgresRepository) ListHECTokensByUser(userID string) ([]*models.HECTo
 	return tokens, nil
 }
 
-func (r *PostgresRepository) ListAllHECTokens() ([]*models.HECToken, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+func (r *PostgresRepository) ListAllHECTokens(ctx context.Context) ([]*models.HECToken, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
 	query := `
@@ -387,8 +387,8 @@ func (r *PostgresRepository) ListAllHECTokens() ([]*models.HECToken, error) {
 	return tokens, nil
 }
 
-func (r *PostgresRepository) RevokeHECToken(token string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+func (r *PostgresRepository) RevokeHECToken(ctx context.Context, token string) error {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
 	query := `UPDATE hec_tokens SET revoked_at = NOW() WHERE token = $1`
@@ -405,8 +405,8 @@ func (r *PostgresRepository) RevokeHECToken(token string) error {
 	return nil
 }
 
-func (r *PostgresRepository) LogAudit(entry *models.AuditLogEntry) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+func (r *PostgresRepository) LogAudit(ctx context.Context, entry *models.AuditLogEntry) error {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
 	var metadataJSON []byte
@@ -439,8 +439,8 @@ func (r *PostgresRepository) LogAudit(entry *models.AuditLogEntry) error {
 	return nil
 }
 
-func (r *PostgresRepository) ListUsers() ([]*models.User, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+func (r *PostgresRepository) ListUsers(ctx context.Context) ([]*models.User, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
 	query := `
@@ -477,8 +477,8 @@ func (r *PostgresRepository) ListUsers() ([]*models.User, error) {
 	return users, nil
 }
 
-func (r *PostgresRepository) DeleteUser(id string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+func (r *PostgresRepository) DeleteUser(ctx context.Context, id string) error {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
 	query := `DELETE FROM users WHERE id = $1`

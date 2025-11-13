@@ -1,6 +1,7 @@
 package audit
 
 import (
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
@@ -12,7 +13,7 @@ import (
 )
 
 type Repository interface {
-	LogAudit(entry *models.AuditLogEntry) error
+	LogAudit(ctx context.Context, entry *models.AuditLogEntry) error
 }
 
 type Logger struct {
@@ -68,6 +69,7 @@ func (l *Logger) Log(actorType, actorID, actorUsername, action, resource, resour
 	l.logs = append(l.logs, log)
 
 	// Always persist to PostgreSQL
+	// Use Background context to ensure audit logs complete even if parent request is cancelled
 	if l.repo != nil {
 		entry := &models.AuditLogEntry{
 			Timestamp:    log.Timestamp,
@@ -83,7 +85,7 @@ func (l *Logger) Log(actorType, actorID, actorUsername, action, resource, resour
 			ErrorMessage: reason,
 			Metadata:     metadata,
 		}
-		if err := l.repo.LogAudit(entry); err != nil {
+		if err := l.repo.LogAudit(context.Background(), entry); err != nil {
 			// Silently ignore audit persistence errors to not block auth operations
 			_ = err
 		}

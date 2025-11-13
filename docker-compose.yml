@@ -165,6 +165,8 @@ services:
       - AUTH_SERVER_TLS_KEY_FILE=/certs/auth-key.pem
       - AUTH_LOGGING_LEVEL=info
       - AUTH_AUTH_JWT_SECRET=${AUTH_JWT_SECRET:-change-this-in-production}
+      - AUTH_AUTH_JWT_REFRESH_SECRET=${AUTH_JWT_REFRESH_SECRET:-change-this-in-production}
+      - AUTH_AUTH_AUDIT_SECRET=${AUTH_AUDIT_SECRET:-change-this-in-production}
       - AUTH_DATABASE_TYPE=postgres
       - AUTH_DATABASE_POSTGRES_HOST=auth-db
       - AUTH_DATABASE_POSTGRES_PORT=5432

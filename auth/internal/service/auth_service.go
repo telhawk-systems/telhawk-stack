@@ -1,12 +1,14 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/telhawk-systems/telhawk-stack/auth/internal/audit"
+	"github.com/telhawk-systems/telhawk-stack/auth/internal/config"
 	"github.com/telhawk-systems/telhawk-stack/auth/internal/models"
 	"github.com/telhawk-systems/telhawk-stack/auth/internal/repository"
 	"github.com/telhawk-systems/telhawk-stack/auth/pkg/tokens"
@@ -24,22 +26,22 @@ type AuthService struct {
 	auditLog *audit.Logger
 }
 
-func NewAuthService(repo repository.Repository, ingestClient *audit.IngestClient) *AuthService {
+func NewAuthService(repo repository.Repository, ingestClient *audit.IngestClient, cfg *config.AuthConfig) *AuthService {
 	var auditLogger *audit.Logger
 	if ingestClient != nil {
-		auditLogger = audit.NewLoggerWithRepoAndIngest("audit-secret-key", repo.(audit.Repository), ingestClient)
+		auditLogger = audit.NewLoggerWithRepoAndIngest(cfg.AuditSecret, repo.(audit.Repository), ingestClient)
 	} else {
-		auditLogger = audit.NewLoggerWithRepo("audit-secret-key", repo.(audit.Repository))
+		auditLogger = audit.NewLoggerWithRepo(cfg.AuditSecret, repo.(audit.Repository))
 	}
 
 	return &AuthService{
 		repo:     repo,
-		tokenGen: tokens.NewTokenGenerator("access-secret-key", "refresh-secret-key"),
+		tokenGen: tokens.NewTokenGenerator(cfg.JWTSecret, cfg.JWTRefreshSecret),
 		auditLog: auditLogger,
 	}
 }
 
-func (s *AuthService) CreateUser(req *models.CreateUserRequest, actorID, ipAddress, userAgent string) (*models.User, error) {
+func (s *AuthService) CreateUser(ctx context.Context, req *models.CreateUserRequest, actorID, ipAddress, userAgent string) (*models.User, error) {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
 		s.auditLog.Log(
@@ -66,7 +68,7 @@ func (s *AuthService) CreateUser(req *models.CreateUserRequest, actorID, ipAddre
 		user.Roles = []string{string(models.RoleViewer)}
 	}
 
-	if err := s.repo.CreateUser(user); err != nil {
+	if err := s.repo.CreateUser(ctx, user); err != nil {
 		s.auditLog.Log(
 			models.ActorTypeUser, actorID, "",
 			models.ActionUserCreate, "user", user.ID,
@@ -92,8 +94,8 @@ func (s *AuthService) CreateUser(req *models.CreateUserRequest, actorID, ipAddre
 	return user, nil
 }
 
-func (s *AuthService) Login(req *models.LoginRequest, ipAddress, userAgent string) (*models.LoginResponse, error) {
-	user, err := s.repo.GetUserByUsername(req.Username)
+func (s *AuthService) Login(ctx context.Context, req *models.LoginRequest, ipAddress, userAgent string) (*models.LoginResponse, error) {
+	user, err := s.repo.GetUserByUsername(ctx, req.Username)
 	if err != nil {
 		s.auditLog.Log(
 			models.ActorTypeUser, "", req.Username,
@@ -154,7 +156,7 @@ func (s *AuthService) Login(req *models.LoginRequest, ipAddress, userAgent strin
 		CreatedAt:    time.Now(),
 	}
 
-	if err := s.repo.CreateSession(session); err != nil {
+	if err := s.repo.CreateSession(ctx, session); err != nil {
 		return nil, err
 	}
 
@@ -177,8 +179,8 @@ func (s *AuthService) Login(req *models.LoginRequest, ipAddress, userAgent strin
 	}, nil
 }
 
-func (s *AuthService) RefreshToken(refreshToken string) (*models.LoginResponse, error) {
-	session, err := s.repo.GetSession(refreshToken)
+func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*models.LoginResponse, error) {
+	session, err := s.repo.GetSession(ctx, refreshToken)
 	if err != nil {
 		return nil, ErrInvalidToken
 	}
@@ -187,7 +189,7 @@ func (s *AuthService) RefreshToken(refreshToken string) (*models.LoginResponse, 
 		return nil, ErrInvalidToken
 	}
 
-	user, err := s.repo.GetUserByID(session.UserID)
+	user, err := s.repo.GetUserByID(ctx, session.UserID)
 	if err != nil {
 		return nil, err
 	}
@@ -218,12 +220,12 @@ func (s *AuthService) ValidateToken(tokenString string) (*models.ValidateTokenRe
 	}, nil
 }
 
-func (s *AuthService) RevokeToken(refreshToken string) error {
-	return s.repo.RevokeSession(refreshToken)
+func (s *AuthService) RevokeToken(ctx context.Context, refreshToken string) error {
+	return s.repo.RevokeSession(ctx, refreshToken)
 }
 
-func (s *AuthService) ValidateHECToken(token, ipAddress, userAgent string) (*models.HECToken, error) {
-	hecToken, err := s.repo.GetHECToken(token)
+func (s *AuthService) ValidateHECToken(ctx context.Context, token, ipAddress, userAgent string) (*models.HECToken, error) {
+	hecToken, err := s.repo.GetHECToken(ctx, token)
 	if err != nil {
 		s.auditLog.Log(
 			models.ActorTypeService, "", "",
@@ -268,16 +270,16 @@ func (s *AuthService) ValidateHECToken(token, ipAddress, userAgent string) (*mod
 	return hecToken, nil
 }
 
-func (s *AuthService) ListUsers() ([]*models.User, error) {
-	return s.repo.ListUsers()
+func (s *AuthService) ListUsers(ctx context.Context) ([]*models.User, error) {
+	return s.repo.ListUsers(ctx)
 }
 
-func (s *AuthService) GetUser(userID string) (*models.User, error) {
-	return s.repo.GetUserByID(userID)
+func (s *AuthService) GetUser(ctx context.Context, userID string) (*models.User, error) {
+	return s.repo.GetUserByID(ctx, userID)
 }
 
-func (s *AuthService) UpdateUserDetails(userID string, req *models.UpdateUserRequest, actorID, ipAddress, userAgent string) (*models.User, error) {
-	user, err := s.repo.GetUserByID(userID)
+func (s *AuthService) UpdateUserDetails(ctx context.Context, userID string, req *models.UpdateUserRequest, actorID, ipAddress, userAgent string) (*models.User, error) {
+	user, err := s.repo.GetUserByID(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -290,7 +292,7 @@ func (s *AuthService) UpdateUserDetails(userID string, req *models.UpdateUserReq
 	}
 	// Note: Use DisableUser/EnableUser methods to manage user lifecycle
 
-	if err := s.repo.UpdateUser(user); err != nil {
+	if err := s.repo.UpdateUser(ctx, user); err != nil {
 		s.auditLog.Log(
 			models.ActorTypeUser, actorID, "",
 			models.ActionUpdate, "user", userID,
@@ -312,13 +314,13 @@ func (s *AuthService) UpdateUserDetails(userID string, req *models.UpdateUserReq
 	return user, nil
 }
 
-func (s *AuthService) DeleteUser(userID, actorID, ipAddress, userAgent string) error {
-	user, err := s.repo.GetUserByID(userID)
+func (s *AuthService) DeleteUser(ctx context.Context, userID, actorID, ipAddress, userAgent string) error {
+	user, err := s.repo.GetUserByID(ctx, userID)
 	if err != nil {
 		return err
 	}
 
-	if err := s.repo.DeleteUser(userID); err != nil {
+	if err := s.repo.DeleteUser(ctx, userID); err != nil {
 		s.auditLog.Log(
 			models.ActorTypeUser, actorID, "",
 			models.ActionDelete, "user", userID,
@@ -340,8 +342,8 @@ func (s *AuthService) DeleteUser(userID, actorID, ipAddress, userAgent string) e
 	return nil
 }
 
-func (s *AuthService) ResetPassword(userID string, newPassword, actorID, ipAddress, userAgent string) error {
-	user, err := s.repo.GetUserByID(userID)
+func (s *AuthService) ResetPassword(ctx context.Context, userID string, newPassword, actorID, ipAddress, userAgent string) error {
+	user, err := s.repo.GetUserByID(ctx, userID)
 	if err != nil {
 		return err
 	}
@@ -360,7 +362,7 @@ func (s *AuthService) ResetPassword(userID string, newPassword, actorID, ipAddre
 
 	user.PasswordHash = string(hashedPassword)
 
-	if err := s.repo.UpdateUser(user); err != nil {
+	if err := s.repo.UpdateUser(ctx, user); err != nil {
 		s.auditLog.Log(
 			models.ActorTypeUser, actorID, "",
 			models.ActionPasswordReset, "user", userID,
@@ -382,7 +384,7 @@ func (s *AuthService) ResetPassword(userID string, newPassword, actorID, ipAddre
 	return nil
 }
 
-func (s *AuthService) CreateHECToken(userID, name, expiresIn, ipAddress, userAgent string) (*models.HECToken, error) {
+func (s *AuthService) CreateHECToken(ctx context.Context, userID, name, expiresIn, ipAddress, userAgent string) (*models.HECToken, error) {
 	tokenUUID, _ := uuid.NewV7()
 	token := tokenUUID.String()
 
@@ -395,7 +397,7 @@ func (s *AuthService) CreateHECToken(userID, name, expiresIn, ipAddress, userAge
 		CreatedAt: time.Now(),
 	}
 
-	if err := s.repo.CreateHECToken(hecToken); err != nil {
+	if err := s.repo.CreateHECToken(ctx, hecToken); err != nil {
 		s.auditLog.Log(
 			models.ActorTypeUser, userID, "",
 			models.ActionHECTokenCreate, "hec_token", hecToken.ID,
@@ -419,12 +421,12 @@ func (s *AuthService) CreateHECToken(userID, name, expiresIn, ipAddress, userAge
 	return hecToken, nil
 }
 
-func (s *AuthService) ListHECTokensByUser(userID string) ([]*models.HECToken, error) {
-	return s.repo.ListHECTokensByUser(userID)
+func (s *AuthService) ListHECTokensByUser(ctx context.Context, userID string) ([]*models.HECToken, error) {
+	return s.repo.ListHECTokensByUser(ctx, userID)
 }
 
-func (s *AuthService) ListAllHECTokensWithUsernames() (map[string]string, []*models.HECToken, error) {
-	tokens, err := s.repo.ListAllHECTokens()
+func (s *AuthService) ListAllHECTokensWithUsernames(ctx context.Context) (map[string]string, []*models.HECToken, error) {
+	tokens, err := s.repo.ListAllHECTokens(ctx)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -438,7 +440,7 @@ func (s *AuthService) ListAllHECTokensWithUsernames() (map[string]string, []*mod
 	// Fetch usernames for all user IDs
 	usernames := make(map[string]string)
 	for userID := range userIDs {
-		user, err := s.repo.GetUserByID(userID)
+		user, err := s.repo.GetUserByID(ctx, userID)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to get username for user %s: %w", userID, err)
 		}
@@ -448,8 +450,8 @@ func (s *AuthService) ListAllHECTokensWithUsernames() (map[string]string, []*mod
 	return usernames, tokens, nil
 }
 
-func (s *AuthService) RevokeHECTokenByUser(token, userID, ipAddress, userAgent string) error {
-	hecToken, err := s.repo.GetHECToken(token)
+func (s *AuthService) RevokeHECTokenByUser(ctx context.Context, token, userID, ipAddress, userAgent string) error {
+	hecToken, err := s.repo.GetHECToken(ctx, token)
 	if err != nil {
 		return err
 	}
@@ -458,7 +460,7 @@ func (s *AuthService) RevokeHECTokenByUser(token, userID, ipAddress, userAgent s
 		return errors.New("unauthorized")
 	}
 
-	if err := s.repo.RevokeHECToken(token); err != nil {
+	if err := s.repo.RevokeHECToken(ctx, token); err != nil {
 		s.auditLog.Log(
 			models.ActorTypeUser, userID, "",
 			models.ActionHECTokenRevoke, "hec_token", hecToken.ID,
@@ -481,8 +483,8 @@ func (s *AuthService) RevokeHECTokenByUser(token, userID, ipAddress, userAgent s
 }
 
 // RevokeHECTokenByID revokes an HEC token by its ID (used for RESTful endpoint)
-func (s *AuthService) RevokeHECTokenByID(tokenID, userID, ipAddress, userAgent string) error {
-	hecToken, err := s.repo.GetHECTokenByID(tokenID)
+func (s *AuthService) RevokeHECTokenByID(ctx context.Context, tokenID, userID, ipAddress, userAgent string) error {
+	hecToken, err := s.repo.GetHECTokenByID(ctx, tokenID)
 	if err != nil {
 		return err
 	}
@@ -491,7 +493,7 @@ func (s *AuthService) RevokeHECTokenByID(tokenID, userID, ipAddress, userAgent s
 		return errors.New("unauthorized")
 	}
 
-	if err := s.repo.RevokeHECToken(hecToken.Token); err != nil {
+	if err := s.repo.RevokeHECToken(ctx, hecToken.Token); err != nil {
 		s.auditLog.Log(
 			models.ActorTypeUser, userID, "",
 			models.ActionHECTokenRevoke, "hec_token", hecToken.ID,

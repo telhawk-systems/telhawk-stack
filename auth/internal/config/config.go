@@ -24,9 +24,11 @@ type ServerConfig struct {
 }
 
 type AuthConfig struct {
-	JWTSecret         string        `mapstructure:"jwt_secret"`
-	AccessTokenTTL    time.Duration `mapstructure:"access_token_ttl"`
-	RefreshTokenTTL   time.Duration `mapstructure:"refresh_token_ttl"`
+	JWTSecret        string        `mapstructure:"jwt_secret"`
+	JWTRefreshSecret string        `mapstructure:"jwt_refresh_secret"`
+	AuditSecret      string        `mapstructure:"audit_secret"`
+	AccessTokenTTL   time.Duration `mapstructure:"access_token_ttl"`
+	RefreshTokenTTL  time.Duration `mapstructure:"refresh_token_ttl"`
 }
 
 type DatabaseConfig struct {
@@ -56,13 +58,15 @@ type IngestConfig struct {
 
 func Load(configPath string) (*Config, error) {
 	v := viper.New()
-	
+
 	// Set defaults
 	v.SetDefault("server.port", 8080)
 	v.SetDefault("server.read_timeout", "15s")
 	v.SetDefault("server.write_timeout", "15s")
 	v.SetDefault("server.idle_timeout", "60s")
 	v.SetDefault("auth.jwt_secret", "change-this-in-production")
+	v.SetDefault("auth.jwt_refresh_secret", "change-this-in-production")
+	v.SetDefault("auth.audit_secret", "change-this-in-production")
 	v.SetDefault("auth.access_token_ttl", "15m")
 	v.SetDefault("auth.refresh_token_ttl", "168h")
 	v.SetDefault("database.type", "memory")
@@ -70,7 +74,7 @@ func Load(configPath string) (*Config, error) {
 	v.SetDefault("logging.format", "json")
 	v.SetDefault("ingest.enabled", false)
 	v.SetDefault("ingest.url", "http://ingest:8082")
-	
+
 	// Read config file
 	if configPath != "" {
 		v.SetConfigFile(configPath)
@@ -80,12 +84,12 @@ func Load(configPath string) (*Config, error) {
 		v.AddConfigPath(".")
 		v.AddConfigPath("/etc/telhawk/auth")
 	}
-	
+
 	// Environment variables override
 	v.SetEnvPrefix("AUTH")
 	v.AutomaticEnv()
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
-	
+
 	// Read config
 	if err := v.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
@@ -93,11 +97,11 @@ func Load(configPath string) (*Config, error) {
 		}
 		// Config file not found; use defaults
 	}
-	
+
 	var cfg Config
 	if err := v.Unmarshal(&cfg); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal config: %w", err)
 	}
-	
+
 	return &cfg, nil
 }

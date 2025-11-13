@@ -9,6 +9,8 @@ server:
 
 auth:
   jwt_secret: "change-this-in-production"
+  jwt_refresh_secret: "change-this-in-production"
+  audit_secret: "change-this-in-production"
   access_token_ttl: 15m
   refresh_token_ttl: 168h  # 7 days
 
