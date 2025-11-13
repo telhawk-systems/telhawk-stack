@@ -252,9 +252,14 @@ class ApiClient {
       throw new Error('Failed to list users');
     }
 
-    const data = await response.json();
-    // Backward compatibility: API may omit `enabled`; default to true
-    return (data as any[]).map((u) => ({ enabled: true, updated_at: '', ...u }));
+    // Parse JSON:API response format
+    const json = await response.json();
+    const items = Array.isArray(json?.data) ? json.data : [];
+    return items.map((item: any) => ({
+      id: item.id,
+      updated_at: '', // Not returned by API
+      ...item.attributes,
+    }));
   }
 
   // Events API (JSON:API)
@@ -294,8 +299,14 @@ class ApiClient {
       throw new Error('Failed to get user');
     }
 
-    const u = await response.json();
-    return { enabled: true, updated_at: '', ...u } as UserDetails;
+    // Parse JSON:API response format
+    const json = await response.json();
+    const attrs = json?.data?.attributes || {};
+    return {
+      id: json?.data?.id || '',
+      updated_at: '', // Not returned by API
+      ...attrs,
+    } as UserDetails;
   }
 
   async updateUser(id: string, updates: Partial<UserDetails>): Promise<UserDetails> {
@@ -306,7 +317,7 @@ class ApiClient {
 
     const response = await fetch(`${this.baseUrl}/auth/api/v1/users/update?id=${id}`, {
       method: 'PUT',
-      headers: { 
+      headers: {
         'Content-Type': 'application/json',
         'X-CSRF-Token': this.csrfToken!,
       },
@@ -318,7 +329,14 @@ class ApiClient {
       throw new Error('Failed to update user');
     }
 
-    return response.json();
+    // Parse JSON:API response format
+    const json = await response.json();
+    const attrs = json?.data?.attributes || {};
+    return {
+      id: json?.data?.id || '',
+      updated_at: '', // Not returned by API
+      ...attrs,
+    } as UserDetails;
   }
 
   async deleteUser(id: string): Promise<void> {
@@ -381,7 +399,14 @@ class ApiClient {
       throw new Error('Failed to create user');
     }
 
-    return response.json();
+    // Parse JSON:API response format
+    const json = await response.json();
+    const attrs = json?.data?.attributes || {};
+    return {
+      id: json?.data?.id || '',
+      updated_at: '', // Not returned by API
+      ...attrs,
+    } as UserDetails;
   }
 
   // HEC Token Management API

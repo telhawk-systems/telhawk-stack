@@ -20,6 +20,28 @@ func (u *User) IsActive() bool {
 	return u.DisabledAt == nil && u.DeletedAt == nil
 }
 
+// UserResponse is the API response format that includes the computed enabled field
+type UserResponse struct {
+	ID        string    `json:"id"`
+	Username  string    `json:"username"`
+	Email     string    `json:"email"`
+	Roles     []string  `json:"roles"`
+	Enabled   bool      `json:"enabled"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+// ToResponse converts a User to an API response format
+func (u *User) ToResponse() *UserResponse {
+	return &UserResponse{
+		ID:        u.ID,
+		Username:  u.Username,
+		Email:     u.Email,
+		Roles:     u.Roles,
+		Enabled:   u.IsActive(),
+		CreatedAt: u.CreatedAt,
+	}
+}
+
 type HECToken struct {
 	ID         string     `json:"id"`
 	Token      string     `json:"token"`
