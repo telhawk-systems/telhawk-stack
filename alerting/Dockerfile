@@ -1,17 +1,20 @@
 # Build stage
 FROM golang:1.25-alpine AS builder
 
-WORKDIR /build
+WORKDIR /build/alerting
 
 # Install build dependencies
 RUN apk add --no-cache git
 
+# Copy query module (dependency) to parent directory
+COPY query/ ../query/
+
 # Copy go mod files
-COPY go.mod go.sum ./
+COPY alerting/go.mod alerting/go.sum ./
 RUN go mod download
 
 # Copy source code
-COPY . .
+COPY alerting/ ./
 
 # Build the binary
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o alerting ./cmd/alerting
@@ -22,16 +25,16 @@ FROM gcr.io/distroless/static-debian12:latest
 WORKDIR /app
 
 # Copy binary from builder
-COPY --from=builder /build/alerting .
+COPY --from=builder /build/alerting/alerting .
 
 # Copy config file
-COPY config.yaml /etc/telhawk/alerting/config.yaml
+COPY alerting/config.yaml /etc/telhawk/alerting/config.yaml
 
 # Copy builtin detection rules
-COPY rules /etc/telhawk/alerting/rules
+COPY alerting/rules /etc/telhawk/alerting/rules
 
 # Copy migrations
-COPY migrations /app/migrations
+COPY alerting/migrations /app/migrations
 
 # Expose port
 EXPOSE 8085

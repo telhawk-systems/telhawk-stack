@@ -234,8 +234,8 @@ services:
 
   alerting:
     build:
-      context: ./alerting
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./alerting/Dockerfile
     container_name: telhawk-alerting
     # SECURITY: Internal service only - no external exposure
     # Access via web UI
