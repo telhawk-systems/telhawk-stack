@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"github.com/telhawk-systems/telhawk-stack/common/httputil"
 	"log"
 	"net/http"
 	"strconv"
@@ -20,8 +21,7 @@ func NewHandler(service *service.Service) *Handler {
 
 // HealthCheck handles health check requests
 func (h *Handler) HealthCheck(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"status": "healthy"})
+	httputil.WriteJSON(w, http.StatusOK, map[string]string{"status": "healthy"})
 }
 
 // GetCorrelationTypes handles GET /correlation/types
@@ -327,8 +327,7 @@ func (h *Handler) CreateSchema(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/vnd.api+json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	httputil.WriteJSON(w, http.StatusCreated, map[string]interface{}{
 		"data": toJSONAPIResource(schema),
 	})
 }
@@ -489,8 +488,7 @@ func (h *Handler) DisableSchema(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"status": "disabled"})
+	httputil.WriteJSON(w, http.StatusOK, map[string]string{"status": "disabled"})
 }
 
 // EnableSchema handles PUT /schemas/:id/enable
@@ -513,8 +511,7 @@ func (h *Handler) EnableSchema(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"status": "enabled"})
+	httputil.WriteJSON(w, http.StatusOK, map[string]string{"status": "enabled"})
 }
 
 // HideSchema handles DELETE /schemas/:id
@@ -540,8 +537,7 @@ func (h *Handler) HideSchema(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"status": "hidden"})
+	httputil.WriteJSON(w, http.StatusOK, map[string]string{"status": "hidden"})
 }
 
 // SetActiveParameterSet handles PUT /schemas/:id/parameters
@@ -579,8 +575,7 @@ func (h *Handler) SetActiveParameterSet(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	httputil.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"status":               "updated",
 		"active_parameter_set": req.ActiveParameterSet,
 	})

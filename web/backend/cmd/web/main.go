@@ -8,11 +8,11 @@ import (
 	"time"
 
 	"github.com/rs/cors"
-	"github.com/telhawk/web/internal/auth"
-	"github.com/telhawk/web/internal/handlers"
-	"github.com/telhawk/web/internal/middleware"
-	"github.com/telhawk/web/internal/proxy"
-	"github.com/telhawk/web/internal/server"
+	"github.com/telhawk-systems/telhawk-stack/web/backend/internal/auth"
+	"github.com/telhawk-systems/telhawk-stack/web/backend/internal/handlers"
+	"github.com/telhawk-systems/telhawk-stack/web/backend/internal/middleware"
+	"github.com/telhawk-systems/telhawk-stack/web/backend/internal/proxy"
+	"github.com/telhawk-systems/telhawk-stack/web/backend/internal/server"
 )
 
 type Config struct {

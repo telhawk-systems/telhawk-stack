@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"github.com/telhawk-systems/telhawk-stack/common/httputil"
 	"net/http"
 	"strings"
 
@@ -68,8 +69,7 @@ func (h *AuthHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/vnd.api+json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(response)
+	httputil.WriteJSON(w, http.StatusCreated, response)
 }
 
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
@@ -431,8 +431,7 @@ func (h *AuthHandler) CreateHECToken(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/vnd.api+json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(response)
+	httputil.WriteJSON(w, http.StatusCreated, response)
 }
 
 func (h *AuthHandler) ListHECTokens(w http.ResponseWriter, r *http.Request) {

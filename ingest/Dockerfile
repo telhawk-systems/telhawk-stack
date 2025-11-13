@@ -5,13 +5,14 @@ WORKDIR /build
 
 # Copy go mod files
 COPY go.mod go.sum ./
+COPY common/ ./common/
 RUN go mod download
 
 # Copy source code
-COPY . .
+COPY ingest/ ./ingest/
 
 # Build binary
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o ingest ./cmd/ingest
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o ingest ./ingest/cmd/ingest
 
 # Runtime stage - use debug image for shell access
 FROM gcr.io/distroless/static-debian12:debug-nonroot

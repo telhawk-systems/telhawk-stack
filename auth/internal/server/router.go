@@ -1,6 +1,7 @@
 package server
 
 import (
+	"github.com/telhawk-systems/telhawk-stack/common/middleware"
 	"net/http"
 	"strings"
 
@@ -56,5 +57,5 @@ func NewRouter(h *handlers.AuthHandler) http.Handler {
 	// Health check
 	mux.HandleFunc("/healthz", h.HealthCheck)
 
-	return mux
+	return middleware.RequestID(mux)
 }

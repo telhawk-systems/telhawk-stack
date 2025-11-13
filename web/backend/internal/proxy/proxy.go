@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/telhawk/web/internal/auth"
+	"github.com/telhawk-systems/telhawk-stack/web/backend/internal/auth"
 )
 
 type Proxy struct {

@@ -1,6 +1,7 @@
 package server
 
 import (
+	"github.com/telhawk-systems/telhawk-stack/common/middleware"
 	"net/http"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -24,5 +25,5 @@ func NewRouter(h *handlers.HECHandler) http.Handler {
 	// Prometheus metrics
 	mux.Handle("/metrics", promhttp.Handler())
 
-	return mux
+	return middleware.RequestID(mux)
 }
