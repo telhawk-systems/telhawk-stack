@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/fatih/color"
+	"github.com/telhawk-systems/telhawk-stack/cli/pkg/color"
 )
 
 var (
