@@ -17,7 +17,18 @@ type PostgresRepository struct {
 
 // NewPostgresRepository creates a new PostgreSQL repository
 func NewPostgresRepository(ctx context.Context, connString string) (*PostgresRepository, error) {
-	pool, err := pgxpool.New(ctx, connString)
+	config, err := pgxpool.ParseConfig(connString)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse database config: %w", err)
+	}
+
+	// Connection pool configuration
+	config.MaxConns = 25            // Maximum number of connections in the pool
+	config.MinConns = 5             // Minimum idle connections
+	config.MaxConnLifetime = 5 * 60 // 5 minutes max connection lifetime
+	config.MaxConnIdleTime = 1 * 60 // 1 minute max idle time
+
+	pool, err := pgxpool.NewWithConfig(ctx, config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create connection pool: %w", err)
 	}

@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"github.com/telhawk-systems/telhawk-stack/common/httputil"
 	"log"
 	"net/http"
 
