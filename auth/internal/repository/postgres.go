@@ -199,7 +199,7 @@ func (r *PostgresRepository) RevokeSession(ctx context.Context, refreshToken str
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	query := `UPDATE sessions SET revoked = true WHERE refresh_token = $1`
+	query := `UPDATE sessions SET revoked_at = NOW() WHERE refresh_token = $1`
 
 	result, err := r.pool.Exec(ctx, query, refreshToken)
 	if err != nil {
