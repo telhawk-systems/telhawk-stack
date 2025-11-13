@@ -367,7 +367,7 @@ class ApiClient {
       await this.getCSRFToken();
     }
 
-    const response = await fetch(`${this.baseUrl}/auth/api/v1/auth/register`, {
+    const response = await fetch(`${this.baseUrl}/auth/api/v1/users/create`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
