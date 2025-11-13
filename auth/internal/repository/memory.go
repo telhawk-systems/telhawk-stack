@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"sync"
 	"time"
 
@@ -24,7 +25,7 @@ func NewInMemoryRepository() *InMemoryRepository {
 	}
 }
 
-func (r *InMemoryRepository) CreateUser(user *models.User) error {
+func (r *InMemoryRepository) CreateUser(ctx context.Context, user *models.User) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -37,7 +38,7 @@ func (r *InMemoryRepository) CreateUser(user *models.User) error {
 	return nil
 }
 
-func (r *InMemoryRepository) GetUserByUsername(username string) (*models.User, error) {
+func (r *InMemoryRepository) GetUserByUsername(ctx context.Context, username string) (*models.User, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -48,7 +49,7 @@ func (r *InMemoryRepository) GetUserByUsername(username string) (*models.User, e
 	return user, nil
 }
 
-func (r *InMemoryRepository) GetUserByID(id string) (*models.User, error) {
+func (r *InMemoryRepository) GetUserByID(ctx context.Context, id string) (*models.User, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -59,7 +60,7 @@ func (r *InMemoryRepository) GetUserByID(id string) (*models.User, error) {
 	return user, nil
 }
 
-func (r *InMemoryRepository) UpdateUser(user *models.User) error {
+func (r *InMemoryRepository) UpdateUser(ctx context.Context, user *models.User) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -72,7 +73,7 @@ func (r *InMemoryRepository) UpdateUser(user *models.User) error {
 	return nil
 }
 
-func (r *InMemoryRepository) CreateSession(session *models.Session) error {
+func (r *InMemoryRepository) CreateSession(ctx context.Context, session *models.Session) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -80,7 +81,7 @@ func (r *InMemoryRepository) CreateSession(session *models.Session) error {
 	return nil
 }
 
-func (r *InMemoryRepository) GetSession(refreshToken string) (*models.Session, error) {
+func (r *InMemoryRepository) GetSession(ctx context.Context, refreshToken string) (*models.Session, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -91,7 +92,7 @@ func (r *InMemoryRepository) GetSession(refreshToken string) (*models.Session, e
 	return session, nil
 }
 
-func (r *InMemoryRepository) RevokeSession(refreshToken string) error {
+func (r *InMemoryRepository) RevokeSession(ctx context.Context, refreshToken string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -105,7 +106,7 @@ func (r *InMemoryRepository) RevokeSession(refreshToken string) error {
 	return nil
 }
 
-func (r *InMemoryRepository) CreateHECToken(token *models.HECToken) error {
+func (r *InMemoryRepository) CreateHECToken(ctx context.Context, token *models.HECToken) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -113,7 +114,7 @@ func (r *InMemoryRepository) CreateHECToken(token *models.HECToken) error {
 	return nil
 }
 
-func (r *InMemoryRepository) GetHECToken(token string) (*models.HECToken, error) {
+func (r *InMemoryRepository) GetHECToken(ctx context.Context, token string) (*models.HECToken, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -125,7 +126,7 @@ func (r *InMemoryRepository) GetHECToken(token string) (*models.HECToken, error)
 }
 
 // GetHECTokenByID retrieves an HEC token by its ID
-func (r *InMemoryRepository) GetHECTokenByID(id string) (*models.HECToken, error) {
+func (r *InMemoryRepository) GetHECTokenByID(ctx context.Context, id string) (*models.HECToken, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -137,7 +138,7 @@ func (r *InMemoryRepository) GetHECTokenByID(id string) (*models.HECToken, error
 	return nil, ErrHECTokenNotFound
 }
 
-func (r *InMemoryRepository) ListHECTokensByUser(userID string) ([]*models.HECToken, error) {
+func (r *InMemoryRepository) ListHECTokensByUser(ctx context.Context, userID string) ([]*models.HECToken, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -150,7 +151,7 @@ func (r *InMemoryRepository) ListHECTokensByUser(userID string) ([]*models.HECTo
 	return tokens, nil
 }
 
-func (r *InMemoryRepository) ListAllHECTokens() ([]*models.HECToken, error) {
+func (r *InMemoryRepository) ListAllHECTokens(ctx context.Context) ([]*models.HECToken, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -161,7 +162,7 @@ func (r *InMemoryRepository) ListAllHECTokens() ([]*models.HECToken, error) {
 	return tokens, nil
 }
 
-func (r *InMemoryRepository) RevokeHECToken(token string) error {
+func (r *InMemoryRepository) RevokeHECToken(ctx context.Context, token string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -175,13 +176,13 @@ func (r *InMemoryRepository) RevokeHECToken(token string) error {
 	return nil
 }
 
-func (r *InMemoryRepository) LogAudit(entry *models.AuditLogEntry) error {
+func (r *InMemoryRepository) LogAudit(ctx context.Context, entry *models.AuditLogEntry) error {
 	// In-memory implementation doesn't persist audit logs
 	// This is for development only
 	return nil
 }
 
-func (r *InMemoryRepository) ListUsers() ([]*models.User, error) {
+func (r *InMemoryRepository) ListUsers(ctx context.Context) ([]*models.User, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -192,7 +193,7 @@ func (r *InMemoryRepository) ListUsers() ([]*models.User, error) {
 	return users, nil
 }
 
-func (r *InMemoryRepository) DeleteUser(id string) error {
+func (r *InMemoryRepository) DeleteUser(ctx context.Context, id string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
