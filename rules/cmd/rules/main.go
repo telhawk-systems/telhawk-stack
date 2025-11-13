@@ -16,6 +16,7 @@ import (
 	"github.com/telhawk-systems/telhawk-stack/rules/internal/config"
 	"github.com/telhawk-systems/telhawk-stack/rules/internal/handlers"
 	"github.com/telhawk-systems/telhawk-stack/rules/internal/repository"
+	"github.com/telhawk-systems/telhawk-stack/rules/internal/server"
 	"github.com/telhawk-systems/telhawk-stack/rules/internal/service"
 )
 
@@ -64,61 +65,12 @@ func main() {
 
 	// Initialize handlers
 	handler := handlers.NewHandler(svc)
-
-	// Setup HTTP router
-	mux := http.NewServeMux()
-
-	// Health check
-	mux.HandleFunc("/healthz", handler.HealthCheck)
-
-	// Correlation types API
-	mux.HandleFunc("/correlation/types", handler.GetCorrelationTypes)
-
-	// API routes (proxied from /api/rules/schemas via web backend)
-	mux.HandleFunc("/schemas", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodPost {
-			handler.CreateSchema(w, r)
-		} else if r.Method == http.MethodGet {
-			handler.ListSchemas(w, r)
-		} else {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		}
-	})
-
-	// Note: These are simplified routes. In production, use a proper router like chi or gorilla/mux
-	mux.HandleFunc("/schemas/", func(w http.ResponseWriter, r *http.Request) {
-		path := r.URL.Path
-
-		// GET /schemas/:id/versions
-		if len(path) > len("/versions") && path[len(path)-len("/versions"):] == "/versions" {
-			handler.GetVersionHistory(w, r)
-			// PUT /schemas/:id/parameters
-		} else if len(path) > len("/parameters") && path[len(path)-len("/parameters"):] == "/parameters" {
-			handler.SetActiveParameterSet(w, r)
-			// PUT /schemas/:id/disable
-		} else if len(path) > len("/disable") && path[len(path)-len("/disable"):] == "/disable" {
-			handler.DisableSchema(w, r)
-			// PUT /schemas/:id/enable
-		} else if len(path) > len("/enable") && path[len(path)-len("/enable"):] == "/enable" {
-			handler.EnableSchema(w, r)
-			// DELETE /schemas/:id
-		} else if r.Method == http.MethodDelete {
-			handler.HideSchema(w, r)
-			// PUT /schemas/:id (update = create new version)
-		} else if r.Method == http.MethodPut {
-			handler.UpdateSchema(w, r)
-			// GET /schemas/:id
-		} else if r.Method == http.MethodGet {
-			handler.GetSchema(w, r)
-		} else {
-			http.Error(w, "Not found", http.StatusNotFound)
-		}
-	})
+	router := server.NewRouter(handler)
 
 	// Create HTTP server
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.Server.Port),
-		Handler:      mux,
+		Handler:      router,
 		ReadTimeout:  cfg.Server.ReadTimeout,
 		WriteTimeout: cfg.Server.WriteTimeout,
 		IdleTimeout:  cfg.Server.IdleTimeout,

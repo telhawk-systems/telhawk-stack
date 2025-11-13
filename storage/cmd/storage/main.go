@@ -14,6 +14,7 @@ import (
 	"github.com/telhawk-systems/telhawk-stack/storage/internal/config"
 	"github.com/telhawk-systems/telhawk-stack/storage/internal/handlers"
 	"github.com/telhawk-systems/telhawk-stack/storage/internal/indexmgr"
+	"github.com/telhawk-systems/telhawk-stack/storage/internal/server"
 )
 
 func main() {
@@ -44,16 +45,11 @@ func main() {
 	}
 
 	handler := handlers.NewStorageHandler(osClient, indexManager)
-
-	mux := http.NewServeMux()
-	mux.HandleFunc("/api/v1/ingest", handler.Ingest)
-	mux.HandleFunc("/api/v1/bulk", handler.BulkIngest)
-	mux.HandleFunc("/healthz", handler.Health)
-	mux.HandleFunc("/readyz", handler.Ready)
+	router := server.NewRouter(handler)
 
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.Server.Port),
-		Handler:      mux,
+		Handler:      router,
 		ReadTimeout:  cfg.Server.ReadTimeout,
 		WriteTimeout: cfg.Server.WriteTimeout,
 		IdleTimeout:  cfg.Server.IdleTimeout,

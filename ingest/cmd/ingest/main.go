@@ -11,13 +11,13 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/ack"
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/authclient"
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/config"
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/coreclient"
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/handlers"
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/ratelimit"
+	"github.com/telhawk-systems/telhawk-stack/ingest/internal/server"
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/service"
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/storageclient"
 )
@@ -94,27 +94,12 @@ func main() {
 
 	// Initialize HTTP handlers
 	handler := handlers.NewHECHandler(ingestService, rateLimiter)
-
-	// Setup HTTP router
-	mux := http.NewServeMux()
-
-	// Splunk HEC endpoints
-	mux.HandleFunc("/services/collector/event", handler.HandleEvent)
-	mux.HandleFunc("/services/collector/raw", handler.HandleRaw)
-	mux.HandleFunc("/services/collector/health", handler.Health)
-	mux.HandleFunc("/services/collector/ack", handler.Ack)
-
-	// Health endpoints
-	mux.HandleFunc("/healthz", handler.Health)
-	mux.HandleFunc("/readyz", handler.Ready)
-
-	// Prometheus metrics
-	mux.Handle("/metrics", promhttp.Handler())
+	router := server.NewRouter(handler)
 
 	// Create server with config values
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.Server.Port),
-		Handler:      mux,
+		Handler:      router,
 		ReadTimeout:  cfg.Server.ReadTimeout,
 		WriteTimeout: cfg.Server.WriteTimeout,
 		IdleTimeout:  cfg.Server.IdleTimeout,
