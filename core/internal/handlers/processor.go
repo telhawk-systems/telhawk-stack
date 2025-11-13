@@ -3,7 +3,6 @@ package handlers
 import (
 	"encoding/base64"
 	"encoding/json"
-	"github.com/telhawk-systems/telhawk-stack/common/httputil"
 	"net/http"
 	"strings"
 	"time"

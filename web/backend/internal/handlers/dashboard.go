@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/telhawk-systems/telhawk-stack/common/httputil"
 	"io"
 	"log"
 	"net/http"
