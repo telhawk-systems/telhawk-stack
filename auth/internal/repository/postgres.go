@@ -334,6 +334,48 @@ func (r *PostgresRepository) ListHECTokensByUser(userID string) ([]*models.HECTo
 	return tokens, nil
 }
 
+func (r *PostgresRepository) ListAllHECTokens() ([]*models.HECToken, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	query := `
+		SELECT id, token, name, user_id, created_at, COALESCE(expires_at, '0001-01-01'::timestamp),
+		       disabled_at, disabled_by, revoked_at, revoked_by
+		FROM hec_tokens
+		ORDER BY created_at DESC
+	`
+
+	rows, err := r.pool.Query(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list all HEC tokens: %w", err)
+	}
+	defer rows.Close()
+
+	var tokens []*models.HECToken
+	for rows.Next() {
+		var token models.HECToken
+		var expiresAt time.Time
+
+		err := rows.Scan(
+			&token.ID, &token.Token, &token.Name, &token.UserID,
+			&token.CreatedAt, &expiresAt, &token.DisabledAt, &token.DisabledBy,
+			&token.RevokedAt, &token.RevokedBy,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan HEC token: %w", err)
+		}
+
+		if !expiresAt.IsZero() && expiresAt.Year() > 1 {
+			expiresCopy := expiresAt
+			token.ExpiresAt = &expiresCopy
+		}
+
+		tokens = append(tokens, &token)
+	}
+
+	return tokens, nil
+}
+
 func (r *PostgresRepository) RevokeHECToken(token string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()

@@ -72,6 +72,7 @@ type HECTokenResponse struct {
 	Token     string     `json:"token"`
 	Name      string     `json:"name"`
 	UserID    string     `json:"user_id"`
+	Username  string     `json:"username,omitempty"` // Only included for admin users
 	Enabled   bool       `json:"enabled"`
 	CreatedAt time.Time  `json:"created_at"`
 	ExpiresAt *time.Time `json:"expires_at,omitempty"`
@@ -105,6 +106,20 @@ func (t *HECToken) ToMaskedResponse() *HECTokenResponse {
 		Token:     MaskToken(t.Token),
 		Name:      t.Name,
 		UserID:    t.UserID,
+		Enabled:   t.IsActive(),
+		CreatedAt: t.CreatedAt,
+		ExpiresAt: t.ExpiresAt,
+	}
+}
+
+// ToMaskedResponseWithUsername converts a HECToken to an API response format with masked token and username
+func (t *HECToken) ToMaskedResponseWithUsername(username string) *HECTokenResponse {
+	return &HECTokenResponse{
+		ID:        t.ID,
+		Token:     MaskToken(t.Token),
+		Name:      t.Name,
+		UserID:    t.UserID,
+		Username:  username,
 		Enabled:   t.IsActive(),
 		CreatedAt: t.CreatedAt,
 		ExpiresAt: t.ExpiresAt,

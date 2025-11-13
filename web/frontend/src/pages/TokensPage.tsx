@@ -166,6 +166,11 @@ export function TokensPage() {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Name
               </th>
+              {tokens.length > 0 && tokens[0].username && (
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Owner
+                </th>
+              )}
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Token (masked)
               </th>
@@ -186,6 +191,11 @@ export function TokensPage() {
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm font-medium text-gray-900">{token.name}</div>
                 </td>
+                {token.username && (
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">{token.username}</div>
+                  </td>
+                )}
                 <td className="px-6 py-4 whitespace-nowrap">
                   <code className="text-xs font-mono text-gray-600">
                     {token.token.substring(0, 8)}...{token.token.substring(token.token.length - 8)}
