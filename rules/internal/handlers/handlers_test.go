@@ -699,3 +699,232 @@ func TestToJSONAPIVersionCollection(t *testing.T) {
 	firstVersion := data[0]
 	assert.Equal(t, "detection-schema-version", firstVersion["type"])
 }
+
+// Additional comprehensive error path tests
+
+func TestCreateSchema_ServiceError(t *testing.T) {
+	mockRepo := new(MockRepository)
+	svc := service.NewService(mockRepo)
+	handler := NewHandler(svc)
+
+	createReq := &models.CreateSchemaRequest{
+		Model:      map[string]interface{}{"threshold": 10},
+		View:       map[string]interface{}{"title": "Test"},
+		Controller: map[string]interface{}{"query": "test"},
+	}
+
+	mockRepo.On("CreateSchema", mock.Anything, mock.Anything).Return(errors.New("database error"))
+
+	body, _ := json.Marshal(createReq)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/schemas", bytes.NewReader(body))
+	w := httptest.NewRecorder()
+
+	handler.CreateSchema(w, req)
+
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	mockRepo.AssertExpectations(t)
+}
+
+func TestUpdateSchema_EmptyID(t *testing.T) {
+	handler := &Handler{}
+
+	updateReq := &models.UpdateSchemaRequest{
+		Model:      map[string]interface{}{"threshold": 20},
+		View:       map[string]interface{}{"title": "Updated"},
+		Controller: map[string]interface{}{"query": "updated"},
+	}
+
+	body, _ := json.Marshal(updateReq)
+	req := httptest.NewRequest(http.MethodPut, "/schemas/", bytes.NewReader(body))
+	w := httptest.NewRecorder()
+
+	handler.UpdateSchema(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Contains(t, w.Body.String(), "Schema ID required")
+}
+
+func TestUpdateSchema_InvalidJSON(t *testing.T) {
+	handler := &Handler{}
+	req := httptest.NewRequest(http.MethodPut, "/schemas/test-id", strings.NewReader("{invalid json"))
+	w := httptest.NewRecorder()
+
+	handler.UpdateSchema(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestUpdateSchema_ServiceError(t *testing.T) {
+	mockRepo := new(MockRepository)
+	svc := service.NewService(mockRepo)
+	handler := NewHandler(svc)
+
+	schemaID := uuid.NewString()
+	updateReq := &models.UpdateSchemaRequest{
+		Model:      map[string]interface{}{"threshold": 20},
+		View:       map[string]interface{}{"title": "Updated"},
+		Controller: map[string]interface{}{"query": "updated"},
+	}
+
+	existing := createTestDetectionSchema()
+	existing.ID = schemaID
+
+	mockRepo.On("GetLatestSchemaByID", mock.Anything, schemaID).Return(existing, nil)
+	mockRepo.On("CreateSchema", mock.Anything, mock.Anything).Return(errors.New("database error"))
+
+	body, _ := json.Marshal(updateReq)
+	req := httptest.NewRequest(http.MethodPut, "/schemas/"+schemaID, bytes.NewReader(body))
+	w := httptest.NewRecorder()
+
+	handler.UpdateSchema(w, req)
+
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	mockRepo.AssertExpectations(t)
+}
+
+func TestListSchemas_InvalidPage(t *testing.T) {
+	mockRepo := new(MockRepository)
+	svc := service.NewService(mockRepo)
+	handler := NewHandler(svc)
+
+	mockRepo.On("ListSchemas", mock.Anything, mock.Anything).Return([]*models.DetectionSchema{}, 0, nil)
+
+	req := httptest.NewRequest(http.MethodGet, "/schemas?page=invalid", nil)
+	w := httptest.NewRecorder()
+
+	handler.ListSchemas(w, req)
+
+	// Should still work, defaults to page 1
+	// The parseInt helper returns 0 for invalid, which is then adjusted to 1
+	assert.Equal(t, http.StatusOK, w.Code)
+	mockRepo.AssertExpectations(t)
+}
+
+func TestListSchemas_InvalidLimit(t *testing.T) {
+	mockRepo := new(MockRepository)
+	svc := service.NewService(mockRepo)
+	handler := NewHandler(svc)
+
+	mockRepo.On("ListSchemas", mock.Anything, mock.Anything).Return([]*models.DetectionSchema{}, 0, nil)
+
+	req := httptest.NewRequest(http.MethodGet, "/schemas?limit=invalid", nil)
+	w := httptest.NewRecorder()
+
+	handler.ListSchemas(w, req)
+
+	// Should still work, defaults to 20
+	assert.Equal(t, http.StatusOK, w.Code)
+	mockRepo.AssertExpectations(t)
+}
+
+func TestListSchemas_ServiceError(t *testing.T) {
+	mockRepo := new(MockRepository)
+	svc := service.NewService(mockRepo)
+	handler := NewHandler(svc)
+
+	mockRepo.On("ListSchemas", mock.Anything, mock.Anything).Return(nil, 0, errors.New("database error"))
+
+	req := httptest.NewRequest(http.MethodGet, "/schemas", nil)
+	w := httptest.NewRecorder()
+
+	handler.ListSchemas(w, req)
+
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	mockRepo.AssertExpectations(t)
+}
+
+func TestGetSchema_EmptyID(t *testing.T) {
+	handler := &Handler{}
+	req := httptest.NewRequest(http.MethodGet, "/schemas/", nil)
+	w := httptest.NewRecorder()
+
+	handler.GetSchema(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestGetSchema_WithVersion(t *testing.T) {
+	mockRepo := new(MockRepository)
+	svc := service.NewService(mockRepo)
+	handler := NewHandler(svc)
+
+	schemaID := uuid.NewString()
+	schema := createTestDetectionSchema()
+	schema.ID = schemaID
+	schema.Version = 2
+
+	// When version is specified in query, the service still uses GetSchemaByVersionID with the ID
+	// The version query param is currently not used (it would need schema version lookup by stable ID + version number)
+	mockRepo.On("GetSchemaByVersionID", mock.Anything, schemaID).Return(schema, nil)
+
+	req := httptest.NewRequest(http.MethodGet, "/schemas/"+schemaID+"?version=2", nil)
+	w := httptest.NewRecorder()
+
+	handler.GetSchema(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	mockRepo.AssertExpectations(t)
+}
+
+func TestDisableSchema_ServiceError(t *testing.T) {
+	mockRepo := new(MockRepository)
+	svc := service.NewService(mockRepo)
+	handler := NewHandler(svc)
+
+	schemaID := uuid.NewString()
+	schema := createTestDetectionSchema()
+
+	mockRepo.On("GetSchemaByVersionID", mock.Anything, schemaID).Return(schema, nil)
+	mockRepo.On("DisableSchema", mock.Anything, schemaID, mock.Anything).Return(errors.New("database error"))
+
+	req := httptest.NewRequest(http.MethodPut, "/schemas/"+schemaID+"/disable", nil)
+	w := httptest.NewRecorder()
+
+	handler.DisableSchema(w, req)
+
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	mockRepo.AssertExpectations(t)
+}
+
+func TestHideSchema_ServiceError(t *testing.T) {
+	mockRepo := new(MockRepository)
+	svc := service.NewService(mockRepo)
+	handler := NewHandler(svc)
+
+	schemaID := uuid.NewString()
+	schema := createTestDetectionSchema()
+
+	mockRepo.On("GetSchemaByVersionID", mock.Anything, schemaID).Return(schema, nil)
+	mockRepo.On("HideSchema", mock.Anything, schemaID, mock.Anything).Return(errors.New("database error"))
+
+	req := httptest.NewRequest(http.MethodDelete, "/schemas/"+schemaID, nil)
+	w := httptest.NewRecorder()
+
+	handler.HideSchema(w, req)
+
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	mockRepo.AssertExpectations(t)
+}
+
+func TestSetActiveParameterSet_ServiceError(t *testing.T) {
+	mockRepo := new(MockRepository)
+	svc := service.NewService(mockRepo)
+	handler := NewHandler(svc)
+
+	schemaID := uuid.NewString()
+
+	mockRepo.On("SetActiveParameterSet", mock.Anything, schemaID, "default").Return(errors.New("database error"))
+
+	reqBody := map[string]string{
+		"active_parameter_set": "default",
+	}
+	body, _ := json.Marshal(reqBody)
+
+	req := httptest.NewRequest(http.MethodPut, "/schemas/"+schemaID+"/parameters", bytes.NewReader(body))
+	w := httptest.NewRecorder()
+
+	handler.SetActiveParameterSet(w, req)
+
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	mockRepo.AssertExpectations(t)
+}

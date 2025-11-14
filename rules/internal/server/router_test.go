@@ -1,377 +1,579 @@
 package server
 
 import (
+	"bytes"
+	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/telhawk-systems/telhawk-stack/rules/internal/handlers"
+	"github.com/telhawk-systems/telhawk-stack/rules/internal/models"
+	"github.com/telhawk-systems/telhawk-stack/rules/internal/service"
 )
 
-// MockHandler implements handlers.Handler interface for testing
-type MockHandler struct {
-	HealthCheckCalled           bool
-	GetCorrelationTypesCalled   bool
-	CreateSchemaCalled          bool
-	ListSchemasCalled           bool
-	GetSchemaCalled             bool
-	UpdateSchemaCalled          bool
-	DisableSchemaCalled         bool
-	EnableSchemaCalled          bool
-	HideSchemaCalled            bool
-	GetVersionHistoryCalled     bool
-	SetActiveParameterSetCalled bool
+// MockRepository for testing
+type MockRepository struct {
+	mock.Mock
 }
 
-func (m *MockHandler) HealthCheck(w http.ResponseWriter, r *http.Request) {
-	m.HealthCheckCalled = true
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("OK"))
+func (m *MockRepository) CreateSchema(ctx context.Context, schema *models.DetectionSchema) error {
+	args := m.Called(ctx, schema)
+	return args.Error(0)
 }
 
-func (m *MockHandler) GetCorrelationTypes(w http.ResponseWriter, r *http.Request) {
-	m.GetCorrelationTypesCalled = true
-	w.WriteHeader(http.StatusOK)
+func (m *MockRepository) GetSchemaByVersionID(ctx context.Context, versionID string) (*models.DetectionSchema, error) {
+	args := m.Called(ctx, versionID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*models.DetectionSchema), args.Error(1)
 }
 
-func (m *MockHandler) CreateSchema(w http.ResponseWriter, r *http.Request) {
-	m.CreateSchemaCalled = true
-	w.WriteHeader(http.StatusCreated)
+func (m *MockRepository) GetLatestSchemaByID(ctx context.Context, id string) (*models.DetectionSchema, error) {
+	args := m.Called(ctx, id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*models.DetectionSchema), args.Error(1)
 }
 
-func (m *MockHandler) ListSchemas(w http.ResponseWriter, r *http.Request) {
-	m.ListSchemasCalled = true
-	w.WriteHeader(http.StatusOK)
+func (m *MockRepository) GetSchemaVersionHistory(ctx context.Context, id string) ([]*models.DetectionSchemaVersion, error) {
+	args := m.Called(ctx, id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]*models.DetectionSchemaVersion), args.Error(1)
 }
 
-func (m *MockHandler) GetSchema(w http.ResponseWriter, r *http.Request) {
-	m.GetSchemaCalled = true
-	w.WriteHeader(http.StatusOK)
+func (m *MockRepository) ListSchemas(ctx context.Context, req *models.ListSchemasRequest) ([]*models.DetectionSchema, int, error) {
+	args := m.Called(ctx, req)
+	if args.Get(0) == nil {
+		return nil, args.Int(1), args.Error(2)
+	}
+	return args.Get(0).([]*models.DetectionSchema), args.Int(1), args.Error(2)
 }
 
-func (m *MockHandler) UpdateSchema(w http.ResponseWriter, r *http.Request) {
-	m.UpdateSchemaCalled = true
-	w.WriteHeader(http.StatusOK)
+func (m *MockRepository) DisableSchema(ctx context.Context, versionID, userID string) error {
+	args := m.Called(ctx, versionID, userID)
+	return args.Error(0)
 }
 
-func (m *MockHandler) DisableSchema(w http.ResponseWriter, r *http.Request) {
-	m.DisableSchemaCalled = true
-	w.WriteHeader(http.StatusOK)
+func (m *MockRepository) EnableSchema(ctx context.Context, versionID string) error {
+	args := m.Called(ctx, versionID)
+	return args.Error(0)
 }
 
-func (m *MockHandler) EnableSchema(w http.ResponseWriter, r *http.Request) {
-	m.EnableSchemaCalled = true
-	w.WriteHeader(http.StatusOK)
+func (m *MockRepository) HideSchema(ctx context.Context, versionID, userID string) error {
+	args := m.Called(ctx, versionID, userID)
+	return args.Error(0)
 }
 
-func (m *MockHandler) HideSchema(w http.ResponseWriter, r *http.Request) {
-	m.HideSchemaCalled = true
-	w.WriteHeader(http.StatusOK)
+func (m *MockRepository) SetActiveParameterSet(ctx context.Context, versionID, parameterSet string) error {
+	args := m.Called(ctx, versionID, parameterSet)
+	return args.Error(0)
 }
 
-func (m *MockHandler) GetVersionHistory(w http.ResponseWriter, r *http.Request) {
-	m.GetVersionHistoryCalled = true
-	w.WriteHeader(http.StatusOK)
+func (m *MockRepository) Close() {}
+
+// Helper to create a test schema
+func createTestSchema() *models.DetectionSchema {
+	return &models.DetectionSchema{
+		ID:        "test-id",
+		VersionID: "test-version-id",
+		Model: map[string]interface{}{
+			"query": "SELECT * FROM events",
+		},
+		View: map[string]interface{}{
+			"title":    "Test Rule",
+			"severity": "high",
+		},
+		Controller: map[string]interface{}{
+			"enabled": true,
+		},
+		CreatedBy: "test-user",
+		CreatedAt: time.Now(),
+		Version:   1,
+	}
 }
 
-func (m *MockHandler) SetActiveParameterSet(w http.ResponseWriter, r *http.Request) {
-	m.SetActiveParameterSetCalled = true
-	w.WriteHeader(http.StatusOK)
+func TestNewRouter_HealthCheckRoute(t *testing.T) {
+	mockRepo := new(MockRepository)
+	svc := service.NewService(mockRepo)
+	handler := handlers.NewHandler(svc)
+	router := NewRouter(handler)
+
+	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Body.String(), "healthy")
 }
 
-func TestNewRouter_HealthCheck(t *testing.T) {
-	router := NewRouter((*handlers.Handler)(nil))
+func TestNewRouter_CorrelationTypesRoute(t *testing.T) {
+	mockRepo := new(MockRepository)
+	svc := service.NewService(mockRepo)
+	handler := handlers.NewHandler(svc)
+	router := NewRouter(handler)
 
-	// Verify router structure exists
-	t.Run("router is created", func(t *testing.T) {
-		assert.NotNil(t, router, "Router should not be nil")
-	})
+	req := httptest.NewRequest(http.MethodGet, "/correlation/types", nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Header().Get("Content-Type"), "application/json")
 }
 
-func TestNewRouter_Routes(t *testing.T) {
-	// Test route registration and HTTP method routing
-	// Since NewRouter creates the actual mux with handler methods,
-	// we'll test the routing behavior by examining which paths are handled
+func TestNewRouter_SchemasPostRoute(t *testing.T) {
+	mockRepo := new(MockRepository)
+	svc := service.NewService(mockRepo)
+	handler := handlers.NewHandler(svc)
+	router := NewRouter(handler)
 
+	schema := createTestSchema()
+	mockRepo.On("CreateSchema", mock.Anything, mock.Anything).Return(nil)
+	mockRepo.On("GetSchemaByVersionID", mock.Anything, mock.Anything).Return(schema, nil)
+
+	reqBody := map[string]interface{}{
+		"model":      schema.Model,
+		"view":       schema.View,
+		"controller": schema.Controller,
+	}
+	body, _ := json.Marshal(reqBody)
+
+	req := httptest.NewRequest(http.MethodPost, "/schemas", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-User-ID", "test-user")
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusCreated, w.Code)
+	mockRepo.AssertExpectations(t)
+}
+
+func TestNewRouter_SchemasGetRoute(t *testing.T) {
+	mockRepo := new(MockRepository)
+	svc := service.NewService(mockRepo)
+	handler := handlers.NewHandler(svc)
+	router := NewRouter(handler)
+
+	schemas := []*models.DetectionSchema{createTestSchema()}
+	mockRepo.On("ListSchemas", mock.Anything, mock.Anything).Return(schemas, 1, nil)
+
+	req := httptest.NewRequest(http.MethodGet, "/schemas", nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	mockRepo.AssertExpectations(t)
+}
+
+func TestNewRouter_SchemasInvalidMethodRoute(t *testing.T) {
+	mockRepo := new(MockRepository)
+	svc := service.NewService(mockRepo)
+	handler := handlers.NewHandler(svc)
+	router := NewRouter(handler)
+
+	req := httptest.NewRequest(http.MethodDelete, "/schemas", nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusMethodNotAllowed, w.Code)
+}
+
+func TestNewRouter_GetSchemaByIDRoute(t *testing.T) {
+	mockRepo := new(MockRepository)
+	svc := service.NewService(mockRepo)
+	handler := handlers.NewHandler(svc)
+	router := NewRouter(handler)
+
+	schema := createTestSchema()
+	mockRepo.On("GetSchemaByVersionID", mock.Anything, "test-version-id").Return(schema, nil)
+
+	req := httptest.NewRequest(http.MethodGet, "/schemas/test-version-id", nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	mockRepo.AssertExpectations(t)
+}
+
+func TestNewRouter_UpdateSchemaRoute(t *testing.T) {
+	mockRepo := new(MockRepository)
+	svc := service.NewService(mockRepo)
+	handler := handlers.NewHandler(svc)
+	router := NewRouter(handler)
+
+	schema := createTestSchema()
+	mockRepo.On("GetLatestSchemaByID", mock.Anything, "test-id").Return(schema, nil)
+	mockRepo.On("CreateSchema", mock.Anything, mock.Anything).Return(nil)
+	mockRepo.On("GetSchemaByVersionID", mock.Anything, mock.Anything).Return(schema, nil)
+
+	reqBody := map[string]interface{}{
+		"model":      schema.Model,
+		"view":       schema.View,
+		"controller": schema.Controller,
+	}
+	body, _ := json.Marshal(reqBody)
+
+	req := httptest.NewRequest(http.MethodPut, "/schemas/test-id", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-User-ID", "test-user")
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	mockRepo.AssertExpectations(t)
+}
+
+func TestNewRouter_DeleteSchemaRoute(t *testing.T) {
+	mockRepo := new(MockRepository)
+	svc := service.NewService(mockRepo)
+	handler := handlers.NewHandler(svc)
+	router := NewRouter(handler)
+
+	schema := createTestSchema()
+	mockRepo.On("GetSchemaByVersionID", mock.Anything, "test-version-id").Return(schema, nil)
+	// Note: HideSchema uses hardcoded user ID in handler (TODO: extract from JWT)
+	mockRepo.On("HideSchema", mock.Anything, "test-version-id", "00000000-0000-0000-0000-000000000001").Return(nil)
+
+	req := httptest.NewRequest(http.MethodDelete, "/schemas/test-version-id", nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	mockRepo.AssertExpectations(t)
+}
+
+func TestNewRouter_VersionHistoryRoute(t *testing.T) {
+	mockRepo := new(MockRepository)
+	svc := service.NewService(mockRepo)
+	handler := handlers.NewHandler(svc)
+	router := NewRouter(handler)
+
+	versions := []*models.DetectionSchemaVersion{
+		{
+			VersionID: "v1",
+			Version:   1,
+			Title:     "Test Rule",
+			CreatedBy: "test-user",
+			CreatedAt: time.Now(),
+		},
+	}
+	mockRepo.On("GetSchemaVersionHistory", mock.Anything, "test-id").Return(versions, nil)
+
+	req := httptest.NewRequest(http.MethodGet, "/schemas/test-id/versions", nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	mockRepo.AssertExpectations(t)
+}
+
+func TestNewRouter_DisableSchemaRoute(t *testing.T) {
+	mockRepo := new(MockRepository)
+	svc := service.NewService(mockRepo)
+	handler := handlers.NewHandler(svc)
+	router := NewRouter(handler)
+
+	schema := createTestSchema()
+	mockRepo.On("GetSchemaByVersionID", mock.Anything, "test-version-id").Return(schema, nil)
+	mockRepo.On("DisableSchema", mock.Anything, "test-version-id", "00000000-0000-0000-0000-000000000001").Return(nil)
+
+	req := httptest.NewRequest(http.MethodPut, "/schemas/test-version-id/disable", nil)
+	req.Header.Set("X-User-ID", "test-user")
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	mockRepo.AssertExpectations(t)
+}
+
+func TestNewRouter_EnableSchemaRoute(t *testing.T) {
+	mockRepo := new(MockRepository)
+	svc := service.NewService(mockRepo)
+	handler := handlers.NewHandler(svc)
+	router := NewRouter(handler)
+
+	mockRepo.On("EnableSchema", mock.Anything, "test-version-id").Return(nil)
+
+	req := httptest.NewRequest(http.MethodPut, "/schemas/test-version-id/enable", nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	mockRepo.AssertExpectations(t)
+}
+
+func TestNewRouter_SetActiveParameterSetRoute(t *testing.T) {
+	mockRepo := new(MockRepository)
+	svc := service.NewService(mockRepo)
+	handler := handlers.NewHandler(svc)
+	router := NewRouter(handler)
+
+	mockRepo.On("SetActiveParameterSet", mock.Anything, "test-version-id", "default").Return(nil)
+
+	reqBody := map[string]interface{}{
+		"active_parameter_set": "default",
+	}
+	body, _ := json.Marshal(reqBody)
+
+	req := httptest.NewRequest(http.MethodPut, "/schemas/test-version-id/parameters", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	mockRepo.AssertExpectations(t)
+}
+
+func TestNewRouter_UnknownSchemaRoute(t *testing.T) {
+	mockRepo := new(MockRepository)
+	svc := service.NewService(mockRepo)
+	handler := handlers.NewHandler(svc)
+	router := NewRouter(handler)
+
+	// Test an unknown route that doesn't match any patterns
+	req := httptest.NewRequest(http.MethodPatch, "/schemas/test-id", nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func TestNewRouter_MiddlewareRequestID(t *testing.T) {
+	mockRepo := new(MockRepository)
+	svc := service.NewService(mockRepo)
+	handler := handlers.NewHandler(svc)
+	router := NewRouter(handler)
+
+	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	// RequestID middleware should add X-Request-ID header
+	requestID := w.Header().Get("X-Request-ID")
+	assert.NotEmpty(t, requestID, "RequestID middleware should set X-Request-ID header")
+}
+
+func TestNewRouter_AllRoutesWithMiddleware(t *testing.T) {
+	// Verify all routes work through the middleware chain
 	tests := []struct {
 		name           string
 		method         string
 		path           string
+		body           map[string]interface{}
+		setupMock      func(*MockRepository)
 		expectedStatus int
-		description    string
 	}{
 		{
-			name:           "health check GET",
-			method:         http.MethodGet,
-			path:           "/healthz",
-			expectedStatus: http.StatusOK, // or panic if handler is nil
-			description:    "Health check endpoint should exist",
-		},
-		{
-			name:           "correlation types GET",
-			method:         http.MethodGet,
-			path:           "/correlation/types",
+			name:   "health check",
+			method: http.MethodGet,
+			path:   "/healthz",
+			setupMock: func(m *MockRepository) {
+				// No setup needed
+			},
 			expectedStatus: http.StatusOK,
-			description:    "Correlation types endpoint should exist",
 		},
 		{
-			name:           "schemas POST",
-			method:         http.MethodPost,
-			path:           "/schemas",
-			expectedStatus: http.StatusCreated,
-			description:    "POST /schemas should route to CreateSchema",
-		},
-		{
-			name:           "schemas GET",
-			method:         http.MethodGet,
-			path:           "/schemas",
+			name:   "correlation types",
+			method: http.MethodGet,
+			path:   "/correlation/types",
+			setupMock: func(m *MockRepository) {
+				// No setup needed
+			},
 			expectedStatus: http.StatusOK,
-			description:    "GET /schemas should route to ListSchemas",
 		},
 		{
-			name:           "schemas invalid method",
-			method:         http.MethodDelete,
-			path:           "/schemas",
-			expectedStatus: http.StatusMethodNotAllowed,
-			description:    "Invalid method on /schemas should return 405",
-		},
-		{
-			name:           "schema by ID GET",
-			method:         http.MethodGet,
-			path:           "/schemas/test-id",
+			name:   "list schemas",
+			method: http.MethodGet,
+			path:   "/schemas",
+			setupMock: func(m *MockRepository) {
+				m.On("ListSchemas", mock.Anything, mock.Anything).Return([]*models.DetectionSchema{}, 0, nil)
+			},
 			expectedStatus: http.StatusOK,
-			description:    "GET /schemas/:id should route to GetSchema",
-		},
-		{
-			name:           "schema by ID PUT",
-			method:         http.MethodPut,
-			path:           "/schemas/test-id",
-			expectedStatus: http.StatusOK,
-			description:    "PUT /schemas/:id should route to UpdateSchema",
-		},
-		{
-			name:           "schema by ID DELETE",
-			method:         http.MethodDelete,
-			path:           "/schemas/test-id",
-			expectedStatus: http.StatusOK,
-			description:    "DELETE /schemas/:id should route to HideSchema",
-		},
-		{
-			name:           "version history",
-			method:         http.MethodGet,
-			path:           "/schemas/test-id/versions",
-			expectedStatus: http.StatusOK,
-			description:    "GET /schemas/:id/versions should route to GetVersionHistory",
-		},
-		{
-			name:           "disable schema",
-			method:         http.MethodPut,
-			path:           "/schemas/test-id/disable",
-			expectedStatus: http.StatusOK,
-			description:    "PUT /schemas/:id/disable should route to DisableSchema",
-		},
-		{
-			name:           "enable schema",
-			method:         http.MethodPut,
-			path:           "/schemas/test-id/enable",
-			expectedStatus: http.StatusOK,
-			description:    "PUT /schemas/:id/enable should route to EnableSchema",
-		},
-		{
-			name:           "set parameters",
-			method:         http.MethodPut,
-			path:           "/schemas/test-id/parameters",
-			expectedStatus: http.StatusOK,
-			description:    "PUT /schemas/:id/parameters should route to SetActiveParameterSet",
 		},
 	}
 
-	// Note: This test structure shows expected routes but can't be run without
-	// causing panics due to nil handler. In a real implementation, you'd either:
-	// 1. Make Handler an interface and pass mock
-	// 2. Use dependency injection
-	// 3. Test with actual handler and mock service/repository
-
-	// For documentation purposes, verify we have test cases for all routes
-	assert.Len(t, tests, 12, "Should have test cases for all major routes")
-
-	// Verify route patterns are documented
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.NotEmpty(t, tt.method, "Test should specify HTTP method")
-			assert.NotEmpty(t, tt.path, "Test should specify path")
-			assert.NotZero(t, tt.expectedStatus, "Test should specify expected status")
+			mockRepo := new(MockRepository)
+			svc := service.NewService(mockRepo)
+			handler := handlers.NewHandler(svc)
+			router := NewRouter(handler)
+
+			tt.setupMock(mockRepo)
+
+			var bodyReader *bytes.Reader
+			if tt.body != nil {
+				bodyBytes, _ := json.Marshal(tt.body)
+				bodyReader = bytes.NewReader(bodyBytes)
+			} else {
+				bodyReader = bytes.NewReader([]byte{})
+			}
+
+			req := httptest.NewRequest(tt.method, tt.path, bodyReader)
+			if tt.body != nil {
+				req.Header.Set("Content-Type", "application/json")
+			}
+			w := httptest.NewRecorder()
+
+			router.ServeHTTP(w, req)
+
+			assert.Equal(t, tt.expectedStatus, w.Code)
+			assert.NotEmpty(t, w.Header().Get("X-Request-ID"), "All routes should have Request ID")
+			mockRepo.AssertExpectations(t)
 		})
 	}
 }
 
-func TestNewRouter_MiddlewareApplied(t *testing.T) {
-	// Test that middleware is applied
-	router := NewRouter((*handlers.Handler)(nil))
+func TestNewRouter_PathMatching(t *testing.T) {
+	// Test that path suffix matching works correctly
+	tests := []struct {
+		name           string
+		path           string
+		method         string
+		shouldMatch    bool
+		expectedStatus int
+	}{
+		{
+			name:           "versions suffix match",
+			path:           "/schemas/test-id/versions",
+			method:         http.MethodGet,
+			shouldMatch:    true,
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "disable suffix match",
+			path:           "/schemas/test-id/disable",
+			method:         http.MethodPut,
+			shouldMatch:    true,
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "enable suffix match",
+			path:           "/schemas/test-id/enable",
+			method:         http.MethodPut,
+			shouldMatch:    true,
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "parameters suffix match",
+			path:           "/schemas/test-id/parameters",
+			method:         http.MethodPut,
+			shouldMatch:    true,
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "schema ID without suffix - GET",
+			path:           "/schemas/test-id",
+			method:         http.MethodGet,
+			shouldMatch:    true,
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "schema ID without suffix - PUT",
+			path:           "/schemas/test-id",
+			method:         http.MethodPut,
+			shouldMatch:    true,
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "schema ID without suffix - DELETE",
+			path:           "/schemas/test-id",
+			method:         http.MethodDelete,
+			shouldMatch:    true,
+			expectedStatus: http.StatusOK,
+		},
+	}
 
-	// Verify router is not nil (middleware.RequestID wraps the mux)
-	assert.NotNil(t, router, "Router should not be nil")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockRepo := new(MockRepository)
+			svc := service.NewService(mockRepo)
+			handler := handlers.NewHandler(svc)
+			router := NewRouter(handler)
 
-	// The router is wrapped with middleware.RequestID
-	// We can verify this by checking the type or by making a request
-	// and checking for X-Request-ID header
-}
-
-func TestNewRouter_Integration(t *testing.T) {
-	// This test verifies the routing logic with a working mock
-	// We'll create a custom handler-like struct to test
-
-	t.Run("health endpoint returns OK", func(t *testing.T) {
-		mock := &MockHandler{}
-
-		// Create a simple mux to test the routing pattern
-		mux := http.NewServeMux()
-		mux.HandleFunc("/healthz", mock.HealthCheck)
-
-		req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
-		w := httptest.NewRecorder()
-
-		mux.ServeHTTP(w, req)
-
-		assert.True(t, mock.HealthCheckCalled, "Health check handler should be called")
-		assert.Equal(t, http.StatusOK, w.Code)
-	})
-
-	t.Run("schemas POST routes correctly", func(t *testing.T) {
-		mock := &MockHandler{}
-
-		mux := http.NewServeMux()
-		mux.HandleFunc("/schemas", func(w http.ResponseWriter, r *http.Request) {
-			if r.Method == http.MethodPost {
-				mock.CreateSchema(w, r)
-			} else if r.Method == http.MethodGet {
-				mock.ListSchemas(w, r)
+			// Setup appropriate mocks based on path
+			schema := createTestSchema()
+			if strings.HasSuffix(tt.path, "/versions") {
+				versions := []*models.DetectionSchemaVersion{
+					{
+						VersionID: "v1",
+						Version:   1,
+						Title:     "Test Rule",
+						CreatedBy: "test-user",
+						CreatedAt: time.Now(),
+					},
+				}
+				mockRepo.On("GetSchemaVersionHistory", mock.Anything, mock.Anything).Return(versions, nil)
+			} else if strings.HasSuffix(tt.path, "/disable") {
+				mockRepo.On("GetSchemaByVersionID", mock.Anything, mock.Anything).Return(schema, nil)
+				mockRepo.On("DisableSchema", mock.Anything, mock.Anything, "00000000-0000-0000-0000-000000000001").Return(nil)
+			} else if strings.HasSuffix(tt.path, "/enable") {
+				mockRepo.On("EnableSchema", mock.Anything, mock.Anything).Return(nil)
+			} else if strings.HasSuffix(tt.path, "/parameters") {
+				mockRepo.On("SetActiveParameterSet", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 			} else {
-				http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+				// Schema GET/PUT/DELETE
+				if tt.method == http.MethodGet {
+					mockRepo.On("GetSchemaByVersionID", mock.Anything, mock.Anything).Return(schema, nil)
+				} else if tt.method == http.MethodPut {
+					mockRepo.On("GetLatestSchemaByID", mock.Anything, mock.Anything).Return(schema, nil)
+					mockRepo.On("CreateSchema", mock.Anything, mock.Anything).Return(nil)
+					mockRepo.On("GetSchemaByVersionID", mock.Anything, mock.Anything).Return(schema, nil)
+				} else if tt.method == http.MethodDelete {
+					mockRepo.On("GetSchemaByVersionID", mock.Anything, mock.Anything).Return(schema, nil)
+					mockRepo.On("HideSchema", mock.Anything, mock.Anything, "00000000-0000-0000-0000-000000000001").Return(nil)
+				}
 			}
-		})
 
-		req := httptest.NewRequest(http.MethodPost, "/schemas", strings.NewReader("{}"))
-		w := httptest.NewRecorder()
-
-		mux.ServeHTTP(w, req)
-
-		assert.True(t, mock.CreateSchemaCalled, "CreateSchema should be called for POST")
-		assert.Equal(t, http.StatusCreated, w.Code)
-	})
-
-	t.Run("schemas GET routes correctly", func(t *testing.T) {
-		mock := &MockHandler{}
-
-		mux := http.NewServeMux()
-		mux.HandleFunc("/schemas", func(w http.ResponseWriter, r *http.Request) {
-			if r.Method == http.MethodPost {
-				mock.CreateSchema(w, r)
-			} else if r.Method == http.MethodGet {
-				mock.ListSchemas(w, r)
+			var body *bytes.Reader
+			if tt.method == http.MethodPut && strings.HasSuffix(tt.path, "/parameters") {
+				bodyBytes, _ := json.Marshal(map[string]interface{}{"active_parameter_set": "default"})
+				body = bytes.NewReader(bodyBytes)
+			} else if tt.method == http.MethodPut {
+				bodyBytes, _ := json.Marshal(map[string]interface{}{
+					"model":      schema.Model,
+					"view":       schema.View,
+					"controller": schema.Controller,
+				})
+				body = bytes.NewReader(bodyBytes)
 			} else {
-				http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+				body = bytes.NewReader([]byte{})
 			}
-		})
 
-		req := httptest.NewRequest(http.MethodGet, "/schemas", nil)
-		w := httptest.NewRecorder()
-
-		mux.ServeHTTP(w, req)
-
-		assert.True(t, mock.ListSchemasCalled, "ListSchemas should be called for GET")
-		assert.Equal(t, http.StatusOK, w.Code)
-	})
-
-	t.Run("schemas invalid method returns 405", func(t *testing.T) {
-		mock := &MockHandler{}
-
-		mux := http.NewServeMux()
-		mux.HandleFunc("/schemas", func(w http.ResponseWriter, r *http.Request) {
-			if r.Method == http.MethodPost {
-				mock.CreateSchema(w, r)
-			} else if r.Method == http.MethodGet {
-				mock.ListSchemas(w, r)
-			} else {
-				http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			req := httptest.NewRequest(tt.method, tt.path, body)
+			if tt.method != http.MethodGet {
+				req.Header.Set("Content-Type", "application/json")
+				req.Header.Set("X-User-ID", "test-user")
 			}
+			w := httptest.NewRecorder()
+
+			router.ServeHTTP(w, req)
+
+			assert.Equal(t, tt.expectedStatus, w.Code)
+			mockRepo.AssertExpectations(t)
 		})
-
-		req := httptest.NewRequest(http.MethodDelete, "/schemas", nil)
-		w := httptest.NewRecorder()
-
-		mux.ServeHTTP(w, req)
-
-		assert.False(t, mock.CreateSchemaCalled, "CreateSchema should not be called")
-		assert.False(t, mock.ListSchemasCalled, "ListSchemas should not be called")
-		assert.Equal(t, http.StatusMethodNotAllowed, w.Code)
-	})
-
-	t.Run("version history routes correctly", func(t *testing.T) {
-		mock := &MockHandler{}
-
-		mux := http.NewServeMux()
-		mux.HandleFunc("/schemas/", func(w http.ResponseWriter, r *http.Request) {
-			path := r.URL.Path
-			if len(path) > len("/versions") && path[len(path)-len("/versions"):] == "/versions" {
-				mock.GetVersionHistory(w, r)
-			} else {
-				http.Error(w, "Not found", http.StatusNotFound)
-			}
-		})
-
-		req := httptest.NewRequest(http.MethodGet, "/schemas/test-id/versions", nil)
-		w := httptest.NewRecorder()
-
-		mux.ServeHTTP(w, req)
-
-		assert.True(t, mock.GetVersionHistoryCalled, "GetVersionHistory should be called")
-		assert.Equal(t, http.StatusOK, w.Code)
-	})
-
-	t.Run("disable endpoint routes correctly", func(t *testing.T) {
-		mock := &MockHandler{}
-
-		mux := http.NewServeMux()
-		mux.HandleFunc("/schemas/", func(w http.ResponseWriter, r *http.Request) {
-			path := r.URL.Path
-			if len(path) > len("/disable") && path[len(path)-len("/disable"):] == "/disable" {
-				mock.DisableSchema(w, r)
-			} else {
-				http.Error(w, "Not found", http.StatusNotFound)
-			}
-		})
-
-		req := httptest.NewRequest(http.MethodPut, "/schemas/test-id/disable", nil)
-		w := httptest.NewRecorder()
-
-		mux.ServeHTTP(w, req)
-
-		assert.True(t, mock.DisableSchemaCalled, "DisableSchema should be called")
-		assert.Equal(t, http.StatusOK, w.Code)
-	})
-
-	t.Run("enable endpoint routes correctly", func(t *testing.T) {
-		mock := &MockHandler{}
-
-		mux := http.NewServeMux()
-		mux.HandleFunc("/schemas/", func(w http.ResponseWriter, r *http.Request) {
-			path := r.URL.Path
-			if len(path) > len("/enable") && path[len(path)-len("/enable"):] == "/enable" {
-				mock.EnableSchema(w, r)
-			} else {
-				http.Error(w, "Not found", http.StatusNotFound)
-			}
-		})
-
-		req := httptest.NewRequest(http.MethodPut, "/schemas/test-id/enable", nil)
-		w := httptest.NewRecorder()
-
-		mux.ServeHTTP(w, req)
-
-		assert.True(t, mock.EnableSchemaCalled, "EnableSchema should be called")
-		assert.Equal(t, http.StatusOK, w.Code)
-	})
+	}
 }

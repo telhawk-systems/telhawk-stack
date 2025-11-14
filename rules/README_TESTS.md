@@ -4,14 +4,17 @@ Comprehensive test suite for the rules microservice, bringing coverage from 0% t
 
 ## Test Coverage
 
-| Component | Coverage | Type |
-|-----------|----------|------|
-| **Service Layer** | 98.4% | Unit Tests |
-| **Handlers** | 84.2% | Unit Tests |
-| **Models** | 100.0% | Unit Tests |
-| **Config** | 96.4% | Unit Tests |
-| **Router/Server** | 22.2% | Unit Tests |
-| **Repository** | Integration Tests | Requires PostgreSQL |
+| Component | Coverage | Type | Test Cases |
+|-----------|----------|------|------------|
+| **Service Layer** | 98.4% | Unit Tests | 10 tests |
+| **Handlers** | 100.0% | Unit Tests | 61 tests |
+| **Models** | 100.0% | Unit Tests | 4 tests |
+| **Config** | 96.4% | Unit Tests | 6 tests |
+| **Router/Server** | 100.0% | Unit Tests | 18 tests |
+| **Repository** | 6.5%* | Integration Tests | 10 tests |
+| **Total Unit Test Coverage** | **99.3%** | Unit Tests | **157 total** |
+
+*Repository tests are integration tests that skip gracefully without a database
 
 ## Test Files
 
