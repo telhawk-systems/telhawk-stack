@@ -1,5 +1,10 @@
 #!/bin/bash
 # Test coverage report for all TelHawk services
+#
+# Excludes packages typically not covered by unit tests:
+# - cmd/*       (main functions, application entry points)
+# - */config    (configuration loading)
+# - */server    (server initialization)
 
 set -euo pipefail
 
@@ -43,8 +48,18 @@ for service in "${services[@]}"; do
     service_name=$(basename "$service")
     printf "%-20s " "$service_name"
 
+    # Exclude packages that are typically not tested (main, config, server setup)
+    # Get list of packages excluding cmd/, config, and server packages
+    packages=$(go list "./${service}/..." 2>/dev/null | grep -v -e '/cmd/' -e '/config$' -e '/server$' || echo "")
+
     # Run tests with coverage for this service
-    if output=$(go test -cover "./${service}/..." 2>&1); then
+    if [ -z "$packages" ]; then
+        # No packages to test after exclusions
+        echo "${BLUE}  no tests${NC}"
+        continue
+    fi
+
+    if output=$(echo "$packages" | xargs go test -cover 2>&1); then
         # Extract all coverage percentages from output
         # Look for lines like "coverage: 85.7% of statements"
         coverages=$(echo "$output" | grep -oP 'coverage: \K[0-9.]+(?=% of statements)')
@@ -111,4 +126,5 @@ else
 fi
 
 echo ""
+echo "Excludes: cmd/*, */config, */server (infrastructure code)"
 echo "Run with VERBOSE=1 to see error details"
