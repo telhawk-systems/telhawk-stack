@@ -14,13 +14,13 @@ import (
 )
 
 var (
-	hecURL      = flag.String("hec-url", "http://localhost:8088", "HEC endpoint URL")
-	hecToken    = flag.String("token", "", "HEC authentication token (required)")
-	count       = flag.Int("count", 100, "Number of events to generate")
-	interval    = flag.Duration("interval", 100*time.Millisecond, "Interval between events")
-	eventTypes  = flag.String("types", "auth,network,process,file,dns,http,detection", "Comma-separated list of event types")
-	timeSpread  = flag.Duration("time-spread", 24*time.Hour, "Spread events over this time period (0 for real-time)")
-	batchSize   = flag.Int("batch-size", 10, "Number of events per batch")
+	hecURL     = flag.String("hec-url", "http://localhost:8088", "HEC endpoint URL")
+	hecToken   = flag.String("token", "", "HEC authentication token (required)")
+	count      = flag.Int("count", 50000, "Number of events to generate")
+	interval   = flag.Duration("interval", 0, "Interval between events (0 for no delay)")
+	eventTypes = flag.String("types", "auth,network,process,file,dns,http,detection", "Comma-separated list of event types")
+	timeSpread = flag.Duration("time-spread", 90*24*time.Hour, "Spread events over this time period (0 for real-time)")
+	batchSize  = flag.Int("batch-size", 50, "Number of events per batch")
 )
 
 type HECEvent struct {
@@ -57,7 +57,7 @@ func main() {
 	failCount := 0
 
 	batch := make([]HECEvent, 0, *batchSize)
-	
+
 	for i := 0; i < *count; i++ {
 		eventType := types[rand.Intn(len(types))]
 		event := generateEvent(eventType, i)
@@ -69,8 +69,13 @@ func main() {
 				failCount += len(batch)
 			} else {
 				successCount += len(batch)
-				if successCount%50 == 0 {
-					log.Printf("Progress: %d/%d events sent", successCount, *count)
+				// Progress reporting: show every 5% or every 1000 events, whichever is more frequent
+				progressInterval := *count / 20
+				if progressInterval < 1000 {
+					progressInterval = 1000
+				}
+				if successCount%progressInterval == 0 || successCount == *count {
+					log.Printf("Progress: %d/%d events sent (%.1f%%)", successCount, *count, float64(successCount)*100.0/float64(*count))
 				}
 			}
 			batch = batch[:0]
@@ -107,7 +112,7 @@ func parseEventTypes(types string) []string {
 
 func generateEvent(eventType string, index int) HECEvent {
 	now := time.Now()
-	
+
 	var eventTime time.Time
 	if *timeSpread > 0 {
 		offset := time.Duration(rand.Int63n(int64(*timeSpread)))
@@ -156,7 +161,7 @@ func generateEvent(eventType string, index int) HECEvent {
 func generateAuthEvent() map[string]interface{} {
 	actions := []string{"login", "logout", "mfa_verify", "password_change"}
 	action := actions[rand.Intn(len(actions))]
-	
+
 	// Only logins should have significant failure rate; others mostly succeed
 	var success bool
 	if action == "login" {
@@ -164,7 +169,7 @@ func generateAuthEvent() map[string]interface{} {
 	} else {
 		success = rand.Float32() > 0.02 // 98% success rate for logout/mfa/password_change
 	}
-	
+
 	event := map[string]interface{}{
 		"class_uid":    3002,
 		"class_name":   "Authentication",
@@ -192,9 +197,9 @@ func generateAuthEvent() map[string]interface{} {
 		}(),
 		"actor": map[string]interface{}{
 			"user": map[string]interface{}{
-				"name":   gofakeit.Username(),
-				"uid":    gofakeit.UUID(),
-				"email":  gofakeit.Email(),
+				"name":  gofakeit.Username(),
+				"uid":   gofakeit.UUID(),
+				"email": gofakeit.Email(),
 			},
 		},
 		"src_endpoint": map[string]interface{}{
@@ -228,7 +233,7 @@ func generateNetworkEvent() map[string]interface{} {
 	actions := []int{1, 2, 5, 6} // open, close, traffic, refuse
 	actionNames := map[int]string{1: "Open", 2: "Close", 5: "Traffic", 6: "Refuse"}
 	action := actions[rand.Intn(len(actions))]
-	
+
 	protocols := []string{"TCP", "UDP", "ICMP"}
 	protocol := protocols[rand.Intn(len(protocols))]
 
@@ -253,7 +258,7 @@ func generateNetworkEvent() map[string]interface{} {
 			"boundary":      []string{"internal", "external"}[rand.Intn(2)],
 		},
 		"traffic": map[string]interface{}{
-			"bytes": rand.Intn(1000000),
+			"bytes":   rand.Intn(1000000),
 			"packets": rand.Intn(10000),
 		},
 		"metadata": map[string]interface{}{
@@ -274,7 +279,7 @@ func generateProcessEvent() map[string]interface{} {
 		"systemctl restart nginx",
 		"npm install express",
 	}
-	
+
 	return map[string]interface{}{
 		"class_uid":     1007,
 		"class_name":    "Process Activity",
@@ -283,10 +288,10 @@ func generateProcessEvent() map[string]interface{} {
 		"activity_name": "Launch",
 		"severity_id":   1,
 		"process": map[string]interface{}{
-			"pid":          rand.Intn(65535),
-			"name":         []string{"bash", "python3", "curl", "docker", "systemctl", "npm"}[rand.Intn(6)],
-			"cmd_line":     commands[rand.Intn(len(commands))],
-			"uid":          gofakeit.UUID(),
+			"pid":      rand.Intn(65535),
+			"name":     []string{"bash", "python3", "curl", "docker", "systemctl", "npm"}[rand.Intn(6)],
+			"cmd_line": commands[rand.Intn(len(commands))],
+			"uid":      gofakeit.UUID(),
 			"parent_process": map[string]interface{}{
 				"pid":  rand.Intn(65535),
 				"name": "systemd",
@@ -311,7 +316,7 @@ func generateFileEvent() map[string]interface{} {
 	actions := []int{1, 2, 3, 4, 5} // create, read, update, delete, rename
 	actionNames := map[int]string{1: "Create", 2: "Read", 3: "Update", 4: "Delete", 5: "Rename"}
 	action := actions[rand.Intn(len(actions))]
-	
+
 	paths := []string{
 		"/var/log/app.log",
 		"/etc/nginx/nginx.conf",
@@ -328,9 +333,9 @@ func generateFileEvent() map[string]interface{} {
 		"activity_name": actionNames[action],
 		"severity_id":   1,
 		"file": map[string]interface{}{
-			"path":      paths[rand.Intn(len(paths))],
-			"type":      []string{"Regular File", "Directory", "Symbolic Link"}[rand.Intn(3)],
-			"size":      rand.Intn(10000000),
+			"path":          paths[rand.Intn(len(paths))],
+			"type":          []string{"Regular File", "Directory", "Symbolic Link"}[rand.Intn(3)],
+			"size":          rand.Intn(10000000),
 			"modified_time": time.Now().Unix(),
 		},
 		"actor": map[string]interface{}{
@@ -357,10 +362,10 @@ func generateDNSEvent() map[string]interface{} {
 		"login.microsoft.com",
 		"updates.ubuntu.com",
 	}
-	
+
 	rTypes := []string{"A", "AAAA", "CNAME", "MX", "TXT"}
 	rType := rTypes[rand.Intn(len(rTypes))]
-	
+
 	return map[string]interface{}{
 		"class_uid":     4003,
 		"class_name":    "DNS Activity",
@@ -405,9 +410,9 @@ func generateHTTPEvent() map[string]interface{} {
 		"/metrics",
 		"/admin/dashboard",
 	}
-	
+
 	statusCode := statusCodes[rand.Intn(len(statusCodes))]
-	
+
 	return map[string]interface{}{
 		"class_uid":     4002,
 		"class_name":    "HTTP Activity",
@@ -423,10 +428,10 @@ func generateHTTPEvent() map[string]interface{} {
 			return 1 // Informational
 		}(),
 		"http_request": map[string]interface{}{
-			"method":     methods[rand.Intn(len(methods))],
-			"url":        map[string]interface{}{
-				"path":   paths[rand.Intn(len(paths))],
-				"scheme": "https",
+			"method": methods[rand.Intn(len(methods))],
+			"url": map[string]interface{}{
+				"path":     paths[rand.Intn(len(paths))],
+				"scheme":   "https",
 				"hostname": gofakeit.DomainName(),
 			},
 			"user_agent": gofakeit.UserAgent(),
@@ -461,9 +466,9 @@ func generateDetectionEvent() map[string]interface{} {
 		{"Privilege Escalation Attempt", 4, "Privilege Escalation"},
 		{"Malware Detected", 5, "Malware"},
 	}
-	
+
 	finding := findings[rand.Intn(len(findings))]
-	
+
 	return map[string]interface{}{
 		"class_uid":     2004,
 		"class_name":    "Detection Finding",
@@ -472,9 +477,9 @@ func generateDetectionEvent() map[string]interface{} {
 		"activity_name": "Create",
 		"severity_id":   finding.severity,
 		"finding": map[string]interface{}{
-			"title":       finding.title,
-			"uid":         gofakeit.UUID(),
-			"types":       []string{"Threat Detection"},
+			"title":        finding.title,
+			"uid":          gofakeit.UUID(),
+			"types":        []string{"Threat Detection"},
 			"created_time": time.Now().Unix(),
 		},
 		"attacks": []map[string]interface{}{
@@ -502,7 +507,7 @@ func generateDetectionEvent() map[string]interface{} {
 func sendBatch(client *http.Client, hecURL, token string, events []HECEvent) error {
 	var buf bytes.Buffer
 	encoder := json.NewEncoder(&buf)
-	
+
 	for _, event := range events {
 		if err := encoder.Encode(event); err != nil {
 			return fmt.Errorf("failed to encode event: %w", err)

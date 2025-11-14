@@ -30,7 +30,7 @@ go build
 
 ### Basic Usage
 
-Generate 100 mixed events:
+Generate 50,000 events spread over 90 days (default):
 
 ```bash
 ./event-seeder -token YOUR_HEC_TOKEN
@@ -38,10 +38,16 @@ Generate 100 mixed events:
 
 ### Custom Event Count
 
-Generate 1000 events:
+Generate 1000 events over 90 days:
 
 ```bash
 ./event-seeder -token YOUR_HEC_TOKEN -count 1000
+```
+
+Or generate 1000 events over the last hour:
+
+```bash
+./event-seeder -token YOUR_HEC_TOKEN -count 1000 -time-spread 1h
 ```
 
 ### Specific Event Types
@@ -82,11 +88,11 @@ Point to a different HEC endpoint:
 |------|---------|-------------|
 | `-hec-url` | `http://localhost:8088` | HEC endpoint URL |
 | `-token` | *required* | HEC authentication token |
-| `-count` | `100` | Number of events to generate |
-| `-interval` | `100ms` | Interval between batches (0 for no delay) |
-| `-batch-size` | `10` | Number of events per batch |
+| `-count` | `50000` | Number of events to generate |
+| `-interval` | `0` | Interval between batches (0 for no delay) |
+| `-batch-size` | `50` | Number of events per batch |
 | `-types` | `auth,network,process,file,dns,http,detection` | Comma-separated event types |
-| `-time-spread` | `24h` | Spread events over this time period (0 for real-time) |
+| `-time-spread` | `2160h` (90 days) | Spread events over this time period (0 for real-time) |
 
 ## Event Types
 
@@ -114,12 +120,20 @@ All generated events include:
 
 ## Examples
 
+### Production-Like Dataset (Default)
+
+Generate 90 days of realistic event data (50,000 events):
+
+```bash
+./event-seeder -token YOUR_TOKEN
+```
+
 ### Development Testing
 
 Quickly populate with a small diverse dataset:
 
 ```bash
-./event-seeder -token YOUR_TOKEN -count 50 -interval 50ms
+./event-seeder -token YOUR_TOKEN -count 100 -time-spread 1h
 ```
 
 ### Load Testing
@@ -127,7 +141,7 @@ Quickly populate with a small diverse dataset:
 Generate high volume for performance testing:
 
 ```bash
-./event-seeder -token YOUR_TOKEN -count 50000 -interval 0 -batch-size 100
+./event-seeder -token YOUR_TOKEN -count 100000 -batch-size 100
 ```
 
 ### Security Scenario Simulation

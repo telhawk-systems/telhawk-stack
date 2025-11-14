@@ -98,24 +98,29 @@ curl -b /tmp/cookies.txt -X POST http://localhost:3000/api/auth/api/v1/hec/token
 # 2. Build and run the seeder:
 cd tools/event-seeder
 go build
-./event-seeder -token YOUR_HEC_TOKEN -count 1000 -time-spread 1h -interval 0
+
+# Default: 50,000 events over 90 days (no arguments needed except token)
+./event-seeder -token YOUR_HEC_TOKEN
 
 # Common seeder use cases:
 
-# Quick development dataset (100 events):
-./event-seeder -token YOUR_TOKEN
+# Quick development dataset (100 events over last hour):
+./event-seeder -token YOUR_TOKEN -count 100 -time-spread 1h
 
 # Dashboard population (1000 events over last hour):
-./event-seeder -token YOUR_TOKEN -count 1000 -time-spread 1h -interval 0
+./event-seeder -token YOUR_TOKEN -count 1000 -time-spread 1h
 
-# Load testing (50k events, fast as possible):
-./event-seeder -token YOUR_TOKEN -count 50000 -interval 0 -batch-size 100
+# Production-like dataset (default: 50k events over 90 days):
+./event-seeder -token YOUR_TOKEN
+
+# Massive load testing (100k events, fast as possible):
+./event-seeder -token YOUR_TOKEN -count 100000 -batch-size 100
 
 # Specific event types only:
 ./event-seeder -token YOUR_TOKEN -types auth,detection -count 500
 
-# Historical data (week of events):
-./event-seeder -token YOUR_TOKEN -count 10000 -time-spread 168h -interval 0
+# Custom time range (30 days of events):
+./event-seeder -token YOUR_TOKEN -count 25000 -time-spread 720h
 ```
 ## Architecture
 See `docs/SERVICES.md` for service flow and summaries.
