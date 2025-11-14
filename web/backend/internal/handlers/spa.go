@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 type SPAHandler struct {
@@ -21,7 +22,15 @@ func NewSPAHandler(staticPath string, fileServer http.Handler) *SPAHandler {
 }
 
 func (h *SPAHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	path := filepath.Join(h.staticPath, r.URL.Path)
+	// Clean the URL path to prevent directory traversal
+	cleanPath := filepath.Clean(r.URL.Path)
+	path := filepath.Join(h.staticPath, cleanPath)
+
+	// Ensure the resulting path is still within staticPath
+	if !strings.HasPrefix(path, h.staticPath) {
+		http.ServeFile(w, r, h.indexPath)
+		return
+	}
 
 	_, err := os.Stat(path)
 	if os.IsNotExist(err) {
