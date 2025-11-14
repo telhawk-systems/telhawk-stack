@@ -8,6 +8,9 @@ Comprehensive test suite for the rules microservice, bringing coverage from 0% t
 |-----------|----------|------|
 | **Service Layer** | 98.4% | Unit Tests |
 | **Handlers** | 84.2% | Unit Tests |
+| **Models** | 100.0% | Unit Tests |
+| **Config** | 96.4% | Unit Tests |
+| **Router/Server** | 22.2% | Unit Tests |
 | **Repository** | Integration Tests | Requires PostgreSQL |
 
 ## Test Files
@@ -47,6 +50,53 @@ Tests for HTTP handlers and JSON:API responses:
 go test ./internal/handlers
 go test -v ./internal/handlers  # Verbose output
 go test -cover ./internal/handlers  # With coverage
+```
+
+#### `internal/models/schema_test.go`
+Tests for data models and helper methods:
+- IsActive() method tests for lifecycle state
+- Active schema (no disabled/hidden timestamps)
+- Disabled schema behavior
+- Hidden schema behavior
+- Combined disabled and hidden state
+
+**Run tests:**
+```bash
+go test ./internal/models
+go test -v ./internal/models  # Verbose output
+go test -cover ./internal/models  # With coverage
+```
+
+#### `internal/config/config_test.go`
+Tests for configuration loading:
+- Default configuration values
+- Loading from YAML config file
+- Environment variable overrides
+- Invalid YAML handling
+- Partial configuration (defaults + overrides)
+- Empty path behavior
+
+**Run tests:**
+```bash
+go test ./internal/config
+go test -v ./internal/config  # Verbose output
+go test -cover ./internal/config  # With coverage
+```
+
+#### `internal/server/router_test.go`
+Tests for HTTP routing and middleware:
+- Route registration verification
+- HTTP method routing (POST, GET, PUT, DELETE)
+- 405 responses for invalid methods
+- Path-based routing for nested endpoints (/versions, /disable, /enable, etc.)
+- Middleware application (RequestID)
+- Integration tests for routing logic
+
+**Run tests:**
+```bash
+go test ./internal/server
+go test -v ./internal/server  # Verbose output
+go test -cover ./internal/server  # With coverage
 ```
 
 ### Integration Tests (Require Database)
@@ -102,11 +152,11 @@ go test -short ./internal/repository  # Skips tests marked with testing.Short()
 ## Running All Tests
 
 ```bash
-# Run all unit tests (service + handlers)
-go test ./internal/service ./internal/handlers
+# Run all unit tests (service + handlers + models + config + server)
+go test ./internal/service ./internal/handlers ./internal/models ./internal/config ./internal/server
 
 # Run with coverage
-go test -cover ./internal/service ./internal/handlers
+go test -cover ./internal/service ./internal/handlers ./internal/models ./internal/config ./internal/server
 
 # Run all tests including integration (requires database)
 go test ./internal/...
@@ -119,14 +169,18 @@ go test -v -cover ./internal/...
 
 Generate HTML coverage report:
 ```bash
-# Generate coverage for unit tests
-go test -coverprofile=coverage.out ./internal/service ./internal/handlers
+# Generate coverage for all unit tests
+go test -coverprofile=coverage.out ./internal/service ./internal/handlers ./internal/models ./internal/config ./internal/server
 
 # View in browser
 go tool cover -html=coverage.out
 
 # View summary by function
 go tool cover -func=coverage.out
+
+# Generate coverage for all tests including integration
+go test -coverprofile=coverage.out ./internal/...
+go tool cover -html=coverage.out
 ```
 
 ## Test Patterns Used
@@ -163,6 +217,32 @@ assert.Equal(t, http.StatusOK, w.Code)
 - `setupTestDB()` - Sets up test database connection
 - `createBuiltinSchema()` - Creates builtin test schemas
 
+### 5. Temporary File Testing
+Config tests use `t.TempDir()` for isolated file operations:
+```go
+tmpDir := t.TempDir()
+configPath := filepath.Join(tmpDir, "config.yaml")
+os.WriteFile(configPath, []byte(configContent), 0644)
+```
+
+### 6. Environment Variable Testing
+Config tests verify environment variable overrides:
+```go
+os.Setenv("RULES_SERVER_PORT", "7777")
+defer os.Unsetenv("RULES_SERVER_PORT")
+```
+
+### 7. Router Integration Testing
+Router tests use mock handlers to verify routing logic:
+```go
+mock := &MockHandler{}
+mux.HandleFunc("/endpoint", mock.Handler)
+req := httptest.NewRequest(http.MethodGet, "/endpoint", nil)
+w := httptest.NewRecorder()
+mux.ServeHTTP(w, req)
+assert.True(t, mock.HandlerCalled)
+```
+
 ## Key Test Scenarios Covered
 
 ### Service Layer
@@ -196,6 +276,29 @@ assert.Equal(t, http.StatusOK, w.Code)
 - ✅ Pagination and filtering
 - ✅ Transaction handling
 - ✅ Error handling (not found, constraints)
+
+### Models
+- ✅ IsActive() method for lifecycle state
+- ✅ Active schema (no timestamps)
+- ✅ Disabled schema detection
+- ✅ Hidden schema detection
+- ✅ Combined disabled and hidden state
+
+### Config
+- ✅ Default configuration loading
+- ✅ YAML file parsing
+- ✅ Environment variable overrides (RULES_*)
+- ✅ Invalid YAML error handling
+- ✅ Partial configuration with defaults
+- ✅ Config file not found graceful handling
+
+### Router/Server
+- ✅ All routes registered correctly
+- ✅ HTTP method routing (GET, POST, PUT, DELETE)
+- ✅ 405 responses for invalid methods
+- ✅ Path-based routing (/versions, /disable, /enable, /parameters)
+- ✅ Middleware application (RequestID)
+- ✅ Integration tests for routing logic
 
 ## Test Maintenance
 
