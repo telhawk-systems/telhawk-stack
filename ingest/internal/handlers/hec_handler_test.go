@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -193,5 +194,167 @@ func TestAckQuery(t *testing.T) {
 
 	if acks["ack-2"] != true {
 		t.Errorf("Expected ack-2 to be true")
+	}
+}
+
+func TestHandleEvent_InvalidJSON(t *testing.T) {
+	mockService := &mockIngestService{}
+	handler := NewHECHandler(mockService, nil)
+
+	// Invalid JSON
+	body := []byte("{invalid json}")
+
+	req := httptest.NewRequest(http.MethodPost, "/services/collector/event", bytes.NewReader(body))
+	req.Header.Set("Authorization", "Telhawk test-token")
+	req.Header.Set("Content-Type", "application/json")
+
+	rr := httptest.NewRecorder()
+	handler.HandleEvent(rr, req)
+
+	if rr.Code == http.StatusOK {
+		t.Error("Expected non-200 status for invalid JSON")
+	}
+}
+
+func TestHandleEvent_EmptyBody(t *testing.T) {
+	mockService := &mockIngestService{}
+	handler := NewHECHandler(mockService, nil)
+
+	req := httptest.NewRequest(http.MethodPost, "/services/collector/event", bytes.NewReader([]byte{}))
+	req.Header.Set("Authorization", "Telhawk test-token")
+	req.Header.Set("Content-Type", "application/json")
+
+	rr := httptest.NewRecorder()
+	handler.HandleEvent(rr, req)
+
+	if rr.Code == http.StatusOK {
+		t.Error("Expected non-200 status for empty body")
+	}
+}
+
+func TestHandleEvent_ServiceError(t *testing.T) {
+	mockService := &mockIngestService{
+		ingestEventErr: fmt.Errorf("service unavailable"),
+	}
+	handler := NewHECHandler(mockService, nil)
+
+	event := map[string]interface{}{
+		"event": "test event",
+	}
+	body, _ := json.Marshal(event)
+
+	req := httptest.NewRequest(http.MethodPost, "/services/collector/event", bytes.NewReader(body))
+	req.Header.Set("Authorization", "Telhawk test-token")
+	req.Header.Set("Content-Type", "application/json")
+
+	rr := httptest.NewRecorder()
+	handler.HandleEvent(rr, req)
+
+	if rr.Code == http.StatusOK {
+		t.Error("Expected non-200 status when service returns error")
+	}
+}
+
+func TestHandleRaw_EmptyBody(t *testing.T) {
+	mockService := &mockIngestService{}
+	handler := NewHECHandler(mockService, nil)
+
+	req := httptest.NewRequest(http.MethodPost, "/services/collector/raw", bytes.NewReader([]byte{}))
+	req.Header.Set("Authorization", "Telhawk test-token")
+
+	rr := httptest.NewRecorder()
+	handler.HandleRaw(rr, req)
+
+	if rr.Code == http.StatusOK {
+		t.Error("Expected non-200 status for empty raw body")
+	}
+}
+
+func TestHandleRaw_ServiceError(t *testing.T) {
+	mockService := &mockIngestService{
+		ingestRawErr: fmt.Errorf("service unavailable"),
+	}
+	handler := NewHECHandler(mockService, nil)
+
+	rawData := []byte("test raw log line")
+
+	req := httptest.NewRequest(http.MethodPost, "/services/collector/raw", bytes.NewReader(rawData))
+	req.Header.Set("Authorization", "Telhawk test-token")
+
+	rr := httptest.NewRecorder()
+	handler.HandleRaw(rr, req)
+
+	if rr.Code == http.StatusOK {
+		t.Error("Expected non-200 status when service returns error")
+	}
+}
+
+func TestHealth(t *testing.T) {
+	mockService := &mockIngestService{}
+	handler := NewHECHandler(mockService, nil)
+
+	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
+	rr := httptest.NewRecorder()
+
+	handler.Health(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Errorf("Expected status 200, got %d", rr.Code)
+	}
+
+	var response map[string]interface{}
+	if err := json.NewDecoder(rr.Body).Decode(&response); err != nil {
+		t.Fatalf("Failed to decode response: %v", err)
+	}
+
+	if response["status"] != "healthy" {
+		t.Errorf("Expected status 'healthy', got %v", response["status"])
+	}
+}
+
+func TestReady(t *testing.T) {
+	mockService := &mockIngestService{}
+	handler := NewHECHandler(mockService, nil)
+
+	req := httptest.NewRequest(http.MethodGet, "/readyz", nil)
+	rr := httptest.NewRecorder()
+
+	handler.Ready(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Errorf("Expected status 200, got %d", rr.Code)
+	}
+
+	var response map[string]interface{}
+	if err := json.NewDecoder(rr.Body).Decode(&response); err != nil {
+		t.Fatalf("Failed to decode response: %v", err)
+	}
+
+	// Check if status field exists
+	status, hasStatus := response["status"]
+	if !hasStatus {
+		t.Fatal("Expected 'status' field in response")
+	}
+
+	// Status should be "ready" (not "failed")
+	if status != "ready" && status != "healthy" {
+		t.Errorf("Expected status 'ready' or 'healthy', got %v", status)
+	}
+}
+
+func TestAck_InvalidJSON(t *testing.T) {
+	mockService := &mockIngestService{}
+	handler := NewHECHandler(mockService, nil)
+
+	body := []byte("{invalid json}")
+
+	req := httptest.NewRequest(http.MethodPost, "/services/collector/ack", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+
+	rr := httptest.NewRecorder()
+	handler.Ack(rr, req)
+
+	if rr.Code == http.StatusOK {
+		t.Error("Expected non-200 status for invalid JSON")
 	}
 }
