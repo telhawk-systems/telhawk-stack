@@ -80,7 +80,12 @@ migrate -database "postgres://telhawk:password@localhost:5432/telhawk_auth?sslmo
 
 ### Generating Test Data (Event Seeder)
 
-The event seeder generates realistic OCSF events for development and testing:
+The event seeder generates realistic OCSF events for development and testing.
+
+**Key features:**
+- **Jittered distribution**: Events are evenly distributed across time with ±40% random jitter (not purely random)
+- **Guaranteed coverage**: Requires minimum 1 event/day to prevent gaps
+- **Homogeneous baseline**: Ideal for layering suspicious activity patterns on top
 
 ```bash
 # 1. Create a HEC token (via web UI at http://localhost:3000/tokens or via API):

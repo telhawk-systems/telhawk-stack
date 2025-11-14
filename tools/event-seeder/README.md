@@ -14,9 +14,10 @@ A tool for generating realistic fake OCSF events and sending them to the TelHawk
   - **Detection Finding (2004)**: Security alerts with MITRE ATT&CK tactics
 
 - Configurable event volume, timing, and distribution
+- **Jittered distribution**: Events are evenly distributed across the time period with randomness to appear natural (not purely random clustering)
 - Batch sending for efficiency
 - Realistic fake data using gofakeit library
-- Optional time spreading for historical data simulation
+- Historical data simulation with guaranteed coverage (minimum 1 event/day)
 
 ## Installation
 
@@ -117,6 +118,19 @@ All generated events include:
 - Appropriate severity levels based on event type and outcome
 - Metadata identifying source as "Event Seeder"
 - Configurable timestamps (real-time or historical with time-spread)
+
+### Time Distribution
+
+When using `-time-spread`, events are distributed using a **jittered algorithm**:
+- Events are evenly spaced across the time period (e.g., 50,000 events over 90 days = ~555 events/day)
+- Each event timestamp includes ±40% random jitter to appear natural
+- Guarantees coverage: requires minimum 1 event/day to prevent sparse distributions
+- Baseline is homogeneous for correlation testing with detection rules
+
+This approach ensures:
+- **No gaps**: Every day will have events (unlike pure random distribution)
+- **Natural appearance**: Jitter makes the distribution look realistic
+- **Predictable baseline**: Ideal for layering suspicious activity patterns on top
 
 ## Examples
 

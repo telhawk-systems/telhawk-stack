@@ -37,6 +37,18 @@ func main() {
 		log.Fatal("HEC token is required. Use -token flag")
 	}
 
+	// Validate event density for time-spread scenarios
+	if *timeSpread > 0 {
+		days := *timeSpread / (24 * time.Hour)
+		eventsPerDay := float64(*count) / float64(days)
+		if eventsPerDay < 1.0 {
+			log.Fatalf("Event density too low: %.2f events/day (need at least 1 event/day). Increase -count or decrease -time-spread", eventsPerDay)
+		}
+		if eventsPerDay < 10.0 {
+			log.Printf("Warning: Low event density (%.2f events/day). Consider increasing -count for more realistic data", eventsPerDay)
+		}
+	}
+
 	gofakeit.Seed(time.Now().UnixNano())
 
 	log.Printf("Starting event seeder:")
@@ -45,6 +57,13 @@ func main() {
 	log.Printf("  Interval: %v", *interval)
 	log.Printf("  Batch size: %d", *batchSize)
 	log.Printf("  Time spread: %v", *timeSpread)
+	if *timeSpread > 0 {
+		days := *timeSpread / (24 * time.Hour)
+		eventsPerDay := float64(*count) / float64(days)
+		log.Printf("  Distribution: Jittered (%.1f events/day avg)", eventsPerDay)
+	} else {
+		log.Printf("  Distribution: Real-time")
+	}
 
 	types := parseEventTypes(*eventTypes)
 	log.Printf("  Event types: %v", types)
@@ -115,8 +134,28 @@ func generateEvent(eventType string, index int) HECEvent {
 
 	var eventTime time.Time
 	if *timeSpread > 0 {
-		offset := time.Duration(rand.Int63n(int64(*timeSpread)))
-		eventTime = now.Add(-offset)
+		// Jittered distribution: evenly space events with random jitter
+		// Calculate base interval between events
+		baseInterval := float64(*timeSpread) / float64(*count)
+
+		// Calculate base timestamp for this event (evenly spaced)
+		baseOffset := time.Duration(float64(index) * baseInterval)
+
+		// Add jitter: ±40% of base interval to make distribution look natural
+		jitterRange := baseInterval * 0.4
+		jitter := time.Duration((rand.Float64()*2.0 - 1.0) * jitterRange)
+
+		// Calculate final timestamp, ensuring we stay within bounds
+		totalOffset := baseOffset + jitter
+		if totalOffset < 0 {
+			totalOffset = 0
+		}
+		if totalOffset > *timeSpread {
+			totalOffset = *timeSpread
+		}
+
+		// Events are placed going backwards from now
+		eventTime = now.Add(-(*timeSpread - totalOffset))
 	} else {
 		eventTime = now
 	}
