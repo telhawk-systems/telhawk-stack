@@ -165,6 +165,9 @@ func (s *IngestService) processEvents() {
 	for {
 		select {
 		case event := <-s.eventQueue:
+			if event == nil {
+				continue
+			}
 			metrics.QueueDepth.Set(float64(len(s.eventQueue)))
 			log.Printf("Processing event: id=%s source=%s", event.ID, event.Source)
 

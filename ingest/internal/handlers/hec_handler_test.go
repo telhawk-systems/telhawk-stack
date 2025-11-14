@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/models"
@@ -356,5 +357,405 @@ func TestAck_InvalidJSON(t *testing.T) {
 
 	if rr.Code == http.StatusOK {
 		t.Error("Expected non-200 status for invalid JSON")
+	}
+}
+
+func TestHandleEvent_MissingToken(t *testing.T) {
+	mockService := &mockIngestService{}
+	handler := NewHECHandler(mockService, nil)
+
+	event := map[string]interface{}{"event": "test"}
+	body, _ := json.Marshal(event)
+
+	req := httptest.NewRequest(http.MethodPost, "/services/collector/event", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+
+	rr := httptest.NewRecorder()
+	handler.HandleEvent(rr, req)
+
+	if rr.Code != http.StatusUnauthorized {
+		t.Errorf("Expected status 401, got %d", rr.Code)
+	}
+}
+
+func TestHandleEvent_TokenValidationFailed(t *testing.T) {
+	mockService := &mockIngestService{
+		validateTokenErr: fmt.Errorf("invalid token"),
+	}
+	handler := NewHECHandler(mockService, nil)
+
+	event := map[string]interface{}{"event": "test"}
+	body, _ := json.Marshal(event)
+
+	req := httptest.NewRequest(http.MethodPost, "/services/collector/event", bytes.NewReader(body))
+	req.Header.Set("Authorization", "Telhawk bad-token")
+	req.Header.Set("Content-Type", "application/json")
+
+	rr := httptest.NewRecorder()
+	handler.HandleEvent(rr, req)
+
+	if rr.Code != http.StatusUnauthorized {
+		t.Errorf("Expected status 401, got %d", rr.Code)
+	}
+}
+
+func TestHandleEvent_WrongMethod(t *testing.T) {
+	mockService := &mockIngestService{}
+	handler := NewHECHandler(mockService, nil)
+
+	req := httptest.NewRequest(http.MethodGet, "/services/collector/event", nil)
+
+	rr := httptest.NewRecorder()
+	handler.HandleEvent(rr, req)
+
+	if rr.Code != http.StatusMethodNotAllowed {
+		t.Errorf("Expected status 405, got %d", rr.Code)
+	}
+}
+
+func TestHandleRaw_WrongMethod(t *testing.T) {
+	mockService := &mockIngestService{}
+	handler := NewHECHandler(mockService, nil)
+
+	req := httptest.NewRequest(http.MethodGet, "/services/collector/raw", nil)
+
+	rr := httptest.NewRecorder()
+	handler.HandleRaw(rr, req)
+
+	if rr.Code != http.StatusMethodNotAllowed {
+		t.Errorf("Expected status 405, got %d", rr.Code)
+	}
+}
+
+func TestHandleRaw_MissingToken(t *testing.T) {
+	mockService := &mockIngestService{}
+	handler := NewHECHandler(mockService, nil)
+
+	req := httptest.NewRequest(http.MethodPost, "/services/collector/raw", bytes.NewReader([]byte("raw data")))
+
+	rr := httptest.NewRecorder()
+	handler.HandleRaw(rr, req)
+
+	if rr.Code != http.StatusUnauthorized {
+		t.Errorf("Expected status 401, got %d", rr.Code)
+	}
+}
+
+func TestHandleRaw_TokenValidationFailed(t *testing.T) {
+	mockService := &mockIngestService{
+		validateTokenErr: fmt.Errorf("invalid token"),
+	}
+	handler := NewHECHandler(mockService, nil)
+
+	req := httptest.NewRequest(http.MethodPost, "/services/collector/raw", bytes.NewReader([]byte("raw data")))
+	req.Header.Set("Authorization", "Telhawk bad-token")
+
+	rr := httptest.NewRecorder()
+	handler.HandleRaw(rr, req)
+
+	if rr.Code != http.StatusUnauthorized {
+		t.Errorf("Expected status 401, got %d", rr.Code)
+	}
+}
+
+func TestHandleRaw_WithQueryParams(t *testing.T) {
+	mockService := &mockIngestService{
+		ingestRawAckID: "raw-ack-456",
+	}
+	handler := NewHECHandler(mockService, nil)
+
+	rawData := []byte("test raw log line")
+
+	req := httptest.NewRequest(http.MethodPost, "/services/collector/raw?source=test-source&sourcetype=test-type&host=test-host", bytes.NewReader(rawData))
+	req.Header.Set("Authorization", "Telhawk test-token")
+
+	rr := httptest.NewRecorder()
+	handler.HandleRaw(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Errorf("Expected status 200, got %d", rr.Code)
+	}
+}
+
+func TestHandleRaw_WithHeaders(t *testing.T) {
+	mockService := &mockIngestService{
+		ingestRawAckID: "raw-ack-789",
+	}
+	handler := NewHECHandler(mockService, nil)
+
+	rawData := []byte("test raw log line")
+
+	req := httptest.NewRequest(http.MethodPost, "/services/collector/raw", bytes.NewReader(rawData))
+	req.Header.Set("Authorization", "Telhawk test-token")
+	req.Header.Set("X-Splunk-Request-Source", "header-source")
+	req.Header.Set("X-Splunk-Request-Sourcetype", "header-type")
+	req.Header.Set("X-Splunk-Request-Host", "header-host")
+
+	rr := httptest.NewRecorder()
+	handler.HandleRaw(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Errorf("Expected status 200, got %d", rr.Code)
+	}
+}
+
+func TestHandleEvent_NDJSONBatch(t *testing.T) {
+	mockService := &mockIngestService{
+		ingestEventAckID: "batch-ack-123",
+	}
+	handler := NewHECHandler(mockService, nil)
+
+	ndjson := `{"event":"event 1","source":"test"}
+{"event":"event 2","source":"test"}
+{"event":"event 3","source":"test"}`
+
+	req := httptest.NewRequest(http.MethodPost, "/services/collector/event", bytes.NewReader([]byte(ndjson)))
+	req.Header.Set("Authorization", "Telhawk test-token")
+	req.Header.Set("Content-Type", "application/json")
+
+	rr := httptest.NewRecorder()
+	handler.HandleEvent(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Errorf("Expected status 200, got %d", rr.Code)
+	}
+}
+
+func TestHandleEvent_NDJSONBatchWithEmptyLines(t *testing.T) {
+	mockService := &mockIngestService{
+		ingestEventAckID: "batch-ack-456",
+	}
+	handler := NewHECHandler(mockService, nil)
+
+	ndjson := `{"event":"event 1"}
+
+{"event":"event 2"}
+
+{"event":"event 3"}`
+
+	req := httptest.NewRequest(http.MethodPost, "/services/collector/event", bytes.NewReader([]byte(ndjson)))
+	req.Header.Set("Authorization", "Telhawk test-token")
+	req.Header.Set("Content-Type", "application/json")
+
+	rr := httptest.NewRecorder()
+	handler.HandleEvent(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Errorf("Expected status 200, got %d", rr.Code)
+	}
+}
+
+func TestHandleEvent_NDJSONInvalidLine(t *testing.T) {
+	mockService := &mockIngestService{}
+	handler := NewHECHandler(mockService, nil)
+
+	ndjson := `{"event":"event 1"}
+{invalid json}
+{"event":"event 3"}`
+
+	req := httptest.NewRequest(http.MethodPost, "/services/collector/event", bytes.NewReader([]byte(ndjson)))
+	req.Header.Set("Authorization", "Telhawk test-token")
+	req.Header.Set("Content-Type", "application/json")
+
+	rr := httptest.NewRecorder()
+	handler.HandleEvent(rr, req)
+
+	if rr.Code == http.StatusOK {
+		t.Error("Expected non-200 status for invalid NDJSON line")
+	}
+}
+
+func TestGetClientIP_XForwardedFor(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.Header.Set("X-Forwarded-For", "1.2.3.4, 5.6.7.8")
+
+	ip := getClientIP(req)
+	if ip != "1.2.3.4" {
+		t.Errorf("getClientIP() = %q, want %q", ip, "1.2.3.4")
+	}
+}
+
+func TestGetClientIP_XRealIP(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.Header.Set("X-Real-IP", "9.10.11.12")
+
+	ip := getClientIP(req)
+	if ip != "9.10.11.12" {
+		t.Errorf("getClientIP() = %q, want %q", ip, "9.10.11.12")
+	}
+}
+
+func TestGetClientIP_RemoteAddr(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.RemoteAddr = "13.14.15.16:12345"
+
+	ip := getClientIP(req)
+	if ip != "13.14.15.16:12345" {
+		t.Errorf("getClientIP() = %q, want %q", ip, "13.14.15.16:12345")
+	}
+}
+
+func TestGetClientIP_Precedence(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.Header.Set("X-Forwarded-For", "1.2.3.4")
+	req.Header.Set("X-Real-IP", "5.6.7.8")
+	req.RemoteAddr = "9.10.11.12:12345"
+
+	ip := getClientIP(req)
+	if ip != "1.2.3.4" {
+		t.Errorf("getClientIP() = %q, want %q", ip, "1.2.3.4")
+	}
+}
+
+func TestAck_GetMethod(t *testing.T) {
+	mockService := &mockIngestService{}
+	handler := NewHECHandler(mockService, nil)
+
+	req := httptest.NewRequest(http.MethodGet, "/services/collector/ack", nil)
+	rr := httptest.NewRecorder()
+
+	handler.Ack(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Errorf("Expected status 200, got %d", rr.Code)
+	}
+}
+
+type mockRateLimiter struct {
+	allowFunc func(ctx context.Context, key string) (bool, error)
+}
+
+func (m *mockRateLimiter) Allow(ctx context.Context, key string) (bool, error) {
+	if m.allowFunc != nil {
+		return m.allowFunc(ctx, key)
+	}
+	return true, nil
+}
+
+func (m *mockRateLimiter) Close() error {
+	return nil
+}
+
+func TestHandleEvent_RateLimitedByIP(t *testing.T) {
+	mockService := &mockIngestService{}
+	rateLimiter := &mockRateLimiter{
+		allowFunc: func(ctx context.Context, key string) (bool, error) {
+			if strings.HasPrefix(key, "ip:") {
+				return false, nil
+			}
+			return true, nil
+		},
+	}
+	handler := NewHECHandler(mockService, rateLimiter)
+
+	event := map[string]interface{}{"event": "test"}
+	body, _ := json.Marshal(event)
+
+	req := httptest.NewRequest(http.MethodPost, "/services/collector/event", bytes.NewReader(body))
+	req.Header.Set("Authorization", "Telhawk test-token")
+	req.Header.Set("Content-Type", "application/json")
+
+	rr := httptest.NewRecorder()
+	handler.HandleEvent(rr, req)
+
+	if rr.Code != http.StatusTooManyRequests {
+		t.Errorf("Expected status 429, got %d", rr.Code)
+	}
+}
+
+func TestHandleEvent_RateLimitedByToken(t *testing.T) {
+	mockService := &mockIngestService{}
+	rateLimiter := &mockRateLimiter{
+		allowFunc: func(ctx context.Context, key string) (bool, error) {
+			if strings.HasPrefix(key, "token:") {
+				return false, nil
+			}
+			return true, nil
+		},
+	}
+	handler := NewHECHandler(mockService, rateLimiter)
+
+	event := map[string]interface{}{"event": "test"}
+	body, _ := json.Marshal(event)
+
+	req := httptest.NewRequest(http.MethodPost, "/services/collector/event", bytes.NewReader(body))
+	req.Header.Set("Authorization", "Telhawk test-token")
+	req.Header.Set("Content-Type", "application/json")
+
+	rr := httptest.NewRecorder()
+	handler.HandleEvent(rr, req)
+
+	if rr.Code != http.StatusTooManyRequests {
+		t.Errorf("Expected status 429, got %d", rr.Code)
+	}
+}
+
+func TestHandleEvent_RateLimitError(t *testing.T) {
+	mockService := &mockIngestService{}
+	rateLimiter := &mockRateLimiter{
+		allowFunc: func(ctx context.Context, key string) (bool, error) {
+			return false, fmt.Errorf("rate limiter error")
+		},
+	}
+	handler := NewHECHandler(mockService, rateLimiter)
+
+	event := map[string]interface{}{"event": "test"}
+	body, _ := json.Marshal(event)
+
+	req := httptest.NewRequest(http.MethodPost, "/services/collector/event", bytes.NewReader(body))
+	req.Header.Set("Authorization", "Telhawk test-token")
+	req.Header.Set("Content-Type", "application/json")
+
+	rr := httptest.NewRecorder()
+	handler.HandleEvent(rr, req)
+
+	if rr.Code == http.StatusTooManyRequests {
+		t.Error("Should not return 429 when rate limiter has an error")
+	}
+}
+
+func TestHandleRaw_RateLimitedByIP(t *testing.T) {
+	mockService := &mockIngestService{}
+	rateLimiter := &mockRateLimiter{
+		allowFunc: func(ctx context.Context, key string) (bool, error) {
+			if strings.HasPrefix(key, "ip:") {
+				return false, nil
+			}
+			return true, nil
+		},
+	}
+	handler := NewHECHandler(mockService, rateLimiter)
+
+	req := httptest.NewRequest(http.MethodPost, "/services/collector/raw", bytes.NewReader([]byte("raw data")))
+	req.Header.Set("Authorization", "Telhawk test-token")
+
+	rr := httptest.NewRecorder()
+	handler.HandleRaw(rr, req)
+
+	if rr.Code != http.StatusTooManyRequests {
+		t.Errorf("Expected status 429, got %d", rr.Code)
+	}
+}
+
+func TestHandleRaw_RateLimitedByToken(t *testing.T) {
+	mockService := &mockIngestService{}
+	rateLimiter := &mockRateLimiter{
+		allowFunc: func(ctx context.Context, key string) (bool, error) {
+			if strings.HasPrefix(key, "token:") {
+				return false, nil
+			}
+			return true, nil
+		},
+	}
+	handler := NewHECHandler(mockService, rateLimiter)
+
+	req := httptest.NewRequest(http.MethodPost, "/services/collector/raw", bytes.NewReader([]byte("raw data")))
+	req.Header.Set("Authorization", "Telhawk test-token")
+
+	rr := httptest.NewRecorder()
+	handler.HandleRaw(rr, req)
+
+	if rr.Code != http.StatusTooManyRequests {
+		t.Errorf("Expected status 429, got %d", rr.Code)
 	}
 }
