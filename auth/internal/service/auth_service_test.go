@@ -1410,6 +1410,241 @@ func TestRevokeHECTokenByID(t *testing.T) {
 }
 
 // ============================================================================
+// Additional Error Case Tests
+// ============================================================================
+
+func TestResetPassword_UpdateUserError(t *testing.T) {
+	service, repo := setupTestService()
+	repo.users["user-123"] = &models.User{
+		ID:           "user-123",
+		Username:     "testuser",
+		PasswordHash: "old-hash",
+	}
+
+	// Force UpdateUser to fail
+	repo.updateUserErr = errors.New("database connection failed")
+
+	err := service.ResetPassword(
+		context.Background(),
+		"user-123",
+		"newpassword123",
+		"admin-id",
+		"192.168.1.1",
+		"test-agent",
+	)
+
+	if err == nil {
+		t.Fatal("Expected error when UpdateUser fails")
+	}
+
+	if err.Error() != "database connection failed" {
+		t.Errorf("Expected 'database connection failed', got %v", err)
+	}
+}
+
+func TestDeleteUser_GetUserError(t *testing.T) {
+	service, repo := setupTestService()
+
+	// Force GetUserByID to fail
+	repo.getUserErr = errors.New("database error")
+
+	err := service.DeleteUser(
+		context.Background(),
+		"user-123",
+		"admin-id",
+		"192.168.1.1",
+		"test-agent",
+	)
+
+	if err == nil {
+		t.Fatal("Expected error when GetUserByID fails")
+	}
+}
+
+func TestDeleteUser_DeleteError(t *testing.T) {
+	service, repo := setupTestService()
+	repo.users["user-123"] = &models.User{
+		ID:       "user-123",
+		Username: "testuser",
+	}
+
+	// Force DeleteUser to fail
+	repo.deleteUserErr = errors.New("cascade constraint violation")
+
+	err := service.DeleteUser(
+		context.Background(),
+		"user-123",
+		"admin-id",
+		"192.168.1.1",
+		"test-agent",
+	)
+
+	if err == nil {
+		t.Fatal("Expected error when DeleteUser fails")
+	}
+
+	if err.Error() != "cascade constraint violation" {
+		t.Errorf("Expected 'cascade constraint violation', got %v", err)
+	}
+}
+
+func TestCreateHECToken_CreateError(t *testing.T) {
+	service, repo := setupTestService()
+
+	// Force CreateHECToken to fail
+	repo.createHECTokenErr = errors.New("unique constraint violation")
+
+	token, err := service.CreateHECToken(
+		context.Background(),
+		"user-123",
+		"Test Token",
+		"never",
+		"192.168.1.1",
+		"test-agent",
+	)
+
+	if err == nil {
+		t.Fatal("Expected error when CreateHECToken fails")
+	}
+
+	if token != nil {
+		t.Error("Expected nil token when creation fails")
+	}
+
+	if err.Error() != "unique constraint violation" {
+		t.Errorf("Expected 'unique constraint violation', got %v", err)
+	}
+}
+
+func TestRevokeHECTokenByUser_RevokeError(t *testing.T) {
+	service, repo := setupTestService()
+
+	token := &models.HECToken{
+		ID:        "token-id",
+		UserID:    "user-123",
+		Token:     "test-token",
+		Name:      "Test Token",
+		CreatedAt: time.Now(),
+	}
+	repo.hecTokens["test-token"] = token
+
+	// Force RevokeHECToken to fail
+	repo.revokeHECTokenErr = errors.New("database deadlock")
+
+	err := service.RevokeHECTokenByUser(
+		context.Background(),
+		"test-token",
+		"user-123",
+		"192.168.1.1",
+		"test-agent",
+	)
+
+	if err == nil {
+		t.Fatal("Expected error when RevokeHECToken fails")
+	}
+
+	if err.Error() != "database deadlock" {
+		t.Errorf("Expected 'database deadlock', got %v", err)
+	}
+}
+
+func TestRevokeHECTokenByID_RevokeError(t *testing.T) {
+	service, repo := setupTestService()
+
+	token := &models.HECToken{
+		ID:        "token-id",
+		UserID:    "user-123",
+		Token:     "test-token",
+		Name:      "Test Token",
+		CreatedAt: time.Now(),
+	}
+	repo.hecTokens["test-token"] = token
+	repo.hecTokensByID["token-id"] = token
+
+	// Force RevokeHECToken to fail
+	repo.revokeHECTokenErr = errors.New("transaction timeout")
+
+	err := service.RevokeHECTokenByID(
+		context.Background(),
+		"token-id",
+		"user-123",
+		"192.168.1.1",
+		"test-agent",
+	)
+
+	if err == nil {
+		t.Fatal("Expected error when RevokeHECToken fails")
+	}
+
+	if err.Error() != "transaction timeout" {
+		t.Errorf("Expected 'transaction timeout', got %v", err)
+	}
+}
+
+func TestRevokeHECTokenByUser_WrongOwner(t *testing.T) {
+	service, repo := setupTestService()
+
+	token := &models.HECToken{
+		ID:        "token-id",
+		UserID:    "user-123",
+		Token:     "test-token",
+		Name:      "Test Token",
+		CreatedAt: time.Now(),
+	}
+	repo.hecTokens["test-token"] = token
+
+	// Try to revoke token with wrong user
+	err := service.RevokeHECTokenByUser(
+		context.Background(),
+		"test-token",
+		"user-456", // Different user
+		"192.168.1.1",
+		"test-agent",
+	)
+
+	if err == nil {
+		t.Fatal("Expected error when user doesn't own the token")
+	}
+
+	expectedErr := "unauthorized"
+	if err.Error() != expectedErr {
+		t.Errorf("Expected error '%s', got '%v'", expectedErr, err)
+	}
+}
+
+func TestRevokeHECTokenByID_WrongOwner(t *testing.T) {
+	service, repo := setupTestService()
+
+	token := &models.HECToken{
+		ID:        "token-id",
+		UserID:    "user-123",
+		Token:     "test-token",
+		Name:      "Test Token",
+		CreatedAt: time.Now(),
+	}
+	repo.hecTokens["test-token"] = token
+	repo.hecTokensByID["token-id"] = token
+
+	// Try to revoke token with wrong user
+	err := service.RevokeHECTokenByID(
+		context.Background(),
+		"token-id",
+		"user-456", // Different user
+		"192.168.1.1",
+		"test-agent",
+	)
+
+	if err == nil {
+		t.Fatal("Expected error when user doesn't own the token")
+	}
+
+	expectedErr := "unauthorized"
+	if err.Error() != expectedErr {
+		t.Errorf("Expected error '%s', got '%v'", expectedErr, err)
+	}
+}
+
+// ============================================================================
 // Helper Functions
 // ============================================================================
 
