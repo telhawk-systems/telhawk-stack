@@ -80,10 +80,12 @@ migrate -database "postgres://telhawk:password@localhost:5432/telhawk_auth?sslmo
 
 ### Generating Test Data (Event Seeder)
 
-The event seeder generates realistic OCSF events for development and testing.
+The event seeder generates realistic OCSF events for development and testing. It now supports **rule-based event generation** that automatically creates events matching detection rules to validate they fire correctly.
 
 **Key features:**
-- **Jittered distribution**: Events are evenly distributed across time with ±40% random jitter (not purely random)
+- **Rule-based generation**: Reads detection rules and generates events that match them (NEW)
+- **Automatic validation**: Ensures generated events will trigger the rules (NEW)
+- **Jittered distribution**: Events are evenly distributed across time with ±40% random jitter
 - **Guaranteed coverage**: Requires minimum 1 event/day to prevent gaps
 - **Homogeneous baseline**: Ideal for layering suspicious activity patterns on top
 
@@ -100,14 +102,48 @@ curl -b /tmp/cookies.txt -X POST http://localhost:3000/api/auth/api/v1/hec/token
 
 # Note the token value from the response
 
-# 2. Build and run the seeder:
+# 2. Build the CLI (if not already built):
+cd cli
+go build -o ../bin/thawk .
+
+# 3. Rule-based event generation (NEW - recommended approach):
+
+# Generate events from detection rules directory (validates rules fire):
+./bin/thawk seeder run --token YOUR_TOKEN --from-rules ./alerting/rules/
+
+# List available rules and their support status:
+./bin/thawk seeder list-rules ./alerting/rules/
+
+# Use YAML config for fine-grained control:
+cat > seeder.yaml <<EOF
+version: "1.0"
+defaults:
+  hec_url: http://localhost:8088
+  token: YOUR_TOKEN
+  count: 1000
+  time_spread: 1h
+  batch_size: 50
+
+rules:
+  failed_login_attack:
+    rule_file: ./alerting/rules/failed_logins.json
+    enabled: true
+    multiplier: 1.5  # Generate 50% more events than threshold
+    params:
+      actor.user.name: admin
+      src_endpoint.ip: 192.168.1.100
+
+  port_scan_attack:
+    rule_file: ./alerting/rules/port_scanning.json
+    enabled: true
+    multiplier: 2.0
+EOF
+
+./bin/thawk seeder run --config seeder.yaml
+
+# 4. Legacy standalone seeder (still supported):
 cd tools/event-seeder
 go build
-
-# Default: 50,000 events over 90 days (no arguments needed except token)
-./event-seeder -token YOUR_HEC_TOKEN
-
-# Common seeder use cases:
 
 # Quick development dataset (100 events over last hour):
 ./event-seeder -token YOUR_TOKEN -count 100 -time-spread 1h
@@ -120,13 +156,21 @@ go build
 
 # Massive load testing (100k events, fast as possible):
 ./event-seeder -token YOUR_TOKEN -count 100000 -batch-size 100
-
-# Specific event types only:
-./event-seeder -token YOUR_TOKEN -types auth,detection -count 500
-
-# Custom time range (30 days of events):
-./event-seeder -token YOUR_TOKEN -count 25000 -time-spread 720h
 ```
+
+**Rule-based generation details:**
+- **Supported correlation types** (Phase 1):
+  - `event_count`: Generates N events matching filter (e.g., failed logins)
+  - `value_count`: Generates events with N unique values (e.g., port scanning)
+- **Not yet supported** (Phase 2):
+  - `temporal_ordered`: Event sequences with strict order
+  - `temporal`: Multiple events in any order
+  - `join`: Field correlation
+- **Benefits**:
+  - Validates detection rules actually work
+  - Automatically stays in sync with rule changes
+  - Includes MITRE ATT&CK mapping from rules
+  - No manual coding of attack patterns needed
 ## Architecture
 See `docs/SERVICES.md` for service flow and summaries.
 

@@ -1,0 +1,104 @@
+version: "1.0"
+
+# Default seeder configuration
+defaults:
+  # HEC endpoint URL
+  hec_url: http://localhost:8088
+
+  # HEC authentication token (can also use environment variable: SEEDER_TOKEN)
+  token: ${SEEDER_TOKEN}
+
+  # Number of baseline benign events to generate
+  count: 10000
+
+  # Time period to spread events across (e.g., 1h, 24h, 7d, 90d)
+  # Events will be distributed with jittered timestamps going backwards from now
+  time_spread: 24h
+
+  # Number of events to send per HTTP request
+  batch_size: 50
+
+  # Delay between sending individual events (0 = no delay, send as fast as possible)
+  interval: 0s
+
+  # Types of baseline events to generate
+  event_types:
+    - auth
+    - network
+    - process
+    - file
+    - dns
+    - http
+    - detection
+
+# Rule-based event generation
+# Generate events that match detection rules to validate they fire correctly
+rules:
+  # Failed login brute force attack
+  failed_login_attack:
+    rule_file: ./alerting/rules/failed_logins.json
+    enabled: true
+    multiplier: 1.5  # Generate 50% more events than threshold (ensures rule fires)
+    params:
+      # Override generated values with specific ones
+      actor.user.name: admin
+      src_endpoint.ip: 192.168.1.100
+
+  # Port scanning attack
+  port_scan_attack:
+    rule_file: ./alerting/rules/port_scanning.json
+    enabled: true
+    multiplier: 2.0  # Generate 2x threshold
+    params:
+      src_endpoint.ip: 10.0.0.50
+
+  # Privilege escalation (temporal_ordered - not yet supported in Phase 1)
+  # privilege_escalation:
+  #   rule_file: ./alerting/rules/privilege_escalation_after_failed_login.json
+  #   enabled: false
+  #   multiplier: 1.5
+
+# Manual attack patterns (legacy approach - still supported)
+# These patterns are manually coded in cli/pkg/attacks/
+attacks:
+  # SQL injection attack pattern
+  sql_injection:
+    pattern: T1190  # MITRE ATT&CK technique
+    enabled: false
+    params:
+      target_host: webapp.example.com
+      attack_duration: 5m
+
+  # Credential stuffing
+  credential_stuffing:
+    pattern: T1078
+    enabled: false
+    params:
+      target_users:
+        - admin
+        - root
+        - administrator
+      source_ips:
+        - 192.168.1.50
+        - 192.168.1.51
+
+# Usage Examples:
+#
+# 1. Generate baseline events only:
+#    thawk seeder run --token YOUR_TOKEN
+#
+# 2. Generate events from all enabled rules:
+#    thawk seeder run --token YOUR_TOKEN
+#    (Rules are auto-generated if configured above)
+#
+# 3. Generate events from rules directory:
+#    thawk seeder run --token YOUR_TOKEN --from-rules ./alerting/rules/
+#
+# 4. Quick test with small dataset:
+#    thawk seeder run --token YOUR_TOKEN --count 100 --time-spread 1h
+#
+# 5. List available rules:
+#    thawk seeder list-rules ./alerting/rules/
+#
+# 6. Validate configuration:
+#    thawk seeder validate --config seeder.yaml

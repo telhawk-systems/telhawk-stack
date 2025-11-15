@@ -1,50 +1,14 @@
-package main
+package seeder
 
 import (
-	"bytes"
-	"encoding/json"
-	"flag"
 	"fmt"
-	"log"
 	"math/rand"
-	"net/http"
-	"strings"
 	"time"
 
 	"github.com/brianvoe/gofakeit/v6"
-	"github.com/telhawk-systems/telhawk-stack/tools/event-seeder/attacks"
 )
 
-// paramFlags holds repeated -param key=value flags
-type paramFlags map[string]string
-
-func (p paramFlags) String() string {
-	return fmt.Sprintf("%v", map[string]string(p))
-}
-
-func (p paramFlags) Set(value string) error {
-	parts := strings.SplitN(value, "=", 2)
-	if len(parts) != 2 {
-		return fmt.Errorf("param must be in format key=value")
-	}
-	p[parts[0]] = parts[1]
-	return nil
-}
-
-var (
-	hecURL     = flag.String("hec-url", "http://localhost:8088", "HEC endpoint URL")
-	hecToken   = flag.String("token", "", "HEC authentication token (required)")
-	count      = flag.Int("count", 50000, "Number of events to generate")
-	interval   = flag.Duration("interval", 0, "Interval between events (0 for no delay)")
-	eventTypes = flag.String("types", "auth,network,process,file,dns,http,detection", "Comma-separated list of event types")
-	timeSpread = flag.Duration("time-spread", 90*24*time.Hour, "Spread events over this time period (0 for real-time)")
-	batchSize  = flag.Int("batch-size", 50, "Number of events per batch")
-
-	// Attack pattern injection flags
-	injectAttack = flag.String("inject-attack", "", "Inject attack pattern (e.g., T1110.001). Use 'list' to see available attacks")
-	attackParams = make(paramFlags)
-)
-
+// HECEvent represents an event to be sent to HEC
 type HECEvent struct {
 	Time       float64                `json:"time"`
 	Event      map[string]interface{} `json:"event"`
@@ -52,214 +16,30 @@ type HECEvent struct {
 	Index      string                 `json:"index,omitempty"`
 }
 
-func main() {
-	flag.Var(attackParams, "param", "Attack-specific parameter in key=value format (can be repeated)")
-	flag.Parse()
-
-	// Handle special commands
-	if *injectAttack == "list" {
-		fmt.Println("Available attack patterns:")
-		for _, name := range attacks.List() {
-			pattern, _ := attacks.Get(name)
-			fmt.Printf("  %-15s - %s\n", name, pattern.Description())
-		}
-		return
-	}
-
-	if *hecToken == "" {
-		log.Fatal("HEC token is required. Use -token flag")
-	}
-
-	// Validate event density for time-spread scenarios
-	if *timeSpread > 0 {
-		days := *timeSpread / (24 * time.Hour)
-		eventsPerDay := float64(*count) / float64(days)
-		if eventsPerDay < 1.0 {
-			log.Fatalf("Event density too low: %.2f events/day (need at least 1 event/day). Increase -count or decrease -time-spread", eventsPerDay)
-		}
-		if eventsPerDay < 10.0 {
-			log.Printf("Warning: Low event density (%.2f events/day). Consider increasing -count for more realistic data", eventsPerDay)
-		}
-	}
-
-	gofakeit.Seed(time.Now().UnixNano())
-
-	log.Printf("Starting event seeder:")
-	log.Printf("  HEC URL: %s", *hecURL)
-	log.Printf("  Event count: %d", *count)
-	log.Printf("  Interval: %v", *interval)
-	log.Printf("  Batch size: %d", *batchSize)
-	log.Printf("  Time spread: %v", *timeSpread)
-	if *timeSpread > 0 {
-		days := *timeSpread / (24 * time.Hour)
-		eventsPerDay := float64(*count) / float64(days)
-		log.Printf("  Distribution: Jittered (%.1f events/day avg)", eventsPerDay)
-	} else {
-		log.Printf("  Distribution: Real-time")
-	}
-
-	types := parseEventTypes(*eventTypes)
-	log.Printf("  Event types: %v", types)
-
-	client := &http.Client{
-		Timeout: 10 * time.Second,
-	}
-
-	successCount := 0
-	failCount := 0
-
-	// Generate and send attack events if requested
-	if *injectAttack != "" {
-		attackEvents, err := generateAttackEvents()
-		if err != nil {
-			log.Fatalf("Failed to generate attack events: %v", err)
-		}
-
-		log.Printf("\nInjecting attack pattern: %s", *injectAttack)
-		log.Printf("  Attack events: %d", len(attackEvents))
-		if len(attackParams) > 0 {
-			log.Printf("  Parameters: %v", map[string]string(attackParams))
-		}
-
-		// Send attack events in batches
-		for i := 0; i < len(attackEvents); i += *batchSize {
-			end := i + *batchSize
-			if end > len(attackEvents) {
-				end = len(attackEvents)
-			}
-			attackBatch := convertAttackEvents(attackEvents[i:end])
-
-			if err := sendBatch(client, *hecURL, *hecToken, attackBatch); err != nil {
-				log.Printf("Failed to send attack batch: %v", err)
-				failCount += len(attackBatch)
-			} else {
-				successCount += len(attackBatch)
-			}
-		}
-
-		log.Printf("  Attack events sent: %d\n", len(attackEvents))
-	}
-
-	batch := make([]HECEvent, 0, *batchSize)
-
-	for i := 0; i < *count; i++ {
-		eventType := types[rand.Intn(len(types))]
-		event := generateEvent(eventType, i)
-		batch = append(batch, event)
-
-		if len(batch) >= *batchSize || i == *count-1 {
-			if err := sendBatch(client, *hecURL, *hecToken, batch); err != nil {
-				log.Printf("Failed to send batch: %v", err)
-				failCount += len(batch)
-			} else {
-				successCount += len(batch)
-				// Progress reporting: show every 5% or every 1000 events, whichever is more frequent
-				progressInterval := *count / 20
-				if progressInterval < 1000 {
-					progressInterval = 1000
-				}
-				if successCount%progressInterval == 0 || successCount == *count {
-					log.Printf("Progress: %d/%d events sent (%.1f%%)", successCount, *count, float64(successCount)*100.0/float64(*count))
-				}
-			}
-			batch = batch[:0]
-		}
-
-		if *interval > 0 && i < *count-1 {
-			time.Sleep(*interval)
-		}
-	}
-
-	log.Printf("\nSeeding complete:")
-	log.Printf("  Success: %d events", successCount)
-	log.Printf("  Failed: %d events", failCount)
-}
-
-func parseEventTypes(types string) []string {
-	result := []string{}
-	current := ""
-	for _, c := range types {
-		if c == ',' {
-			if current != "" {
-				result = append(result, current)
-				current = ""
-			}
-		} else {
-			current += string(c)
-		}
-	}
-	if current != "" {
-		result = append(result, current)
-	}
-	return result
-}
-
-// generateAttackEvents creates attack pattern events based on configuration
-func generateAttackEvents() ([]attacks.HECEvent, error) {
-	attackName := strings.TrimSpace(*injectAttack)
-	pattern, ok := attacks.Get(attackName)
-	if !ok {
-		return nil, fmt.Errorf("unknown attack pattern: %s (use -inject-attack=list to see available patterns)", attackName)
-	}
-
-	// Convert string params to interface{} for flexibility
-	params := make(map[string]interface{})
-	for k, v := range attackParams {
-		params[k] = v
-	}
-
-	// Build attack configuration
-	cfg := &attacks.Config{
-		Now:        time.Now(),
-		TimeSpread: *timeSpread,
-		Params:     params,
-	}
-
-	return pattern.Generate(cfg)
-}
-
-// convertAttackEvents converts attacks.HECEvent to main.HECEvent
-// This is needed because the attack package defines its own HECEvent type to avoid circular imports
-func convertAttackEvents(attackEvents []attacks.HECEvent) []HECEvent {
-	events := make([]HECEvent, len(attackEvents))
-	for i, ae := range attackEvents {
-		events[i] = HECEvent{
-			Time:       ae.Time,
-			Event:      ae.Event,
-			SourceType: ae.SourceType,
-			Index:      ae.Index,
-		}
-	}
-	return events
-}
-
-func generateEvent(eventType string, index int) HECEvent {
+// GenerateEvent creates a single event of the specified type
+func GenerateEvent(eventType string, index int, totalCount int, timeSpread time.Duration) HECEvent {
 	now := time.Now()
 
 	var eventTime time.Time
-	if *timeSpread > 0 {
+	if timeSpread > 0 {
 		// Jittered distribution: evenly space events with random jitter
-		// Calculate base interval between events
-		baseInterval := float64(*timeSpread) / float64(*count)
-
-		// Calculate base timestamp for this event (evenly spaced)
+		baseInterval := float64(timeSpread) / float64(totalCount)
 		baseOffset := time.Duration(float64(index) * baseInterval)
 
-		// Add jitter: ±40% of base interval to make distribution look natural
+		// Add jitter: ±40% of base interval
 		jitterRange := baseInterval * 0.4
 		jitter := time.Duration((rand.Float64()*2.0 - 1.0) * jitterRange)
 
-		// Calculate final timestamp, ensuring we stay within bounds
 		totalOffset := baseOffset + jitter
 		if totalOffset < 0 {
 			totalOffset = 0
 		}
-		if totalOffset > *timeSpread {
-			totalOffset = *timeSpread
+		if totalOffset > timeSpread {
+			totalOffset = timeSpread
 		}
 
 		// Events are placed going backwards from now
-		eventTime = now.Add(-(*timeSpread - totalOffset))
+		eventTime = now.Add(-(timeSpread - totalOffset))
 	} else {
 		eventTime = now
 	}
@@ -305,12 +85,11 @@ func generateAuthEvent() map[string]interface{} {
 	actions := []string{"login", "logout", "mfa_verify", "password_change"}
 	action := actions[rand.Intn(len(actions))]
 
-	// Only logins should have significant failure rate; others mostly succeed
 	var success bool
 	if action == "login" {
-		success = rand.Float32() > 0.15 // 85% success rate for logins
+		success = rand.Float32() > 0.15 // 85% success rate
 	} else {
-		success = rand.Float32() > 0.02 // 98% success rate for logout/mfa/password_change
+		success = rand.Float32() > 0.02 // 98% success rate
 	}
 
 	event := map[string]interface{}{
@@ -328,9 +107,9 @@ func generateAuthEvent() map[string]interface{} {
 		"activity_name": action,
 		"severity_id": func() int {
 			if !success {
-				return 3 // Medium
+				return 3
 			}
-			return 1 // Informational
+			return 1
 		}(),
 		"status": func() string {
 			if success {
@@ -356,7 +135,7 @@ func generateAuthEvent() map[string]interface{} {
 			"product": map[string]interface{}{
 				"vendor_name": "TelHawk",
 				"name":        "Event Seeder",
-				"version":     "1.0.0",
+				"version":     "2.0.0",
 			},
 		},
 	}
@@ -373,7 +152,7 @@ func generateAuthEvent() map[string]interface{} {
 }
 
 func generateNetworkEvent() map[string]interface{} {
-	actions := []int{1, 2, 5, 6} // open, close, traffic, refuse
+	actions := []int{1, 2, 5, 6}
 	actionNames := map[int]string{1: "Open", 2: "Close", 5: "Traffic", 6: "Refuse"}
 	action := actions[rand.Intn(len(actions))]
 
@@ -427,7 +206,7 @@ func generateProcessEvent() map[string]interface{} {
 		"class_uid":     1007,
 		"class_name":    "Process Activity",
 		"category_uid":  1,
-		"activity_id":   1, // Launch
+		"activity_id":   1,
 		"activity_name": "Launch",
 		"severity_id":   1,
 		"process": map[string]interface{}{
@@ -456,7 +235,7 @@ func generateProcessEvent() map[string]interface{} {
 }
 
 func generateFileEvent() map[string]interface{} {
-	actions := []int{1, 2, 3, 4, 5} // create, read, update, delete, rename
+	actions := []int{1, 2, 3, 4, 5}
 	actionNames := map[int]string{1: "Create", 2: "Read", 3: "Update", 4: "Delete", 5: "Rename"}
 	action := actions[rand.Intn(len(actions))]
 
@@ -513,7 +292,7 @@ func generateDNSEvent() map[string]interface{} {
 		"class_uid":     4003,
 		"class_name":    "DNS Activity",
 		"category_uid":  4,
-		"activity_id":   1, // Query
+		"activity_id":   1,
 		"activity_name": "Query",
 		"severity_id":   1,
 		"query": map[string]interface{}{
@@ -564,11 +343,11 @@ func generateHTTPEvent() map[string]interface{} {
 		"activity_name": "HTTP Request",
 		"severity_id": func() int {
 			if statusCode >= 500 {
-				return 3 // Medium
+				return 3
 			} else if statusCode >= 400 {
-				return 2 // Low
+				return 2
 			}
-			return 1 // Informational
+			return 1
 		}(),
 		"http_request": map[string]interface{}{
 			"method": methods[rand.Intn(len(methods))],
@@ -616,7 +395,7 @@ func generateDetectionEvent() map[string]interface{} {
 		"class_uid":     2004,
 		"class_name":    "Detection Finding",
 		"category_uid":  2,
-		"activity_id":   1, // Create
+		"activity_id":   1,
 		"activity_name": "Create",
 		"severity_id":   finding.severity,
 		"finding": map[string]interface{}{
@@ -645,35 +424,4 @@ func generateDetectionEvent() map[string]interface{} {
 			},
 		},
 	}
-}
-
-func sendBatch(client *http.Client, hecURL, token string, events []HECEvent) error {
-	var buf bytes.Buffer
-	encoder := json.NewEncoder(&buf)
-
-	for _, event := range events {
-		if err := encoder.Encode(event); err != nil {
-			return fmt.Errorf("failed to encode event: %w", err)
-		}
-	}
-
-	req, err := http.NewRequest("POST", hecURL+"/services/collector/event", &buf)
-	if err != nil {
-		return fmt.Errorf("failed to create request: %w", err)
-	}
-
-	req.Header.Set("Authorization", "Splunk "+token)
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return fmt.Errorf("failed to send request: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("HEC returned status %d", resp.StatusCode)
-	}
-
-	return nil
 }

@@ -1,4 +1,4 @@
-module github.com/hailelagi/telhawk-stack/tools/event-seeder
+module github.com/telhawk-systems/telhawk-stack/tools/event-seeder
 
 go 1.25
 
