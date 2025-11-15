@@ -267,16 +267,6 @@ This script runs the same checks as CI:
 
 For detailed information about CI, Git hooks, and local development checks, see [docs/CI_DEVELOPMENT.md](docs/CI_DEVELOPMENT.md).
 
-## Commercial Support & Services
-
-TelHawk Systems offers:
-- **Enterprise Support** - SLA-backed support and maintenance
-- **Managed Hosting** - Fully managed SIEM in your cloud or ours
-- **Custom Development** - Integrations and custom features
-- **Training & Consulting** - Security operations best practices
-
-Contact: **sales@telhawk.com**
-
 ## Related Projects
 
 - [telhawk-proxy](https://github.com/telhawk-systems/telhawk-proxy) - Telemetry collection proxy (natural data source for TelHawk Stack)
