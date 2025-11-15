@@ -1,7 +1,7 @@
 # golangci-lint configuration for TelHawk Stack
 # See https://golangci-lint.run/usage/configuration/
 
-version: 2
+version: "2"
 
 run:
   timeout: 5m
@@ -19,8 +19,6 @@ linters:
     - unused        # Check for unused code
 
     # Additional recommended linters
-    - gofmt         # Check code formatting
-    - goimports     # Check import formatting
     - misspell      # Find commonly misspelled English words
     - unconvert     # Remove unnecessary type conversions
     - unparam       # Find unused function parameters
@@ -28,104 +26,90 @@ linters:
     - bodyclose     # Check HTTP response body is closed
     - noctx         # Find sending HTTP request without context.Context
     - errorlint     # Find code that causes problems with error wrapping
-    - exportloopref # Check for pointers to enclosing loop variables
     - gocritic      # Opinionated Go linter
     - revive        # Drop-in replacement for golint
 
-linters-settings:
-  errcheck:
-    check-type-assertions: true
-    check-blank: true
-    exclude-functions:
-      # Common functions where it's okay to ignore errors
-      - io.Copy(*bytes.Buffer)
-      - io.WriteString(*bytes.Buffer)
-      - (*database/sql.Rows).Close
-      - (*github.com/go-redis/redis/v8.Client).Close
+  settings:
+    errcheck:
+      check-type-assertions: true
+      check-blank: true
+      exclude-functions:
+        # Common functions where it's okay to ignore errors
+        - io.Copy(*bytes.Buffer)
+        - io.WriteString(*bytes.Buffer)
+        - (*database/sql.Rows).Close
+        - (*github.com/go-redis/redis/v8.Client).Close
 
-  govet:
-    enable:
-      - shadow       # Report shadowed variables
-      - nilness      # Check for redundant or impossible nil comparisons
+    govet:
+      enable:
+        - shadow       # Report shadowed variables
+        - nilness      # Check for redundant or impossible nil comparisons
 
-  gosec:
-    severity: medium
-    confidence: medium
-    excludes:
-      - G104  # Duplicates errcheck
-      - G304  # File path provided as taint input (too many false positives)
+    gosec:
+      severity: medium
+      confidence: medium
+      excludes:
+        - G104  # Duplicates errcheck
+        - G304  # File path provided as taint input (too many false positives)
 
-  gocritic:
-    enabled-tags:
-      - diagnostic
-      - performance
-      - style
-    disabled-checks:
-      - commentFormatting  # Too strict for internal comments
-      - whyNoLint         # We don't require explanations for all nolint directives
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - performance
+        - style
+      disabled-checks:
+        - commentFormatting  # Too strict for internal comments
+        - whyNoLint         # We don't require explanations for all nolint directives
 
-  revive:
+    revive:
+      rules:
+        - name: exported
+          disabled: false
+          arguments:
+            - disableStutteringCheck
+        - name: var-naming
+          disabled: false
+          arguments:
+            - ["ID", "URL", "HTTP", "API", "JWT", "HEC", "OCSF", "TLS", "SSL", "IP", "TCP", "UDP", "DNS", "ICMP", "SQL", "DB", "DLQ", "TTL", "UUID", "JSON", "YAML", "CSV", "PDF", "CSV", "ILM"]
+        - name: package-comments
+          disabled: true  # Not all packages need comments
+
+    staticcheck:
+      checks: ["all"]
+
+  exclusions:
+    paths:
+      # Exclude generated code
+      - generated/
+      # Exclude migrations
+      - migrations/
+      # Exclude vendor
+      - vendor/
+
     rules:
-      - name: exported
-        disabled: false
-        arguments:
-          - disableStutteringCheck
-      - name: var-naming
-        disabled: false
-        arguments:
-          - ["ID", "URL", "HTTP", "API", "JWT", "HEC", "OCSF", "TLS", "SSL", "IP", "TCP", "UDP", "DNS", "ICMP", "SQL", "DB", "DLQ", "TTL", "UUID", "JSON", "YAML", "CSV", "PDF", "CSV", "ILM"] # Common initialisms
-      - name: package-comments
-        disabled: true  # Not all packages need comments
+      # Exclude some linters from running on tests files
+      - path: _test\.go
+        linters:
+          - gosec       # Security checks less relevant in tests
+          - errcheck    # Error checking less strict in tests
+          - gocritic    # Style less strict in tests
 
-  staticcheck:
-    checks: ["all"]
+      # Common false positives
+      - text: "Error return value of .((os\\.)?std(out|err)\\..*|.*Close|.*Flush|os\\.Remove(All)?|.*print(f|ln)?|os\\.(Un)?Setenv). is not checked"
+        linters:
+          - errcheck
 
-issues:
-  exclude-use-default: false
+      # Allow shadowing of err
+      - text: "shadow: declaration of \"err\""
+        linters:
+          - govet
 
-  # Maximum issues count per one linter
-  max-issues-per-linter: 0
-
-  # Maximum count of issues with the same text
-  max-same-issues: 0
-
-  # Exclude specific issues
-  exclude-rules:
-    # Exclude some linters from running on tests files
-    - path: _test\.go
-      linters:
-        - gosec       # Security checks less relevant in tests
-        - errcheck    # Error checking less strict in tests
-        - gocritic    # Style less strict in tests
-
-    # Exclude generated code
-    - path: generated/
-      linters:
-        - all
-
-    # Exclude migrations
-    - path: migrations/
-      linters:
-        - all
-
-    # Exclude vendor
-    - path: vendor/
-      linters:
-        - all
-
-    # Common false positives
-    - text: "Error return value of .((os\\.)?std(out|err)\\..*|.*Close|.*Flush|os\\.Remove(All)?|.*print(f|ln)?|os\\.(Un)?Setenv). is not checked"
-      linters:
-        - errcheck
-
-    # Allow shadowing of err
-    - text: "shadow: declaration of \"err\""
-      linters:
-        - govet
+formatters:
+  enable:
+    - gofmt         # Check code formatting
+    - goimports     # Check import formatting
 
 output:
   formats:
-    colored-line-number: {}
-  print-issued-lines: true
-  print-linter-name: true
-  sort-results: true
+    text:
+      path: stdout
