@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [ main ]
 
+permissions:
+  contents: read
+  actions: write
+
 jobs:
   test:
     name: Test
@@ -95,12 +99,14 @@ jobs:
     strategy:
       matrix:
         module:
+          - alerting
           - auth
           - cli
           - common
           - core
           - ingest
           - query
+          - rules
           - storage
           - web/backend
           - tools/event-seeder
@@ -146,6 +152,12 @@ jobs:
 
           echo "Building auth service..."
           cd auth && go build -v -o ../bin/auth ./cmd/auth && cd ..
+
+          echo "Building rules service..."
+          cd rules && go build -v -o ../bin/rules ./cmd/rules && cd ..
+
+          echo "Building alerting service..."
+          cd alerting && go build -v -o ../bin/alerting ./cmd/alerting && cd ..
 
           echo "Building ingest service..."
           cd ingest && go build -v -o ../bin/ingest ./cmd/ingest && cd ..
