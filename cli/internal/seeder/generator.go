@@ -97,9 +97,10 @@ func generateAuthEvent() map[string]interface{} {
 		"class_name":   "Authentication",
 		"category_uid": 3,
 		"activity_id": func() int {
-			if action == "login" {
+			switch action {
+			case "login":
 				return 1
-			} else if action == "logout" {
+			case "logout":
 				return 2
 			}
 			return 99

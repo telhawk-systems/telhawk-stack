@@ -1,8 +1,9 @@
 package server
 
 import (
-	"github.com/telhawk-systems/telhawk-stack/common/middleware"
 	"net/http"
+
+	"github.com/telhawk-systems/telhawk-stack/common/middleware"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/handlers"

@@ -3,6 +3,7 @@ package coreclient
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -451,7 +452,7 @@ func TestRetryableError(t *testing.T) {
 	}
 
 	unwrapped := baseErr.Unwrap()
-	if unwrapped != http.ErrServerClosed {
+	if !errors.Is(unwrapped, http.ErrServerClosed) {
 		t.Errorf("Unwrap() = %v, want %v", unwrapped, http.ErrServerClosed)
 	}
 }

@@ -1,8 +1,9 @@
 package ocsf
 
 import (
-	"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf/objects"
 	"time"
+
+	"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf/objects"
 )
 
 // Event represents an OCSF compliant event record.

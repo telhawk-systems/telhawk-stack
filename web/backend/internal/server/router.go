@@ -2,8 +2,9 @@ package server
 
 import (
 	"fmt"
-	"github.com/telhawk-systems/telhawk-stack/common/middleware"
 	"net/http"
+
+	"github.com/telhawk-systems/telhawk-stack/common/middleware"
 
 	"github.com/telhawk-systems/telhawk-stack/web/backend/internal/auth"
 	"github.com/telhawk-systems/telhawk-stack/web/backend/internal/handlers"

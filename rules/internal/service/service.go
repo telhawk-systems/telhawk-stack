@@ -84,7 +84,7 @@ func (s *Service) GetSchema(ctx context.Context, idOrVersionID string, version *
 	}
 
 	// If not found, try as stable ID (get latest version)
-	if err == repository.ErrSchemaNotFound {
+	if errors.Is(err, repository.ErrSchemaNotFound) {
 		schema, err = s.repo.GetLatestSchemaByID(ctx, idOrVersionID)
 		if err != nil {
 			return nil, err

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -70,7 +71,7 @@ func main() {
 			slog.Error("Failed to initialize migrations", slog.String("error", err.Error()))
 			os.Exit(1)
 		}
-		if err := m.Up(); err != nil && err != migrate.ErrNoChange {
+		if err := m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
 			slog.Error("Failed to run migrations", slog.String("error", err.Error()))
 			os.Exit(1)
 		}

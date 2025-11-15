@@ -536,13 +536,14 @@ func TestNewRouter_PathMatching(t *testing.T) {
 				mockRepo.On("SetActiveParameterSet", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 			} else {
 				// Schema GET/PUT/DELETE
-				if tt.method == http.MethodGet {
+				switch tt.method {
+				case http.MethodGet:
 					mockRepo.On("GetSchemaByVersionID", mock.Anything, mock.Anything).Return(schema, nil)
-				} else if tt.method == http.MethodPut {
+				case http.MethodPut:
 					mockRepo.On("GetLatestSchemaByID", mock.Anything, mock.Anything).Return(schema, nil)
 					mockRepo.On("CreateSchema", mock.Anything, mock.Anything).Return(nil)
 					mockRepo.On("GetSchemaByVersionID", mock.Anything, mock.Anything).Return(schema, nil)
-				} else if tt.method == http.MethodDelete {
+				case http.MethodDelete:
 					mockRepo.On("GetSchemaByVersionID", mock.Anything, mock.Anything).Return(schema, nil)
 					mockRepo.On("HideSchema", mock.Anything, mock.Anything, "00000000-0000-0000-0000-000000000001").Return(nil)
 				}

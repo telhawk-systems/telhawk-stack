@@ -225,10 +225,11 @@ func TestInitialize(t *testing.T) {
 
 		case strings.HasPrefix(r.URL.Path, "/test-events-"):
 			// Index operations
-			if r.Method == "HEAD" {
+			switch r.Method {
+			case "HEAD":
 				// Index doesn't exist
 				w.WriteHeader(http.StatusNotFound)
-			} else if r.Method == "PUT" {
+			case "PUT":
 				// Create index
 				indexCreated = true
 				w.WriteHeader(http.StatusOK)

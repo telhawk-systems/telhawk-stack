@@ -5,11 +5,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/telhawk-systems/telhawk-stack/common/httputil"
 	"io"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/telhawk-systems/telhawk-stack/common/httputil"
 
 	"github.com/opensearch-project/opensearch-go/v2/opensearchutil"
 	"github.com/telhawk-systems/telhawk-stack/storage/internal/client"

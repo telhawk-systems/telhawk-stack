@@ -69,7 +69,7 @@ func (c *QueryClient) SavedSearchList(baseURL string, showAll bool) ([]SavedSear
 		q.Set("filter[show_all]", "true")
 		u.RawQuery = q.Encode()
 	}
-	req, _ := http.NewRequest("GET", u.String(), nil)
+	req, _ := http.NewRequest("GET", u.String(), http.NoBody)
 	req.Header.Set("Accept", "application/vnd.api+json")
 	resp, err := c.client.Do(req)
 	if err != nil {
@@ -93,7 +93,7 @@ func (c *QueryClient) SavedSearchList(baseURL string, showAll bool) ([]SavedSear
 }
 
 func (c *QueryClient) SavedSearchGet(baseURL, id string) (*SavedSearch, error) {
-	req, _ := http.NewRequest("GET", baseURL+"/api/v1/saved-searches/"+id, nil)
+	req, _ := http.NewRequest("GET", baseURL+"/api/v1/saved-searches/"+id, http.NoBody)
 	req.Header.Set("Accept", "application/vnd.api+json")
 	resp, err := c.client.Do(req)
 	if err != nil {
@@ -140,7 +140,7 @@ func (c *QueryClient) SavedSearchUpdate(token, baseURL, id string, attrs map[str
 }
 
 func (c *QueryClient) SavedSearchAction(token, baseURL, id, action string) (*SavedSearch, error) {
-	req, _ := http.NewRequest("POST", baseURL+"/api/v1/saved-searches/"+id+"/"+action, nil)
+	req, _ := http.NewRequest("POST", baseURL+"/api/v1/saved-searches/"+id+"/"+action, http.NoBody)
 	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("Accept", "application/vnd.api+json")
 	resp, err := c.client.Do(req)

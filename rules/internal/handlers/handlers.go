@@ -2,10 +2,12 @@ package handlers
 
 import (
 	"encoding/json"
-	"github.com/telhawk-systems/telhawk-stack/common/httputil"
+	"errors"
 	"log"
 	"net/http"
 	"strconv"
+
+	"github.com/telhawk-systems/telhawk-stack/common/httputil"
 
 	"github.com/telhawk-systems/telhawk-stack/rules/internal/models"
 	"github.com/telhawk-systems/telhawk-stack/rules/internal/service"
@@ -357,7 +359,7 @@ func (h *Handler) UpdateSchema(w http.ResponseWriter, r *http.Request) {
 
 	schema, err := h.service.UpdateSchema(r.Context(), id, &req, userID)
 	if err != nil {
-		if err == service.ErrBuiltinRuleProtected {
+		if errors.Is(err, service.ErrBuiltinRuleProtected) {
 			http.Error(w, "Builtin rules cannot be modified", http.StatusForbidden)
 			return
 		}
@@ -479,7 +481,7 @@ func (h *Handler) DisableSchema(w http.ResponseWriter, r *http.Request) {
 	userID := "00000000-0000-0000-0000-000000000001"
 
 	if err := h.service.DisableSchema(r.Context(), versionID, userID); err != nil {
-		if err == service.ErrBuiltinRuleProtected {
+		if errors.Is(err, service.ErrBuiltinRuleProtected) {
 			http.Error(w, "Builtin rules cannot be disabled", http.StatusForbidden)
 			return
 		}
@@ -528,7 +530,7 @@ func (h *Handler) HideSchema(w http.ResponseWriter, r *http.Request) {
 	userID := "00000000-0000-0000-0000-000000000001"
 
 	if err := h.service.HideSchema(r.Context(), versionID, userID); err != nil {
-		if err == service.ErrBuiltinRuleProtected {
+		if errors.Is(err, service.ErrBuiltinRuleProtected) {
 			http.Error(w, "Builtin rules cannot be deleted", http.StatusForbidden)
 			return
 		}

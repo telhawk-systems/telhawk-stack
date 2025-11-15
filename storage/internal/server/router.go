@@ -1,8 +1,9 @@
 package server
 
 import (
-	"github.com/telhawk-systems/telhawk-stack/common/middleware"
 	"net/http"
+
+	"github.com/telhawk-systems/telhawk-stack/common/middleware"
 
 	"github.com/telhawk-systems/telhawk-stack/storage/internal/handlers"
 )

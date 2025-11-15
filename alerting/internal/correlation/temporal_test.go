@@ -24,7 +24,8 @@ func TestTemporalEvaluator_Evaluate(t *testing.T) {
 
 		// Return different events for each query
 		var response map[string]interface{}
-		if queryCallCount == 1 {
+		switch queryCallCount {
+		case 1:
 			// First query: failed logins
 			response = map[string]interface{}{
 				"took": 2,
@@ -48,7 +49,7 @@ func TestTemporalEvaluator_Evaluate(t *testing.T) {
 					},
 				},
 			}
-		} else if queryCallCount == 2 {
+		case 2:
 			// Second query: file deletions
 			response = map[string]interface{}{
 				"took": 2,
@@ -72,7 +73,7 @@ func TestTemporalEvaluator_Evaluate(t *testing.T) {
 					},
 				},
 			}
-		} else {
+		default:
 			// Third query: external connections
 			response = map[string]interface{}{
 				"took": 2,

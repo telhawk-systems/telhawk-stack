@@ -1,8 +1,9 @@
 package server
 
 import (
-	"github.com/telhawk-systems/telhawk-stack/common/middleware"
 	"net/http"
+
+	"github.com/telhawk-systems/telhawk-stack/common/middleware"
 
 	"github.com/telhawk-systems/telhawk-stack/alerting/internal/handlers"
 )
@@ -33,11 +34,12 @@ func NewRouter(h *handlers.Handler) http.Handler {
 
 	// Cases API routes
 	mux.HandleFunc("/api/v1/cases", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodPost {
+		switch r.Method {
+		case http.MethodPost:
 			h.CreateCase(w, r)
-		} else if r.Method == http.MethodGet {
+		case http.MethodGet:
 			h.ListCases(w, r)
-		} else {
+		default:
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
 	})

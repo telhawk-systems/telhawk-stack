@@ -29,7 +29,7 @@ func (c *HTTPRulesClient) ListSchemas(ctx context.Context) ([]*DetectionSchema, 
 	// Fetch schemas without disabled or hidden ones
 	url := fmt.Sprintf("%s/api/v1/schemas?include_disabled=false&include_hidden=false&limit=100", c.baseURL)
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, http.NoBody)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}

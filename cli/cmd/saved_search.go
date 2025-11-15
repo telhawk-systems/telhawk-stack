@@ -51,9 +51,18 @@ var savedSaveCmd = &cobra.Command{
 		if name == "" {
 			return fmt.Errorf("--name is required")
 		}
-		qstr, _ := cmd.Flags().GetString("query")
-		file, _ := cmd.Flags().GetString("file")
-		isGlobal, _ := cmd.Flags().GetBool("global")
+		qstr, err := cmd.Flags().GetString("query")
+		if err != nil {
+			return fmt.Errorf("failed to get query: %w", err)
+		}
+		file, err := cmd.Flags().GetString("file")
+		if err != nil {
+			return fmt.Errorf("failed to get file: %w", err)
+		}
+		isGlobal, err := cmd.Flags().GetBool("global")
+		if err != nil {
+			return fmt.Errorf("failed to get global flag: %w", err)
+		}
 		var q map[string]interface{}
 		if file != "" {
 			b, err := os.ReadFile(file)
@@ -90,7 +99,10 @@ var savedListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List saved searches",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		showAll, _ := cmd.Flags().GetBool("show-all")
+		showAll, err := cmd.Flags().GetBool("show-all")
+		if err != nil {
+			return fmt.Errorf("failed to get show-all flag: %w", err)
+		}
 		queryURL, _ := cmd.Flags().GetString("query-url")
 		qc := client.NewQueryClient(queryURL)
 		items, err := qc.SavedSearchList(queryURL, showAll)
@@ -216,7 +228,7 @@ var savedRunCmd = &cobra.Command{
 		// Use generic action to trigger run and print raw response
 		// For now, call endpoint directly via HTTP for simplicity
 		qcli := client.NewQueryClient(queryURL)
-		req, _ := http.NewRequest("POST", queryURL+"/api/v1/saved-searches/"+id+"/run", nil)
+		req, _ := http.NewRequest("POST", queryURL+"/api/v1/saved-searches/"+id+"/run", http.NoBody)
 		req.Header.Set("Authorization", "Bearer "+p.AccessToken)
 		req.Header.Set("Accept", "application/json")
 		resp, err := qcli.Client().Do(req)

@@ -259,7 +259,7 @@ func (g *RuleBasedGenerator) applyFilterToEvent(event map[string]interface{}, fi
 // setFieldValue sets a nested field value using dot notation
 func (g *RuleBasedGenerator) setFieldValue(event map[string]interface{}, fieldPath string, value interface{}) {
 	// Remove leading dot if present
-	fieldPath = fmt.Sprintf("%v", fieldPath)
+
 	fieldPath = fieldPath[1:] // Remove leading dot
 
 	parts := splitFieldPath(fieldPath)
@@ -282,7 +282,7 @@ func (g *RuleBasedGenerator) setFieldValue(event map[string]interface{}, fieldPa
 // splitFieldPath splits a field path like ".actor.user.name" into parts
 func splitFieldPath(path string) []string {
 	// Remove leading dot
-	path = fmt.Sprintf("%v", path)
+
 	if len(path) > 0 && path[0] == '.' {
 		path = path[1:]
 	}

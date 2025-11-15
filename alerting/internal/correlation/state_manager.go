@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -64,7 +65,7 @@ func (sm *StateManager) GetBaseline(ctx context.Context, ruleID, entityKey strin
 
 	key := sm.baselineKey(ruleID, entityKey)
 	data, err := sm.redis.Get(ctx, key).Result()
-	if err == redis.Nil {
+	if errors.Is(err, redis.Nil) {
 		// No baseline exists yet - return empty baseline
 		return &Baseline{
 			Samples:     []float64{},
@@ -162,7 +163,7 @@ func (sm *StateManager) RecordAlert(ctx context.Context, ruleID string, suppress
 	// Get existing state
 	data, err := sm.redis.Get(ctx, key).Result()
 	var state SuppressionState
-	if err == redis.Nil {
+	if errors.Is(err, redis.Nil) {
 		// First alert
 		state = SuppressionState{
 			FirstAlertTime:     now,
@@ -233,7 +234,7 @@ func (sm *StateManager) GetMissingSince(ctx context.Context, ruleID, entityID st
 
 	key := sm.heartbeatKey(ruleID, entityID)
 	data, err := sm.redis.Get(ctx, key).Result()
-	if err == redis.Nil {
+	if errors.Is(err, redis.Nil) {
 		// Never seen this entity
 		return time.Time{}, nil
 	}

@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
@@ -96,11 +97,13 @@ func (l *Logger) Log(actorType, actorID, actorUsername, action, resource, resour
 	if l.ingestClient != nil && models.ShouldForwardToIngest(action) {
 		go func() {
 			// Async send to not block auth operations
-			_ = l.ingestClient.ForwardEvent(
+			if err := l.ingestClient.ForwardEvent(
 				actorType, actorID, actorUsername, action,
 				resource, resourceID, ipAddress, userAgent,
 				result, reason, metadata, log.Timestamp,
-			)
+			); err != nil {
+				slog.Warn("Failed to forward audit event to ingest", slog.String("error", err.Error()))
+			}
 		}()
 	}
 

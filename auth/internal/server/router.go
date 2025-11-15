@@ -1,9 +1,10 @@
 package server
 
 import (
-	"github.com/telhawk-systems/telhawk-stack/common/middleware"
 	"net/http"
 	"strings"
+
+	"github.com/telhawk-systems/telhawk-stack/common/middleware"
 
 	"github.com/telhawk-systems/telhawk-stack/auth/internal/handlers"
 )
@@ -31,11 +32,12 @@ func NewRouter(h *handlers.AuthHandler) http.Handler {
 
 	// HEC token management endpoints
 	mux.HandleFunc("/api/v1/hec/tokens", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodPost {
+		switch r.Method {
+		case http.MethodPost:
 			h.CreateHECToken(w, r)
-		} else if r.Method == http.MethodGet {
+		case http.MethodGet:
 			h.ListHECTokens(w, r)
-		} else {
+		default:
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
 	})

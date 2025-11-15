@@ -1,8 +1,9 @@
 package server
 
 import (
-	"github.com/telhawk-systems/telhawk-stack/common/middleware"
 	"net/http"
+
+	"github.com/telhawk-systems/telhawk-stack/common/middleware"
 
 	"github.com/telhawk-systems/telhawk-stack/rules/internal/handlers"
 )
@@ -19,11 +20,12 @@ func NewRouter(h *handlers.Handler) http.Handler {
 
 	// API routes (proxied from /api/rules/schemas via web backend)
 	mux.HandleFunc("/schemas", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodPost {
+		switch r.Method {
+		case http.MethodPost:
 			h.CreateSchema(w, r)
-		} else if r.Method == http.MethodGet {
+		case http.MethodGet:
 			h.ListSchemas(w, r)
-		} else {
+		default:
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
 	})

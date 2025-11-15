@@ -97,7 +97,10 @@ var userCreateCmd = &cobra.Command{
 		username, _ := cmd.Flags().GetString("username")
 		email, _ := cmd.Flags().GetString("email")
 		password, _ := cmd.Flags().GetString("password")
-		roles, _ := cmd.Flags().GetStringSlice("roles")
+		roles, err := cmd.Flags().GetStringSlice("roles")
+		if err != nil {
+			return fmt.Errorf("failed to get roles: %w", err)
+		}
 
 		profile, _ := cmd.Flags().GetString("profile")
 		p, err := cfg.GetProfile(profile)

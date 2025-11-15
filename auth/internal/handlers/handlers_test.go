@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -1553,7 +1554,7 @@ func TestDeleteUserHandler_Success(t *testing.T) {
 
 	// Verify user is deleted
 	_, err := repo.GetUserByID(context.Background(), "user-123")
-	if err != repository.ErrUserNotFound {
+	if !errors.Is(err, repository.ErrUserNotFound) {
 		t.Error("Expected user to be deleted")
 	}
 }

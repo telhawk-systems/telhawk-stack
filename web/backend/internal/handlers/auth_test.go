@@ -121,9 +121,10 @@ func TestAuthHandler_Login_Success(t *testing.T) {
 
 	var accessToken, refreshToken *http.Cookie
 	for _, cookie := range cookies {
-		if cookie.Name == "access_token" {
+		switch cookie.Name {
+		case "access_token":
 			accessToken = cookie
-		} else if cookie.Name == "refresh_token" {
+		case "refresh_token":
 			refreshToken = cookie
 		}
 	}

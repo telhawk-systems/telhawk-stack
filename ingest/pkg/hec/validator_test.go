@@ -1,6 +1,7 @@
 package hec
 
 import (
+	"errors"
 	"testing"
 )
 
@@ -116,7 +117,7 @@ func TestValidateEventFormat(t *testing.T) {
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ValidateEventFormat() error = %v, wantErr %v", err, tt.wantErr)
 			}
-			if tt.wantErr && err != ErrInvalidEvent {
+			if tt.wantErr && !errors.Is(err, ErrInvalidEvent) {
 				t.Errorf("ValidateEventFormat() error = %v, want %v", err, ErrInvalidEvent)
 			}
 		})

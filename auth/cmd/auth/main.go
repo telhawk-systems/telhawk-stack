@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -89,16 +90,20 @@ func main() {
 			os.Exit(1)
 		}
 
-		if err := m.Up(); err != nil && err != migrate.ErrNoChange {
+		if err := m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
 			slog.Error("Failed to run migrations", slog.String("error", err.Error()))
 			os.Exit(1)
 		}
 
-		version, dirty, _ := m.Version()
-		slog.Info("Database migration complete",
-			slog.Uint64("version", uint64(version)),
-			slog.Bool("dirty", dirty),
-		)
+		version, dirty, err := m.Version()
+		if err != nil {
+			slog.Warn("Could not get migration version", slog.String("error", err.Error()))
+		} else {
+			slog.Info("Database migration complete",
+				slog.Uint64("version", uint64(version)),
+				slog.Bool("dirty", dirty),
+			)
+		}
 	} else {
 		slog.Warn("Using in-memory repository (development only)")
 		repo = repository.NewInMemoryRepository()

@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -85,7 +86,7 @@ func (r *PostgresRepository) GetLatest(ctx context.Context, id string) (*models.
 		&s.CreatedAt, &disabledAt, &hiddenAt,
 	)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("not found")
 		}
 		return nil, fmt.Errorf("get latest: %w", err)

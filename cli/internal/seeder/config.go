@@ -1,6 +1,7 @@
 package seeder
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -74,7 +75,8 @@ func LoadConfig(configPath string) (*Config, error) {
 
 	// Read config file (optional - don't fail if not found)
 	if err := v.ReadInConfig(); err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+		var configFileNotFoundError viper.ConfigFileNotFoundError
+		if errors.As(err, &configFileNotFoundError) {
 			// Config file found but had error
 			return nil, fmt.Errorf("error reading config file: %w", err)
 		}

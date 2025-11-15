@@ -144,7 +144,7 @@ func (imp *Importer) importRuleFile(ctx context.Context, filePath string) error 
 // checkRuleExists checks if a rule already exists and returns its content hash
 func (imp *Importer) checkRuleExists(ctx context.Context, ruleID string) (bool, string, error) {
 	url := fmt.Sprintf("%s/%s", imp.rulesURL, ruleID)
-	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", url, http.NoBody)
 	if err != nil {
 		return false, "", err
 	}
@@ -160,7 +160,10 @@ func (imp *Importer) checkRuleExists(ctx context.Context, ruleID string) (bool, 
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return false, "", fmt.Errorf("unexpected status %d (failed to read body: %w)", resp.StatusCode, err)
+		}
 		return false, "", fmt.Errorf("unexpected status %d: %s", resp.StatusCode, string(body))
 	}
 
@@ -215,7 +218,10 @@ func (imp *Importer) createRule(ctx context.Context, rule RuleFile, contentHash 
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusCreated {
-		body, _ := io.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return fmt.Errorf("create failed with status %d (failed to read body: %w)", resp.StatusCode, err)
+		}
 		return fmt.Errorf("create failed with status %d: %s", resp.StatusCode, string(body))
 	}
 
@@ -257,7 +263,10 @@ func (imp *Importer) updateRule(ctx context.Context, ruleID string, rule RuleFil
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return fmt.Errorf("update failed with status %d (failed to read body: %w)", resp.StatusCode, err)
+		}
 		return fmt.Errorf("update failed with status %d: %s", resp.StatusCode, string(body))
 	}
 
@@ -277,11 +286,16 @@ func generateDeterministicUUID(ruleName string) string {
 // Used to detect if a rule has changed
 func calculateContentHash(rule RuleFile) string {
 	// Serialize rule to JSON (deterministic order)
-	data, _ := json.Marshal(map[string]interface{}{
+	data, err := json.Marshal(map[string]interface{}{
 		"model":      rule.Model,
 		"view":       rule.View,
 		"controller": rule.Controller,
 	})
+	if err != nil {
+		// This should never happen for a simple map, but handle it
+		log.Printf("Warning: failed to marshal rule for hashing: %v", err)
+		return ""
+	}
 	hash := sha256.Sum256(data)
 	return fmt.Sprintf("%x", hash[:8]) // Use first 8 bytes for shorter hash
 }

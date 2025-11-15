@@ -402,12 +402,7 @@ func (m *IndexManager) createISMPolicy(ctx context.Context) error {
 
 	// Check if policy exists
 	req := m.client.Client().Transport.Perform
-	checkReq, err := http.NewRequestWithContext(
-		ctx,
-		"GET",
-		"/_plugins/_ism/policies/"+policyName,
-		nil,
-	)
+	checkReq, err := http.NewRequestWithContext(ctx, "GET", "/_plugins/_ism/policies/"+policyName, http.NoBody)
 	if err != nil {
 		return err
 	}

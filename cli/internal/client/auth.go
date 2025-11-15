@@ -159,7 +159,7 @@ func (c *AuthClient) CreateHECToken(accessToken, name, expires string) (*HECToke
 }
 
 func (c *AuthClient) ListHECTokens(accessToken string) ([]*HECToken, error) {
-	req, err := http.NewRequest("GET", c.baseURL+"/api/v1/hec/tokens", nil)
+	req, err := http.NewRequest("GET", c.baseURL+"/api/v1/hec/tokens", http.NoBody)
 	if err != nil {
 		return nil, err
 	}
@@ -237,7 +237,7 @@ func extractUserIDFromToken(token string) string {
 }
 
 func (c *AuthClient) ListUsers(accessToken string) ([]*User, error) {
-	req, err := http.NewRequest("GET", c.baseURL+"/api/v1/users", nil)
+	req, err := http.NewRequest("GET", c.baseURL+"/api/v1/users", http.NoBody)
 	if err != nil {
 		return nil, err
 	}
@@ -263,7 +263,7 @@ func (c *AuthClient) ListUsers(accessToken string) ([]*User, error) {
 }
 
 func (c *AuthClient) GetUser(accessToken, userID string) (*User, error) {
-	req, err := http.NewRequest("GET", c.baseURL+"/api/v1/users/get?id="+userID, nil)
+	req, err := http.NewRequest("GET", c.baseURL+"/api/v1/users/get?id="+userID, http.NoBody)
 	if err != nil {
 		return nil, err
 	}
@@ -371,7 +371,7 @@ func (c *AuthClient) UpdateUser(accessToken, userID, email string, roles []strin
 }
 
 func (c *AuthClient) DeleteUser(accessToken, userID string) error {
-	req, err := http.NewRequest("DELETE", c.baseURL+"/api/v1/users/delete?id="+userID, nil)
+	req, err := http.NewRequest("DELETE", c.baseURL+"/api/v1/users/delete?id="+userID, http.NoBody)
 	if err != nil {
 		return err
 	}

@@ -153,7 +153,7 @@ func TestCreateUser(t *testing.T) {
 				if err == nil {
 					t.Fatal("Expected error but got none")
 				}
-				if tt.errorType != nil && err != tt.errorType {
+				if tt.errorType != nil && !errors.Is(err, tt.errorType) {
 					t.Errorf("Expected error %v, got %v", tt.errorType, err)
 				}
 				return
@@ -224,7 +224,7 @@ func TestGetUserByUsername(t *testing.T) {
 				if err == nil {
 					t.Fatal("Expected error but got none")
 				}
-				if tt.errorType != nil && err != tt.errorType {
+				if tt.errorType != nil && !errors.Is(err, tt.errorType) {
 					t.Errorf("Expected error %v, got %v", tt.errorType, err)
 				}
 				return
@@ -309,7 +309,7 @@ func TestDeleteUser(t *testing.T) {
 
 	// Verify user is deleted (should not exist)
 	_, err = repo.GetUserByID(ctx, user.ID)
-	if err != ErrUserNotFound {
+	if !errors.Is(err, ErrUserNotFound) {
 		t.Errorf("Expected ErrUserNotFound after deletion, got %v", err)
 	}
 }
@@ -458,7 +458,7 @@ func TestGetSession(t *testing.T) {
 				if err == nil {
 					t.Fatal("Expected error but got none")
 				}
-				if tt.errorType != nil && err != tt.errorType {
+				if tt.errorType != nil && !errors.Is(err, tt.errorType) {
 					t.Errorf("Expected error %v, got %v", tt.errorType, err)
 				}
 				return
@@ -621,7 +621,7 @@ func TestGetHECToken(t *testing.T) {
 				if err == nil {
 					t.Fatal("Expected error but got none")
 				}
-				if tt.errorType != nil && err != tt.errorType {
+				if tt.errorType != nil && !errors.Is(err, tt.errorType) {
 					t.Errorf("Expected error %v, got %v", tt.errorType, err)
 				}
 				return

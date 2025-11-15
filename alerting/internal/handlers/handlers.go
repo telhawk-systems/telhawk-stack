@@ -2,10 +2,11 @@ package handlers
 
 import (
 	"encoding/json"
-	"github.com/telhawk-systems/telhawk-stack/common/httputil"
 	"log"
 	"net/http"
 	"strconv"
+
+	"github.com/telhawk-systems/telhawk-stack/common/httputil"
 
 	"github.com/telhawk-systems/telhawk-stack/alerting/internal/models"
 	"github.com/telhawk-systems/telhawk-stack/alerting/internal/service"

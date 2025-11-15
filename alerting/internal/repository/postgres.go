@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -80,7 +81,7 @@ func (r *PostgresRepository) GetCaseByID(ctx context.Context, id string) (*model
 		&c.ClosedAt, &c.ClosedBy, &c.AlertCount,
 	)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrCaseNotFound
 		}
 		return nil, fmt.Errorf("failed to get case: %w", err)

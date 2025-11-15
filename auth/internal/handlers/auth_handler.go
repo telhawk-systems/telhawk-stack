@@ -2,9 +2,10 @@ package handlers
 
 import (
 	"encoding/json"
-	"github.com/telhawk-systems/telhawk-stack/common/httputil"
 	"net/http"
 	"strings"
+
+	"github.com/telhawk-systems/telhawk-stack/common/httputil"
 
 	"github.com/telhawk-systems/telhawk-stack/auth/internal/models"
 	"github.com/telhawk-systems/telhawk-stack/auth/internal/service"

@@ -123,5 +123,7 @@ func init() {
 
 	tokenCreateCmd.Flags().StringP("name", "n", "", "Token name")
 	tokenCreateCmd.Flags().String("expires", "", "Expiration duration (e.g., 30d, 1y)")
-	tokenCreateCmd.MarkFlagRequired("name")
+	if err := tokenCreateCmd.MarkFlagRequired("name"); err != nil {
+		panic(fmt.Sprintf("failed to mark name as required: %v", err))
+	}
 }

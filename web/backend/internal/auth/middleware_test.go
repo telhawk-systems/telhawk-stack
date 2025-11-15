@@ -554,9 +554,10 @@ func TestMiddleware_clearAuthCookies(t *testing.T) {
 	// Check access_token cookie
 	var accessCookie, refreshCookie *http.Cookie
 	for _, cookie := range cookies {
-		if cookie.Name == "access_token" {
+		switch cookie.Name {
+		case "access_token":
 			accessCookie = cookie
-		} else if cookie.Name == "refresh_token" {
+		case "refresh_token":
 			refreshCookie = cookie
 		}
 	}

@@ -25,7 +25,8 @@ func TestTemporalOrderedEvaluator_Evaluate(t *testing.T) {
 		queryCallCount++
 
 		var response map[string]interface{}
-		if queryCallCount == 1 {
+		switch queryCallCount {
+		case 1:
 			// Step 1: Recon (network scan)
 			response = map[string]interface{}{
 				"took": 2,
@@ -48,7 +49,7 @@ func TestTemporalOrderedEvaluator_Evaluate(t *testing.T) {
 					},
 				},
 			}
-		} else if queryCallCount == 2 {
+		case 2:
 			// Step 2: Exploit
 			response = map[string]interface{}{
 				"took": 2,
@@ -71,7 +72,7 @@ func TestTemporalOrderedEvaluator_Evaluate(t *testing.T) {
 					},
 				},
 			}
-		} else {
+		default:
 			// Step 3: Persistence
 			response = map[string]interface{}{
 				"took": 2,

@@ -28,10 +28,15 @@ type AuthService struct {
 
 func NewAuthService(repo repository.Repository, ingestClient *audit.IngestClient, cfg *config.AuthConfig) *AuthService {
 	var auditLogger *audit.Logger
+	auditRepo, ok := repo.(audit.Repository)
+	if !ok {
+		panic("repository does not implement audit.Repository interface")
+	}
+
 	if ingestClient != nil {
-		auditLogger = audit.NewLoggerWithRepoAndIngest(cfg.AuditSecret, repo.(audit.Repository), ingestClient)
+		auditLogger = audit.NewLoggerWithRepoAndIngest(cfg.AuditSecret, auditRepo, ingestClient)
 	} else {
-		auditLogger = audit.NewLoggerWithRepo(cfg.AuditSecret, repo.(audit.Repository))
+		auditLogger = audit.NewLoggerWithRepo(cfg.AuditSecret, auditRepo)
 	}
 
 	return &AuthService{
@@ -54,7 +59,18 @@ func (s *AuthService) CreateUser(ctx context.Context, req *models.CreateUserRequ
 		return nil, err
 	}
 
-	userID, _ := uuid.NewV7()
+	userID, err := uuid.NewV7()
+	if err != nil {
+		s.auditLog.Log(
+			models.ActorTypeUser, actorID, "",
+			models.ActionUserCreate, "user", "",
+			ipAddress, userAgent,
+			models.ResultFailure, "failed to generate user ID",
+			nil,
+		)
+		return nil, fmt.Errorf("failed to generate user ID: %w", err)
+	}
+
 	user := &models.User{
 		ID:           userID.String(),
 		Username:     req.Username,

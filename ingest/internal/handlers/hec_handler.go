@@ -3,12 +3,13 @@ package handlers
 import (
 	"context"
 	"encoding/json"
-	"github.com/telhawk-systems/telhawk-stack/common/httputil"
 	"io"
 	"log"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/telhawk-systems/telhawk-stack/common/httputil"
 
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/metrics"
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/models"

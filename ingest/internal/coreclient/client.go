@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -152,6 +153,7 @@ func (e *retryableError) Unwrap() error {
 }
 
 func isRetryable(err error) bool {
-	_, ok := err.(*retryableError)
+	retryableError := &retryableError{}
+	ok := errors.As(err, &retryableError)
 	return ok
 }
