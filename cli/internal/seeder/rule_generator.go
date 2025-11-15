@@ -164,6 +164,15 @@ func (g *RuleBasedGenerator) generateForValueCount() ([]HECEvent, error) {
 		uniqueValue := g.generateUniqueValueForField(countField, i)
 		g.setFieldValue(event, countField, uniqueValue)
 
+		// Debug: print first event
+		if i == 0 {
+			log.Printf("  DEBUG: First event structure:")
+			log.Printf("    class_uid: %v", event["class_uid"])
+			log.Printf("    src_endpoint: %v", event["src_endpoint"])
+			log.Printf("    dst_endpoint: %v", event["dst_endpoint"])
+			log.Printf("    Field '%s' = %v", countField, uniqueValue)
+		}
+
 		// Create HEC event
 		events[i] = HECEvent{
 			Time:       float64(eventTime.Unix()) + float64(eventTime.Nanosecond())/1e9,
@@ -330,7 +339,8 @@ func (g *RuleBasedGenerator) generateValueForField(field string) interface{} {
 	}
 	// Ports
 	if containsIgnoreCase(field, ".port") || containsIgnoreCase(field, "_port") {
-		return rand.Intn(65535-1024) + 1024
+		// OCSF defines port as string (can be numeric like "443" or named like "https")
+		return fmt.Sprintf("%d", rand.Intn(65535-1024)+1024)
 	}
 	// Hostnames
 	if containsIgnoreCase(field, "hostname") || containsIgnoreCase(field, ".host") {
@@ -350,7 +360,8 @@ func (g *RuleBasedGenerator) generateUniqueValueForField(field string, index int
 	// Common field patterns
 	if containsIgnoreCase(field, "port") {
 		// Generate sequential ports starting from 1024
-		return 1024 + index
+		// OCSF defines port as string (can be numeric like "443" or named like "https")
+		return fmt.Sprintf("%d", 1024+index)
 	}
 	if containsIgnoreCase(field, "ip") || containsIgnoreCase(field, "addr") {
 		// Generate IPs in a range
@@ -450,6 +461,13 @@ func (g *RuleBasedGenerator) addRequiredOCSFFields(event map[string]interface{})
 		}
 		if _, exists := event["severity_id"]; !exists {
 			event["severity_id"] = 1 // Informational
+		}
+		// Add connection_info if not exists (required for network events)
+		if _, exists := event["connection_info"]; !exists {
+			event["connection_info"] = map[string]interface{}{
+				"protocol_name": "TCP",
+				"direction":     "outbound",
+			}
 		}
 	case 1007: // Process Activity
 		event["category_uid"] = 1
