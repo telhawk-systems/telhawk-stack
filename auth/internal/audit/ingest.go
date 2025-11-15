@@ -26,22 +26,22 @@ func NewIngestClient(ingestURL, hecToken string) *IngestClient {
 
 // OCSFAuthEvent represents an OCSF Authentication event (class 3002)
 type OCSFAuthEvent struct {
-	ActivityID   int                    `json:"activity_id"`   // 1=Logon, 2=Logoff, 3=AuthTicket, etc.
-	CategoryUID  int                    `json:"category_uid"`  // 3 = Identity & Access Management
-	ClassUID     int                    `json:"class_uid"`     // 3002 = Authentication
-	Time         int64                  `json:"time"`          // Unix timestamp in milliseconds
-	TypeUID      int                    `json:"type_uid"`      // class_uid * 100 + activity_id
-	Severity     string                 `json:"severity"`      // Informational, Low, Medium, High, Critical
-	SeverityID   int                    `json:"severity_id"`   // 1-6
-	Status       string                 `json:"status"`        // Success, Failure
-	StatusID     int                    `json:"status_id"`     // 1=Success, 2=Failure
-	User         OCSFUser               `json:"user"`
-	SrcEndpoint  *OCSFEndpoint          `json:"src_endpoint,omitempty"`
-	Metadata     OCSFMetadata           `json:"metadata"`
-	Message      string                 `json:"message,omitempty"`
-	Observables  []OCSFObservable       `json:"observables,omitempty"`
-	RawData      string                 `json:"raw_data,omitempty"`
-	Enrichments  []map[string]interface{} `json:"enrichments,omitempty"`
+	ActivityID  int                      `json:"activity_id"`  // 1=Logon, 2=Logoff, 3=AuthTicket, etc.
+	CategoryUID int                      `json:"category_uid"` // 3 = Identity & Access Management
+	ClassUID    int                      `json:"class_uid"`    // 3002 = Authentication
+	Time        int64                    `json:"time"`         // Unix timestamp in milliseconds
+	TypeUID     int                      `json:"type_uid"`     // class_uid * 100 + activity_id
+	Severity    string                   `json:"severity"`     // Informational, Low, Medium, High, Critical
+	SeverityID  int                      `json:"severity_id"`  // 1-6
+	Status      string                   `json:"status"`       // Success, Failure
+	StatusID    int                      `json:"status_id"`    // 1=Success, 2=Failure
+	User        OCSFUser                 `json:"user"`
+	SrcEndpoint *OCSFEndpoint            `json:"src_endpoint,omitempty"`
+	Metadata    OCSFMetadata             `json:"metadata"`
+	Message     string                   `json:"message,omitempty"`
+	Observables []OCSFObservable         `json:"observables,omitempty"`
+	RawData     string                   `json:"raw_data,omitempty"`
+	Enrichments []map[string]interface{} `json:"enrichments,omitempty"`
 }
 
 type OCSFUser struct {
@@ -53,11 +53,11 @@ type OCSFUser struct {
 }
 
 type OCSFEndpoint struct {
-	IP         string `json:"ip,omitempty"`
-	Port       int    `json:"port,omitempty"`
-	Hostname   string `json:"hostname,omitempty"`
-	Domain     string `json:"domain,omitempty"`
-	UID        string `json:"uid,omitempty"`
+	IP       string `json:"ip,omitempty"`
+	Port     int    `json:"port,omitempty"`
+	Hostname string `json:"hostname,omitempty"`
+	Domain   string `json:"domain,omitempty"`
+	UID      string `json:"uid,omitempty"`
 }
 
 type OCSFMetadata struct {
@@ -71,25 +71,25 @@ type OCSFMetadata struct {
 }
 
 type OCSFProduct struct {
-	Name      string `json:"name"`
-	Vendor    string `json:"vendor_name"`
-	Version   string `json:"version"`
-	UID       string `json:"uid,omitempty"`
-	Feature   string `json:"feature,omitempty"`
+	Name    string `json:"name"`
+	Vendor  string `json:"vendor_name"`
+	Version string `json:"version"`
+	UID     string `json:"uid,omitempty"`
+	Feature string `json:"feature,omitempty"`
 }
 
 type OCSFObservable struct {
-	Name     string `json:"name"`
-	Type     string `json:"type"`
-	TypeID   int    `json:"type_id"`
-	Value    string `json:"value"`
+	Name       string          `json:"name"`
+	Type       string          `json:"type"`
+	TypeID     int             `json:"type_id"`
+	Value      string          `json:"value"`
 	Reputation *OCSFReputation `json:"reputation,omitempty"`
 }
 
 type OCSFReputation struct {
-	Score     int    `json:"score,omitempty"`
-	ScoreID   int    `json:"score_id,omitempty"`
-	BaseScore int    `json:"base_score,omitempty"`
+	Score     int `json:"score,omitempty"`
+	ScoreID   int `json:"score_id,omitempty"`
+	BaseScore int `json:"base_score,omitempty"`
 }
 
 // HECEvent wraps the OCSF event for HEC ingestion

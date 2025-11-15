@@ -9,8 +9,8 @@ func CSRF(cookieSecure bool) func(http.Handler) http.Handler {
 	// Paths that should be exempt from CSRF protection
 	// Authenticated endpoints are exempt because they're already protected by JWT auth
 	exemptPaths := map[string]bool{
-		"/api/auth/login":  true,  // Login is the first POST, needs to work without CSRF
-		"/api/health":      true,  // Health check
+		"/api/auth/login": true, // Login is the first POST, needs to work without CSRF
+		"/api/health":     true, // Health check
 	}
 
 	// Prefixes for authenticated endpoints that don't need CSRF (already have JWT auth)

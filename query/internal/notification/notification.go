@@ -41,14 +41,14 @@ func (w *WebhookChannel) Type() string {
 
 func (w *WebhookChannel) Send(ctx context.Context, alert *models.Alert, results []map[string]interface{}) error {
 	payload := map[string]interface{}{
-		"alert_id":    alert.ID,
-		"alert_name":  alert.Name,
-		"severity":    alert.Severity,
-		"description": alert.Description,
-		"query":       alert.Query,
+		"alert_id":     alert.ID,
+		"alert_name":   alert.Name,
+		"severity":     alert.Severity,
+		"description":  alert.Description,
+		"query":        alert.Query,
 		"result_count": len(results),
-		"results":     results,
-		"timestamp":   time.Now().UTC().Format(time.RFC3339),
+		"results":      results,
+		"timestamp":    time.Now().UTC().Format(time.RFC3339),
 	}
 
 	jsonData, err := json.Marshal(payload)
@@ -100,7 +100,7 @@ func (s *SlackChannel) Type() string {
 
 func (s *SlackChannel) Send(ctx context.Context, alert *models.Alert, results []map[string]interface{}) error {
 	color := s.severityColor(alert.Severity)
-	
+
 	payload := map[string]interface{}{
 		"text": fmt.Sprintf("🚨 Alert: %s", alert.Name),
 		"attachments": []map[string]interface{}{
@@ -216,7 +216,7 @@ func (m *MultiChannel) Type() string {
 func (m *MultiChannel) Send(ctx context.Context, alert *models.Alert, results []map[string]interface{}) error {
 	var lastErr error
 	successCount := 0
-	
+
 	for _, ch := range m.channels {
 		if err := ch.Send(ctx, alert, results); err != nil {
 			lastErr = fmt.Errorf("%s channel failed: %w", ch.Type(), err)
@@ -224,10 +224,10 @@ func (m *MultiChannel) Send(ctx context.Context, alert *models.Alert, results []
 			successCount++
 		}
 	}
-	
+
 	if successCount == 0 && len(m.channels) > 0 {
 		return fmt.Errorf("all notification channels failed: %w", lastErr)
 	}
-	
+
 	return nil
 }

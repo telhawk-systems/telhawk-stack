@@ -56,4 +56,3 @@ func (EmailActivityValidator) Validate(ctx context.Context, event *ocsf.Event) e
 	// TODO: Validate enum field 'direction_id' (valid values: 0, 1, 2, 3, 99)
 	return nil
 }
-

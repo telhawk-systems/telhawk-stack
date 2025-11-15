@@ -57,4 +57,3 @@ func (RemediationActivityValidator) Validate(ctx context.Context, event *ocsf.Ev
 	}
 	return nil
 }
-

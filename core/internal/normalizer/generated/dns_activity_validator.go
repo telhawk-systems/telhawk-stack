@@ -46,4 +46,3 @@ func (DnsActivityValidator) Validate(ctx context.Context, event *ocsf.Event) err
 	}
 	return nil
 }
-

@@ -44,7 +44,7 @@ func TestOCSFPassthroughNormalizer_NormalizeHECEnvelope(t *testing.T) {
 
 	// Test event wrapped in HEC envelope format
 	hecPayload := map[string]interface{}{
-		"time": 1699999999.5,
+		"time":       1699999999.5,
 		"sourcetype": "ocsf:authentication",
 		"event": map[string]interface{}{
 			"class_uid":     3002,

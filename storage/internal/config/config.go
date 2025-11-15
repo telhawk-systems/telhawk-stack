@@ -29,13 +29,13 @@ type OpenSearchConfig struct {
 }
 
 type IndexManagementConfig struct {
-	IndexPrefix    string        `yaml:"index_prefix"`
-	ShardCount     int           `yaml:"shard_count"`
-	ReplicaCount   int           `yaml:"replica_count"`
-	RefreshInterval string       `yaml:"refresh_interval"`
-	RetentionDays  int           `yaml:"retention_days"`
-	RolloverSizeGB int           `yaml:"rollover_size_gb"`
-	RolloverAge    time.Duration `yaml:"rollover_age"`
+	IndexPrefix     string        `yaml:"index_prefix"`
+	ShardCount      int           `yaml:"shard_count"`
+	ReplicaCount    int           `yaml:"replica_count"`
+	RefreshInterval string        `yaml:"refresh_interval"`
+	RetentionDays   int           `yaml:"retention_days"`
+	RolloverSizeGB  int           `yaml:"rollover_size_gb"`
+	RolloverAge     time.Duration `yaml:"rollover_age"`
 }
 
 func Load(configPath string) (*Config, error) {

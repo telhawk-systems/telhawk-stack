@@ -59,4 +59,3 @@ func (DatastoreActivityValidator) Validate(ctx context.Context, event *ocsf.Even
 	// TODO: Validate enum field 'type_id' (valid values: 0, 1, 2, 3, 99)
 	return nil
 }
-

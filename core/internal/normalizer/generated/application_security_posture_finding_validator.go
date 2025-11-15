@@ -33,4 +33,3 @@ func (ApplicationSecurityPostureFindingValidator) Validate(ctx context.Context, 
 
 	return nil
 }
-

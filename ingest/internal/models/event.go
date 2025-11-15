@@ -44,9 +44,9 @@ type Event struct {
 }
 
 type IngestionStats struct {
-	TotalEvents     int64     `json:"total_events"`
-	TotalBytes      int64     `json:"total_bytes"`
-	SuccessfulEvents int64    `json:"successful_events"`
-	FailedEvents    int64     `json:"failed_events"`
-	LastEvent       time.Time `json:"last_event"`
+	TotalEvents      int64     `json:"total_events"`
+	TotalBytes       int64     `json:"total_bytes"`
+	SuccessfulEvents int64     `json:"successful_events"`
+	FailedEvents     int64     `json:"failed_events"`
+	LastEvent        time.Time `json:"last_event"`
 }

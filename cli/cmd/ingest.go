@@ -41,7 +41,7 @@ var ingestSendCmd = &cobra.Command{
 			profile, _ := cmd.Flags().GetString("profile")
 			ingestURL = cfg.GetIngestURL(profile)
 		}
-		
+
 		ingestClient := client.NewIngestClient(ingestURL)
 
 		var event map[string]interface{}

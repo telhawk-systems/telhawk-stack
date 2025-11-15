@@ -48,7 +48,7 @@ func TestGenerateAuthEvent(t *testing.T) {
 		// Track failure rates by action type
 		action := event["activity_name"].(string)
 		status := event["status"].(string)
-		
+
 		if action == "login" {
 			totalLogins++
 			if status == "Failure" {
@@ -264,7 +264,7 @@ func TestGenerateHTTPEvent(t *testing.T) {
 	// Verify severity_id is set appropriately for status codes
 	statusCode := resp["code"].(int)
 	severityID := event["severity_id"].(int)
-	
+
 	if statusCode >= 500 && severityID < 3 {
 		t.Error("5xx errors should have severity_id >= 3")
 	}
@@ -316,10 +316,10 @@ func TestGenerateDetectionEvent(t *testing.T) {
 
 func TestGenerateEventAllTypes(t *testing.T) {
 	types := []string{"auth", "network", "process", "file", "dns", "http", "detection"}
-	
+
 	for _, eventType := range types {
 		event := generateEvent(eventType, 0)
-		
+
 		// Verify HECEvent structure
 		if event.Time == 0 {
 			t.Errorf("Event type %s has zero time", eventType)
@@ -361,9 +361,9 @@ func TestGenerateEventAllTypes(t *testing.T) {
 		if eventType == "detection" {
 			expectedSourcetype = "ocsf:detection_finding"
 		}
-		
+
 		if event.SourceType != expectedSourcetype {
-			t.Errorf("Event type %s has wrong sourcetype: expected %s, got %s", 
+			t.Errorf("Event type %s has wrong sourcetype: expected %s, got %s",
 				eventType, expectedSourcetype, event.SourceType)
 		}
 	}
@@ -384,13 +384,13 @@ func TestParseEventTypes(t *testing.T) {
 	for _, tt := range tests {
 		result := parseEventTypes(tt.input)
 		if len(result) != len(tt.expected) {
-			t.Errorf("parseEventTypes(%q) returned %d items, expected %d", 
+			t.Errorf("parseEventTypes(%q) returned %d items, expected %d",
 				tt.input, len(result), len(tt.expected))
 			continue
 		}
 		for i, v := range result {
 			if v != tt.expected[i] {
-				t.Errorf("parseEventTypes(%q)[%d] = %q, expected %q", 
+				t.Errorf("parseEventTypes(%q)[%d] = %q, expected %q",
 					tt.input, i, v, tt.expected[i])
 			}
 		}
@@ -411,7 +411,7 @@ func TestEventMetadataConsistency(t *testing.T) {
 
 	for eventType, generator := range generators {
 		event := generator()
-		
+
 		// Verify metadata exists
 		metadata, ok := event["metadata"].(map[string]interface{})
 		if !ok {

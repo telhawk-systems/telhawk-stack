@@ -65,7 +65,7 @@ func (p *Processor) Process(ctx context.Context, envelope *model.RawEventEnvelop
 	if p.storageClient != nil {
 		if err := p.storageClient.StoreEvent(ctx, event); err != nil {
 			p.failed.Add(1)
-			
+
 			// Write to DLQ for storage failures
 			if p.dlq != nil {
 				if dlqErr := p.dlq.Write(ctx, envelope, err, "storage_failed"); dlqErr != nil {
@@ -74,7 +74,7 @@ func (p *Processor) Process(ctx context.Context, envelope *model.RawEventEnvelop
 					p.dlqWritten.Add(1)
 				}
 			}
-			
+
 			log.Printf("ERROR: failed to persist event to storage: %v", err)
 			return nil, err
 		}
@@ -104,11 +104,11 @@ func (p *Processor) Health() Stats {
 		Stored:        p.stored.Load(),
 		DLQWritten:    p.dlqWritten.Load(),
 	}
-	
+
 	if p.dlq != nil {
 		stats.DLQStats = p.dlq.Stats()
 	}
-	
+
 	return stats
 }
 
@@ -116,4 +116,3 @@ func (p *Processor) Health() Stats {
 func (p *Processor) DLQ() *dlq.Queue {
 	return p.dlq
 }
-

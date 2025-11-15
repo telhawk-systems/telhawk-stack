@@ -41,7 +41,7 @@ func main() {
 	registry := normalizer.NewRegistry(
 		// OCSF Passthrough (for events already in OCSF format)
 		normalizer.OCSFPassthroughNormalizer{},
-		
+
 		// Application (8)
 		generated.NewApiActivityNormalizer(),
 		generated.NewApplicationErrorNormalizer(),
@@ -51,7 +51,7 @@ func main() {
 		generated.NewScanActivityNormalizer(),
 		generated.NewWebResourceAccessActivityNormalizer(),
 		generated.NewWebResourcesActivityNormalizer(),
-		
+
 		// Discovery (24)
 		generated.NewAdminGroupQueryNormalizer(),
 		generated.NewCloudResourcesInventoryInfoNormalizer(),
@@ -77,7 +77,7 @@ func main() {
 		generated.NewStartupItemQueryNormalizer(),
 		generated.NewUserInventoryNormalizer(),
 		generated.NewUserQueryNormalizer(),
-		
+
 		// Findings (9)
 		generated.NewApplicationSecurityPostureFindingNormalizer(),
 		generated.NewComplianceFindingNormalizer(),
@@ -88,7 +88,7 @@ func main() {
 		generated.NewIncidentFindingNormalizer(),
 		generated.NewSecurityFindingNormalizer(),
 		generated.NewVulnerabilityFindingNormalizer(),
-		
+
 		// IAM (6)
 		generated.NewAccountChangeNormalizer(),
 		generated.NewAuthenticationNormalizer(),
@@ -96,7 +96,7 @@ func main() {
 		generated.NewEntityManagementNormalizer(),
 		generated.NewGroupManagementNormalizer(),
 		generated.NewUserAccessNormalizer(),
-		
+
 		// Network (14)
 		generated.NewDhcpActivityNormalizer(),
 		generated.NewDnsActivityNormalizer(),
@@ -112,13 +112,13 @@ func main() {
 		generated.NewSmbActivityNormalizer(),
 		generated.NewSshActivityNormalizer(),
 		generated.NewTunnelActivityNormalizer(),
-		
+
 		// Remediation (4)
 		generated.NewFileRemediationActivityNormalizer(),
 		generated.NewNetworkRemediationActivityNormalizer(),
 		generated.NewProcessRemediationActivityNormalizer(),
 		generated.NewRemediationActivityNormalizer(),
-		
+
 		// System (10)
 		generated.NewEventLogActvityNormalizer(),
 		generated.NewFileActivityNormalizer(),
@@ -130,11 +130,11 @@ func main() {
 		generated.NewProcessActivityNormalizer(),
 		generated.NewScheduledJobActivityNormalizer(),
 		generated.NewScriptActivityNormalizer(),
-		
+
 		// Unmanned Systems (2)
 		generated.NewAirborneBroadcastActivityNormalizer(),
 		generated.NewDroneFlightsActivityNormalizer(),
-		
+
 		// Fallback for generic HEC events
 		normalizer.HECNormalizer{},
 	)
@@ -150,7 +150,7 @@ func main() {
 
 	pipe := pipeline.New(registry, validators)
 	storageClient := storage.NewClient(cfg.Storage.URL)
-	
+
 	// Initialize DLQ if enabled
 	var dlqQueue *dlq.Queue
 	if cfg.DLQ.Enabled {
@@ -164,7 +164,7 @@ func main() {
 	} else {
 		log.Println("DLQ disabled")
 	}
-	
+
 	processor := service.NewProcessor(pipe, storageClient, dlqQueue)
 	handler := handlers.NewProcessorHandler(processor)
 

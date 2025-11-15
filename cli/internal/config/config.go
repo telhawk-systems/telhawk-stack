@@ -41,12 +41,12 @@ func Default() *Config {
 
 func Load(cfgFile string) (*Config, error) {
 	v := viper.New()
-	
+
 	// Set defaults
 	v.SetDefault("current_profile", "default")
 	v.SetDefault("defaults.auth_url", "http://localhost:8080")
 	v.SetDefault("defaults.ingest_url", "http://localhost:8088")
-	
+
 	// Determine config file path
 	if cfgFile == "" {
 		home, err := os.UserHomeDir()
@@ -56,26 +56,26 @@ func Load(cfgFile string) (*Config, error) {
 		// If we can't determine home dir, just skip config file
 	}
 
-	// Environment variable overrides  
+	// Environment variable overrides
 	v.SetEnvPrefix("THAWK")
 	v.AutomaticEnv()
-	
+
 	// Bind specific env vars
 	v.BindEnv("defaults.auth_url", "THAWK_AUTH_URL")
 	v.BindEnv("defaults.ingest_url", "THAWK_INGEST_URL")
-	
+
 	cfg := Default()
 	cfg.path = cfgFile
-	
+
 	// Read config file (optional - skip if path is empty or doesn't exist)
 	if cfgFile != "" {
 		v.SetConfigFile(cfgFile)
 		v.SetConfigType("yaml")
-		
+
 		// Try to read config file - ignore any errors
 		_ = v.ReadInConfig()
 	}
-	
+
 	// Unmarshal into config struct
 	if err := v.Unmarshal(cfg); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal config: %w", err)

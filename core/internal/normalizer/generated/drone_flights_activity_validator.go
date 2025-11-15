@@ -61,4 +61,3 @@ func (DroneFlightsActivityValidator) Validate(ctx context.Context, event *ocsf.E
 	// TODO: Validate enum field 'auth_protocol_id' (valid values: 0, 1, 2, 3, 4, 5, 6, 7, 8, 99)
 	return nil
 }
-

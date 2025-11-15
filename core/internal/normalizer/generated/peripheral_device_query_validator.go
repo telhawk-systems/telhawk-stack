@@ -37,4 +37,3 @@ func (PeripheralDeviceQueryValidator) Validate(ctx context.Context, event *ocsf.
 
 	return nil
 }
-

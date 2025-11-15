@@ -22,7 +22,7 @@ var authLoginCmd = &cobra.Command{
 		username, _ := cmd.Flags().GetString("username")
 		password, _ := cmd.Flags().GetString("password")
 		authURL, _ := cmd.Flags().GetString("auth-url")
-		
+
 		// Use config default if not provided via flag
 		if authURL == "" || !cmd.Flags().Changed("auth-url") {
 			profile, _ := cmd.Flags().GetString("profile")
@@ -60,7 +60,7 @@ var authLogoutCmd = &cobra.Command{
 	Long:  "Remove stored credentials",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		profile, _ := cmd.Flags().GetString("profile")
-		
+
 		if err := cfg.RemoveProfile(profile); err != nil {
 			return err
 		}

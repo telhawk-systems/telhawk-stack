@@ -51,4 +51,3 @@ func (PeripheralActivityValidator) Validate(ctx context.Context, event *ocsf.Eve
 	}
 	return nil
 }
-

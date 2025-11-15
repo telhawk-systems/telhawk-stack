@@ -33,4 +33,3 @@ func (DetectionFindingValidator) Validate(ctx context.Context, event *ocsf.Event
 
 	return nil
 }
-

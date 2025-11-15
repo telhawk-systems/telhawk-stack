@@ -16,7 +16,7 @@ func SecurityHeaders(cfg SecurityConfig) func(http.Handler) http.Handler {
 			w.Header().Set("Referrer-Policy", "strict-origin-when-cross-origin")
 			w.Header().Set("Permissions-Policy", "geolocation=(), microphone=(), camera=()")
 			w.Header().Set("X-XSS-Protection", "1; mode=block")
-			
+
 			// CSP without unsafe-inline - strict security
 			csp := "default-src 'self'; " +
 				"script-src 'self'; " +
@@ -27,13 +27,13 @@ func SecurityHeaders(cfg SecurityConfig) func(http.Handler) http.Handler {
 				"frame-ancestors 'none'; " +
 				"base-uri 'self'; " +
 				"form-action 'self'"
-			
+
 			w.Header().Set("Content-Security-Policy", csp)
-			
+
 			if cfg.CookieSecure {
 				w.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload")
 			}
-			
+
 			next.ServeHTTP(w, r)
 		})
 	}

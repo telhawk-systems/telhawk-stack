@@ -52,4 +52,3 @@ func (WebResourceAccessActivityValidator) Validate(ctx context.Context, event *o
 	}
 	return nil
 }
-

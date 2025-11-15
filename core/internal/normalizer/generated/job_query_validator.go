@@ -37,4 +37,3 @@ func (JobQueryValidator) Validate(ctx context.Context, event *ocsf.Event) error 
 
 	return nil
 }
-

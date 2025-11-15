@@ -156,7 +156,7 @@ func TestGeneratedNormalizersIntegration(t *testing.T) {
 				}
 			}
 
-			t.Logf("✓ Successfully processed %s -> %s (class_uid=%d)", 
+			t.Logf("✓ Successfully processed %s -> %s (class_uid=%d)",
 				tc.file, event.Class, event.ClassUID)
 		})
 	}
@@ -175,9 +175,9 @@ func TestNormalizerSelection(t *testing.T) {
 	)
 
 	testCases := []struct {
-		sourceType      string
-		expectNormType  string
-		shouldMatch     bool
+		sourceType     string
+		expectNormType string
+		shouldMatch    bool
 	}{
 		{"auth_login", "*generated.AuthenticationNormalizer", true},
 		{"ldap_auth", "*generated.AuthenticationNormalizer", true},
@@ -201,7 +201,7 @@ func TestNormalizerSelection(t *testing.T) {
 			}
 
 			norm := registry.Find(envelope)
-			
+
 			if tc.shouldMatch {
 				if norm == nil {
 					t.Errorf("expected normalizer for %s, got nil", tc.sourceType)

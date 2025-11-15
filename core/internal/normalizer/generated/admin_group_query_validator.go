@@ -37,4 +37,3 @@ func (AdminGroupQueryValidator) Validate(ctx context.Context, event *ocsf.Event)
 
 	return nil
 }
-

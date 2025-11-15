@@ -54,4 +54,3 @@ func (AirborneBroadcastActivityValidator) Validate(ctx context.Context, event *o
 	}
 	return nil
 }
-

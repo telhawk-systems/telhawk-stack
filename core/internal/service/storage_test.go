@@ -124,7 +124,7 @@ func TestStoragePersistence(t *testing.T) {
 					if stored["class"] != tc.expectClass {
 						t.Errorf("stored event has wrong class: %v", stored["class"])
 					}
-					t.Logf("✓ Event stored successfully: class=%s, class_uid=%v", 
+					t.Logf("✓ Event stored successfully: class=%s, class_uid=%v",
 						stored["class"], stored["class_uid"])
 				}
 			}
@@ -143,7 +143,7 @@ func TestStoragePersistence(t *testing.T) {
 		t.Errorf("expected 0 failed events, got %d", stats.Failed)
 	}
 
-	t.Logf("Final stats: processed=%d, stored=%d, failed=%d, calls=%d", 
+	t.Logf("Final stats: processed=%d, stored=%d, failed=%d, calls=%d",
 		stats.Processed, stats.Stored, stats.Failed, storageCallCount)
 }
 

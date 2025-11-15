@@ -39,4 +39,3 @@ func (DeviceConfigStateChangeValidator) Validate(ctx context.Context, event *ocs
 	// TODO: Validate enum field 'state_id' (valid values: 0, 1, 2, 99)
 	return nil
 }
-

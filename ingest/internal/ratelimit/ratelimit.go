@@ -36,7 +36,7 @@ func NewRedisRateLimiter(redisURL string, limit int, window time.Duration, disab
 	// Test connection
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	
+
 	if err := client.Ping(ctx).Err(); err != nil {
 		return nil, fmt.Errorf("redis connection failed: %w", err)
 	}
@@ -57,7 +57,7 @@ func (r *redisRateLimiter) Allow(ctx context.Context, key string) (bool, error) 
 
 	now := time.Now().UnixNano()
 	windowStart := now - r.window.Nanoseconds()
-	
+
 	// Redis Lua script for atomic rate limiting
 	script := `
 		local key = KEYS[1]

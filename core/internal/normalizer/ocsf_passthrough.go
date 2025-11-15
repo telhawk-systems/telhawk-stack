@@ -31,7 +31,7 @@ func (OCSFPassthroughNormalizer) Normalize(ctx context.Context, envelope *model.
 	var ocsfData map[string]interface{}
 	if eventData, ok := payload["event"].(map[string]interface{}); ok {
 		ocsfData = eventData
-		
+
 		// If time is missing in the event but present in the wrapper, copy it
 		if _, hasTime := ocsfData["time"]; !hasTime {
 			if wrapperTime, ok := payload["time"].(float64); ok {

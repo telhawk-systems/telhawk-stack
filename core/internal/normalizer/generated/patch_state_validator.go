@@ -37,4 +37,3 @@ func (PatchStateValidator) Validate(ctx context.Context, event *ocsf.Event) erro
 
 	return nil
 }
-

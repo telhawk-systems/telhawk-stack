@@ -55,4 +55,3 @@ func (DhcpActivityValidator) Validate(ctx context.Context, event *ocsf.Event) er
 	}
 	return nil
 }
-

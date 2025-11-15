@@ -237,7 +237,7 @@ func (m *IndexManager) getOCSFMappings() map[string]interface{} {
 						"type": "long",
 					},
 					"modified_time": map[string]interface{}{
-						"type": "date",
+						"type":   "date",
 						"format": "epoch_second||strict_date_optional_time||yyyy-MM-dd HH:mm:ss",
 					},
 				},
@@ -359,7 +359,7 @@ func (m *IndexManager) getOCSFMappings() map[string]interface{} {
 func (m *IndexManager) createISMPolicy(ctx context.Context) error {
 	policy := map[string]interface{}{
 		"policy": map[string]interface{}{
-			"description": "TelHawk events index lifecycle policy",
+			"description":   "TelHawk events index lifecycle policy",
 			"default_state": "hot",
 			"states": []map[string]interface{}{
 				{
@@ -367,8 +367,8 @@ func (m *IndexManager) createISMPolicy(ctx context.Context) error {
 					"actions": []map[string]interface{}{
 						{
 							"rollover": map[string]interface{}{
-								"min_size":        fmt.Sprintf("%dGB", m.config.RolloverSizeGB),
-								"min_index_age":   formatDurationForOpenSearch(m.config.RolloverAge),
+								"min_size":      fmt.Sprintf("%dGB", m.config.RolloverSizeGB),
+								"min_index_age": formatDurationForOpenSearch(m.config.RolloverAge),
 							},
 						},
 					},
@@ -399,7 +399,7 @@ func (m *IndexManager) createISMPolicy(ctx context.Context) error {
 	}
 
 	policyName := m.config.IndexPrefix + "-policy"
-	
+
 	// Check if policy exists
 	req := m.client.Client().Transport.Perform
 	checkReq, err := http.NewRequestWithContext(
@@ -411,13 +411,13 @@ func (m *IndexManager) createISMPolicy(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	
+
 	checkRes, err := req(checkReq)
 	if err != nil {
 		return err
 	}
 	checkRes.Body.Close()
-	
+
 	// If policy exists (200), update it. Otherwise create it (404)
 	method := "PUT"
 	url := "/_plugins/_ism/policies/" + policyName

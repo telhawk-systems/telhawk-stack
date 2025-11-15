@@ -50,4 +50,3 @@ func (DataSecurityFindingValidator) Validate(ctx context.Context, event *ocsf.Ev
 	}
 	return nil
 }
-

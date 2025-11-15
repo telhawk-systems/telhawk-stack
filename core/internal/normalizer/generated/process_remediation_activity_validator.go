@@ -37,4 +37,3 @@ func (ProcessRemediationActivityValidator) Validate(ctx context.Context, event *
 
 	return nil
 }
-

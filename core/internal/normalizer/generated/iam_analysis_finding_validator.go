@@ -33,4 +33,3 @@ func (IamAnalysisFindingValidator) Validate(ctx context.Context, event *ocsf.Eve
 
 	return nil
 }
-

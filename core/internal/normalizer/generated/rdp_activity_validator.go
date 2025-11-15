@@ -50,4 +50,3 @@ func (RdpActivityValidator) Validate(ctx context.Context, event *ocsf.Event) err
 	}
 	return nil
 }
-

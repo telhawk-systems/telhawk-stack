@@ -50,4 +50,3 @@ func (KernelExtensionActivityValidator) Validate(ctx context.Context, event *ocs
 	}
 	return nil
 }
-

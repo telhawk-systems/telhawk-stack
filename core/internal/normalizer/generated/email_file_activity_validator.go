@@ -53,4 +53,3 @@ func (EmailFileActivityValidator) Validate(ctx context.Context, event *ocsf.Even
 	}
 	return nil
 }
-

@@ -37,4 +37,3 @@ func (FileRemediationActivityValidator) Validate(ctx context.Context, event *ocs
 
 	return nil
 }
-

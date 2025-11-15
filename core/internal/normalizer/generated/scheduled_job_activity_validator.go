@@ -52,4 +52,3 @@ func (ScheduledJobActivityValidator) Validate(ctx context.Context, event *ocsf.E
 	}
 	return nil
 }
-

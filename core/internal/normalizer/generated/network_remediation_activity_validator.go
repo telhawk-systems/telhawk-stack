@@ -37,4 +37,3 @@ func (NetworkRemediationActivityValidator) Validate(ctx context.Context, event *
 
 	return nil
 }
-

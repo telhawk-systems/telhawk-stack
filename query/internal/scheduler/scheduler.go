@@ -24,23 +24,23 @@ type AlertStore interface {
 
 // Scheduler manages periodic execution of alerts and notification delivery.
 type Scheduler struct {
-	mu           sync.RWMutex
-	executor     AlertExecutor
-	store        AlertStore
-	channel      notification.Channel
-	running      bool
-	stopChan     chan struct{}
-	wg           sync.WaitGroup
+	mu            sync.RWMutex
+	executor      AlertExecutor
+	store         AlertStore
+	channel       notification.Channel
+	running       bool
+	stopChan      chan struct{}
+	wg            sync.WaitGroup
 	checkInterval time.Duration
-	
-	alertTimers  map[string]*alertTimer
-	metrics      *Metrics
+
+	alertTimers map[string]*alertTimer
+	metrics     *Metrics
 }
 
 type alertTimer struct {
-	alertID      string
-	ticker       *time.Ticker
-	stopChan     chan struct{}
+	alertID  string
+	ticker   *time.Ticker
+	stopChan chan struct{}
 }
 
 // Metrics tracks scheduler performance and alert execution stats.
@@ -64,7 +64,7 @@ func NewScheduler(executor AlertExecutor, store AlertStore, channel notification
 	if cfg.CheckInterval == 0 {
 		cfg.CheckInterval = 30 * time.Second
 	}
-	
+
 	return &Scheduler{
 		executor:      executor,
 		store:         store,
@@ -87,10 +87,10 @@ func (s *Scheduler) Start(ctx context.Context) error {
 	s.mu.Unlock()
 
 	log.Printf("alert scheduler starting (check interval: %s)", s.checkInterval)
-	
+
 	s.wg.Add(1)
 	go s.run(ctx)
-	
+
 	return nil
 }
 
@@ -104,9 +104,9 @@ func (s *Scheduler) Stop() error {
 	s.running = false
 	close(s.stopChan)
 	s.mu.Unlock()
-	
+
 	s.stopAllAlertTimers()
-	
+
 	s.wg.Wait()
 	log.Printf("alert scheduler stopped")
 	return nil
@@ -114,12 +114,12 @@ func (s *Scheduler) Stop() error {
 
 func (s *Scheduler) run(ctx context.Context) {
 	defer s.wg.Done()
-	
+
 	ticker := time.NewTicker(s.checkInterval)
 	defer ticker.Stop()
-	
+
 	s.syncAlerts(ctx)
-	
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -136,31 +136,31 @@ func (s *Scheduler) syncAlerts(ctx context.Context) {
 	s.metrics.mu.Lock()
 	s.metrics.LastCheckTime = time.Now()
 	s.metrics.mu.Unlock()
-	
+
 	alerts, err := s.store.ListAlerts(ctx)
 	if err != nil {
 		log.Printf("failed to list alerts: %v", err)
 		return
 	}
-	
+
 	activeAlertIDs := make(map[string]bool)
-	
+
 	for _, alert := range alerts.Alerts {
 		if alert.Status != "active" {
 			continue
 		}
-		
+
 		activeAlertIDs[alert.ID] = true
-		
+
 		s.mu.RLock()
 		_, exists := s.alertTimers[alert.ID]
 		s.mu.RUnlock()
-		
+
 		if !exists {
 			s.scheduleAlert(ctx, &alert)
 		}
 	}
-	
+
 	s.mu.Lock()
 	for alertID, timer := range s.alertTimers {
 		if !activeAlertIDs[alertID] {
@@ -181,26 +181,26 @@ func (s *Scheduler) scheduleAlert(ctx context.Context, alert *models.Alert) {
 			interval = 5 * time.Minute
 		}
 	}
-	
+
 	timer := &alertTimer{
 		alertID:  alert.ID,
 		ticker:   time.NewTicker(interval),
 		stopChan: make(chan struct{}),
 	}
-	
+
 	s.mu.Lock()
 	s.alertTimers[alert.ID] = timer
 	s.mu.Unlock()
-	
+
 	log.Printf("scheduled alert %s (%s) with interval %s", alert.ID, alert.Name, interval)
-	
+
 	s.wg.Add(1)
 	go s.runAlert(ctx, timer)
 }
 
 func (s *Scheduler) runAlert(ctx context.Context, timer *alertTimer) {
 	defer s.wg.Done()
-	
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -217,14 +217,14 @@ func (s *Scheduler) executeAlert(ctx context.Context, alertID string) {
 	s.metrics.mu.Lock()
 	s.metrics.AlertExecutions++
 	s.metrics.mu.Unlock()
-	
+
 	alerts, err := s.store.ListAlerts(ctx)
 	if err != nil {
 		log.Printf("failed to retrieve alert %s: %v", alertID, err)
 		s.incrementErrors()
 		return
 	}
-	
+
 	var alert *models.Alert
 	for _, a := range alerts.Alerts {
 		if a.ID == alertID {
@@ -232,23 +232,23 @@ func (s *Scheduler) executeAlert(ctx context.Context, alertID string) {
 			break
 		}
 	}
-	
+
 	if alert == nil {
 		log.Printf("alert %s not found", alertID)
 		s.incrementErrors()
 		return
 	}
-	
+
 	if alert.Status != "active" {
 		return
 	}
-	
+
 	now := time.Now().UTC()
 	lookback := time.Duration(alert.Schedule.LookbackMinutes) * time.Minute
 	if lookback == 0 {
 		lookback = time.Duration(alert.Schedule.IntervalMinutes) * time.Minute
 	}
-	
+
 	searchReq := &models.SearchRequest{
 		Query: alert.Query,
 		TimeRange: &models.TimeRange{
@@ -257,24 +257,24 @@ func (s *Scheduler) executeAlert(ctx context.Context, alertID string) {
 		},
 		Limit: 100,
 	}
-	
+
 	resp, err := s.executor.ExecuteSearch(ctx, searchReq)
 	if err != nil {
 		log.Printf("failed to execute alert %s (%s): %v", alert.ID, alert.Name, err)
 		s.incrementErrors()
 		return
 	}
-	
+
 	if resp.ResultCount == 0 {
 		return
 	}
-	
+
 	log.Printf("alert %s (%s) triggered with %d results", alert.ID, alert.Name, resp.ResultCount)
-	
+
 	s.metrics.mu.Lock()
 	s.metrics.AlertsTriggered++
 	s.metrics.mu.Unlock()
-	
+
 	if err := s.channel.Send(ctx, alert, resp.Results); err != nil {
 		log.Printf("failed to send notification for alert %s: %v", alert.ID, err)
 		s.metrics.mu.Lock()
@@ -282,11 +282,11 @@ func (s *Scheduler) executeAlert(ctx context.Context, alertID string) {
 		s.metrics.mu.Unlock()
 		return
 	}
-	
+
 	s.metrics.mu.Lock()
 	s.metrics.NotificationsSent++
 	s.metrics.mu.Unlock()
-	
+
 	if err := s.store.UpdateLastTriggered(ctx, alert.ID, now); err != nil {
 		log.Printf("failed to update last triggered time for alert %s: %v", alert.ID, err)
 	}
@@ -301,7 +301,7 @@ func (s *Scheduler) incrementErrors() {
 func (s *Scheduler) stopAllAlertTimers() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	
+
 	for _, timer := range s.alertTimers {
 		timer.stop()
 	}
@@ -317,14 +317,14 @@ func (at *alertTimer) stop() {
 func (s *Scheduler) GetMetrics() map[string]interface{} {
 	s.metrics.mu.RLock()
 	defer s.metrics.mu.RUnlock()
-	
+
 	return map[string]interface{}{
-		"alerts_triggered":      s.metrics.AlertsTriggered,
-		"alert_executions":      s.metrics.AlertExecutions,
-		"alert_errors":          s.metrics.AlertErrors,
-		"notifications_sent":    s.metrics.NotificationsSent,
-		"notification_errors":   s.metrics.NotificationErrors,
-		"last_check_time":       s.metrics.LastCheckTime.Format(time.RFC3339),
-		"active_alert_count":    len(s.alertTimers),
+		"alerts_triggered":    s.metrics.AlertsTriggered,
+		"alert_executions":    s.metrics.AlertExecutions,
+		"alert_errors":        s.metrics.AlertErrors,
+		"notifications_sent":  s.metrics.NotificationsSent,
+		"notification_errors": s.metrics.NotificationErrors,
+		"last_check_time":     s.metrics.LastCheckTime.Format(time.RFC3339),
+		"active_alert_count":  len(s.alertTimers),
 	}
 }
