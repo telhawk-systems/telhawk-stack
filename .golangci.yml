@@ -32,9 +32,6 @@ linters:
     - gocritic      # Opinionated Go linter
     - revive        # Drop-in replacement for golint
 
-  disable:
-    - typecheck     # Disabled because it can conflict with build tags
-
 linters-settings:
   errcheck:
     check-type-assertions: true
