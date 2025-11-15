@@ -84,6 +84,9 @@ linters:
       - migrations/
       # Exclude vendor
       - vendor/
+      # Exclude code generation tools (less strict linting for dev tools)
+      - tools/ocsf-generator/
+      - tools/normalizer-generator/
 
     rules:
       # Exclude some linters from running on tests files
