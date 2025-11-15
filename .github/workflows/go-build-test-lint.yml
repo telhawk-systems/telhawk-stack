@@ -40,10 +40,13 @@ jobs:
             echo "Checking $dir"
             cd "$GITHUB_WORKSPACE/$dir"
             go mod tidy
-            if ! git diff --exit-code go.mod go.sum; then
+            # Check go.mod and go.sum (if it exists)
+            files="go.mod"
+            if [ -f go.sum ]; then
+              files="go.mod go.sum"
+            fi
+            if ! git diff --exit-code $files; then
               echo "ERROR: go.mod or go.sum not tidy in $dir"
-              echo "Diff:"
-              git diff go.mod go.sum
               failed=1
             fi
           done
@@ -127,7 +130,7 @@ jobs:
           go-version: '1.25'
 
       - name: Run golangci-lint on ${{ matrix.module }}
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v7
         with:
           version: v2.6.1
           args: --timeout=5m
