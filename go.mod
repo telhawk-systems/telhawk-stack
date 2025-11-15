@@ -2,6 +2,8 @@ module github.com/telhawk-systems/telhawk-stack
 
 go 1.25
 
+toolchain go1.25.4
+
 require (
 	github.com/alicebob/miniredis/v2 v2.35.0
 	github.com/brianvoe/gofakeit/v6 v6.28.0
