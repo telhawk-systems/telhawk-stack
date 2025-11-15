@@ -234,8 +234,6 @@ TelHawk Stack is licensed under the **TelHawk Systems Source Available License (
 - ❌ **No distribution** - Cannot distribute binaries or create public forks
 - ❌ **No commercial hosting** - Cannot offer as a service to others
 
-For commercial licensing, distribution rights, or hosting as a service, contact: **licensing@telhawk.com**
-
 See the [LICENSE](LICENSE) file for full terms.
 
 ## Contributing
