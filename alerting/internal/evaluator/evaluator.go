@@ -178,7 +178,12 @@ func (e *Evaluator) evaluateCorrelationRule(ctx context.Context, schema *Detecti
 		Controller: schema.Controller,
 	}
 
-	correlationType := correlation.CorrelationType(schema.Model["correlation_type"].(string))
+	correlationTypeStr, ok := schema.Model["correlation_type"].(string)
+	if !ok {
+		log.Printf("Invalid correlation_type for schema %s", schema.ID)
+		return []*Alert{}
+	}
+	correlationType := correlation.CorrelationType(correlationTypeStr)
 
 	var alerts []*correlation.Alert
 	var err error
@@ -225,9 +230,9 @@ func (e *Evaluator) applySuppression(ctx context.Context, schema *DetectionSchem
 		return alerts // No suppression configured
 	}
 
-	enabled, _ := suppressionConfig["enabled"].(bool)
-	if !enabled {
-		return alerts // Suppression disabled
+	enabled, ok := suppressionConfig["enabled"].(bool)
+	if !ok || !enabled {
+		return alerts // Suppression disabled or not properly configured
 	}
 
 	// Extract suppression parameters
@@ -312,9 +317,9 @@ func (e *Evaluator) evaluateSimpleRule(ctx context.Context, schema *DetectionSch
 	view := schema.View
 
 	// Get title and description from view
-	title, _ := view["title"].(string)
-	description, _ := view["description"].(string)
-	severity, _ := view["severity"].(string)
+	title, _ := view["title"].(string)             //nolint:errcheck // Optional field, empty string is acceptable default
+	description, _ := view["description"].(string) //nolint:errcheck // Optional field, empty string is acceptable default
+	severity, _ := view["severity"].(string)       //nolint:errcheck // Optional field, empty string is acceptable default
 	if severity == "" {
 		severity = "medium"
 	}
@@ -376,13 +381,8 @@ func (e *Evaluator) matchesController(controller map[string]interface{}, eventDa
 		return false
 	}
 
-	// For now, just do a simple string match on serialized event
-	eventJSON, _ := json.Marshal(eventData)
-	// This is a placeholder - real implementation would parse and execute the query
-	_ = eventJSON
-	_ = query
-
 	// TODO: Implement proper query language evaluation
 	// For now, return false to avoid generating spurious alerts
+	_ = query
 	return false
 }

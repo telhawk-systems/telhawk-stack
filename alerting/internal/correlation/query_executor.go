@@ -225,7 +225,10 @@ func (qe *QueryExecutor) executeOpenSearchQuery(ctx context.Context, query map[s
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("query failed with status %d (failed to read response body: %w)", resp.StatusCode, err)
+		}
 		return nil, fmt.Errorf("query failed with status %d: %s", resp.StatusCode, string(body))
 	}
 
@@ -297,7 +300,10 @@ func (qe *QueryExecutor) executeOpenSearchAggQuery(ctx context.Context, query ma
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("query failed with status %d (failed to read response body: %w)", resp.StatusCode, err)
+		}
 		return nil, fmt.Errorf("query failed with status %d: %s", resp.StatusCode, string(body))
 	}
 

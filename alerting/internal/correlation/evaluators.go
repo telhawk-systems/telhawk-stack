@@ -77,7 +77,11 @@ func (e *EventCountEvaluator) Evaluate(ctx context.Context, schema *DetectionSch
 	}
 
 	// Extract query from controller
-	queryInterface, ok := schema.Controller["detection"].(map[string]interface{})["query"]
+	detection, ok := schema.Controller["detection"].(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("detection not found in controller")
+	}
+	queryInterface, ok := detection["query"]
 	if !ok {
 		return nil, fmt.Errorf("query not found in controller.detection")
 	}
@@ -99,8 +103,11 @@ func (e *EventCountEvaluator) Evaluate(ctx context.Context, schema *DetectionSch
 	}
 
 	// Get threshold and operator from controller
-	detection := schema.Controller["detection"].(map[string]interface{})
-	threshold := int64(detection["threshold"].(float64))
+	thresholdFloat, ok := detection["threshold"].(float64)
+	if !ok {
+		return nil, fmt.Errorf("threshold not found or invalid in controller.detection")
+	}
+	threshold := int64(thresholdFloat)
 	operator := params.Operator
 	if op, ok := detection["operator"].(string); ok {
 		operator = op
@@ -131,11 +138,20 @@ func (e *EventCountEvaluator) extractParameters(schema *DetectionSchema) (*Event
 		// Merge with parameter set
 		if sets, ok := schema.Model["parameter_sets"].([]interface{}); ok {
 			for _, set := range sets {
-				setMap := set.(map[string]interface{})
+				setMap, ok := set.(map[string]interface{})
+				if !ok {
+					continue // Skip invalid parameter sets
+				}
 				if setMap["name"] == activeSet {
 					// Merge parameters
-					baseParams := paramsInterface.(map[string]interface{})
-					setParams := setMap["parameters"].(map[string]interface{})
+					baseParams, ok := paramsInterface.(map[string]interface{})
+					if !ok {
+						return nil, fmt.Errorf("invalid base parameters format")
+					}
+					setParams, ok := setMap["parameters"].(map[string]interface{})
+					if !ok {
+						return nil, fmt.Errorf("invalid set parameters format")
+					}
 					merged := make(map[string]interface{})
 					for k, v := range baseParams {
 						merged[k] = v
@@ -187,9 +203,9 @@ func (e *EventCountEvaluator) meetsThreshold(count, threshold int64, operator st
 func (e *EventCountEvaluator) createAlert(schema *DetectionSchema, params *EventCountParams, groupKey string, count int64, timeWindow time.Duration) *Alert {
 	// Extract view fields
 	view := schema.View
-	title := view["title"].(string)
-	severity := view["severity"].(string)
-	description := view["description"].(string)
+	title, _ := view["title"].(string)
+	severity, _ := view["severity"].(string)
+	description, _ := view["description"].(string)
 
 	// Template variable replacement (simplified)
 	metadata := map[string]interface{}{
@@ -254,9 +270,19 @@ func (e *ValueCountEvaluator) Evaluate(ctx context.Context, schema *DetectionSch
 	}
 
 	// Extract and parse query
-	queryInterface := schema.Controller["detection"].(map[string]interface{})["query"]
+	detection, ok := schema.Controller["detection"].(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("detection not found in controller")
+	}
+	queryInterface, ok := detection["query"]
+	if !ok {
+		return nil, fmt.Errorf("query not found in controller.detection")
+	}
 	var query model.Query
-	queryBytes, _ := json.Marshal(queryInterface)
+	queryBytes, err := json.Marshal(queryInterface)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal query: %w", err)
+	}
 	if err := json.Unmarshal(queryBytes, &query); err != nil {
 		return nil, fmt.Errorf("failed to parse query: %w", err)
 	}

@@ -306,7 +306,11 @@ func hashKey(key string) string {
 // hashMap generates a consistent hash for a map
 func hashMap(m map[string]string) string {
 	// Sort keys and create deterministic string representation
-	data, _ := json.Marshal(m)
+	data, err := json.Marshal(m)
+	if err != nil {
+		// If marshaling fails, return hash of empty data
+		data = []byte{}
+	}
 	hash := sha256.Sum256(data)
 	return fmt.Sprintf("%x", hash[:8])
 }

@@ -83,7 +83,9 @@ func (h *Handler) GetCase(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(c)
+	if err := json.NewEncoder(w).Encode(c); err != nil {
+		log.Printf("Error encoding response: %v", err)
+	}
 }
 
 // ListCases handles GET /api/v1/cases
@@ -110,7 +112,9 @@ func (h *Handler) ListCases(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		log.Printf("Error encoding response: %v", err)
+	}
 }
 
 // UpdateCase handles PUT /api/v1/cases/:id
@@ -144,7 +148,9 @@ func (h *Handler) UpdateCase(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(c)
+	if err := json.NewEncoder(w).Encode(c); err != nil {
+		log.Printf("Error encoding response: %v", err)
+	}
 }
 
 // CloseCase handles PUT /api/v1/cases/:id/close
@@ -250,10 +256,12 @@ func (h *Handler) GetCaseAlerts(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	if err := json.NewEncoder(w).Encode(map[string]interface{}{
 		"case_id": caseID,
 		"alerts":  alerts,
-	})
+	}); err != nil {
+		log.Printf("Error encoding response: %v", err)
+	}
 }
 
 // ListAlerts handles GET /api/v1/alerts
@@ -350,7 +358,9 @@ func (h *Handler) ListAlerts(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		log.Printf("Error encoding response: %v", err)
+	}
 }
 
 // GetAlert handles GET /api/v1/alerts/:id
@@ -417,7 +427,9 @@ func (h *Handler) GetAlert(w http.ResponseWriter, r *http.Request) {
 	alert["_index"] = searchResp.Hits.Hits[0].Index
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(alert)
+	if err := json.NewEncoder(w).Encode(alert); err != nil {
+		log.Printf("Error encoding response: %v", err)
+	}
 }
 
 // Helper function to parse integer query parameters

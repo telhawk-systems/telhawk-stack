@@ -27,7 +27,10 @@ func (s *Service) CreateCase(ctx context.Context, req *models.CreateCaseRequest,
 		return nil, fmt.Errorf("invalid severity: %s", req.Severity)
 	}
 
-	caseUUID, _ := uuid.NewV7()
+	caseUUID, err := uuid.NewV7()
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate UUID: %w", err)
+	}
 	c := &models.Case{
 		ID:          caseUUID.String(),
 		Title:       req.Title,
