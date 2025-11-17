@@ -3,6 +3,7 @@ package correlation
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -25,13 +26,20 @@ type QueryExecutor struct {
 
 // NewQueryExecutor creates a new query executor
 func NewQueryExecutor(storageURL, username, password string, insecure bool) *QueryExecutor {
+	// Create HTTP client with optional TLS skip verification
+	transport := &http.Transport{}
+	if insecure {
+		transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	}
+
 	return &QueryExecutor{
 		storageURL: storageURL,
 		username:   username,
 		password:   password,
 		insecure:   insecure,
 		httpClient: &http.Client{
-			Timeout: 30 * time.Second,
+			Timeout:   30 * time.Second,
+			Transport: transport,
 		},
 		translator: &SimpleTranslator{},
 	}

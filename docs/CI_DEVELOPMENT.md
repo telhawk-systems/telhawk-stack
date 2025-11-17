@@ -75,7 +75,7 @@ Run Go's built-in static analyzer:
 
 ```bash
 # Run on all modules
-for dir in auth cli common core ingest query storage web/backend tools/event-seeder tools/normalizer-generator tools/ocsf-generator; do
+for dir in auth cli common core ingest query storage web/backend tools/normalizer-generator tools/ocsf-generator; do
   echo "Vetting $dir"
   (cd "$dir" && go vet ./...)
 done
@@ -89,7 +89,7 @@ Ensure `go.mod` and `go.sum` are clean:
 
 ```bash
 # Check all modules
-for dir in auth cli common core ingest query storage web/backend tools/event-seeder tools/normalizer-generator tools/ocsf-generator; do
+for dir in auth cli common core ingest query storage web/backend tools/normalizer-generator tools/ocsf-generator; do
   echo "Checking $dir"
   (cd "$dir" && go mod tidy)
 done
@@ -106,7 +106,7 @@ Run all tests with race detection:
 
 ```bash
 # Run tests in all modules
-for dir in auth cli common core ingest query storage web/backend tools/event-seeder tools/normalizer-generator tools/ocsf-generator; do
+for dir in auth cli common core ingest query storage web/backend tools/normalizer-generator tools/ocsf-generator; do
   echo "Testing $dir"
   (cd "$dir" && go test -v -race -coverprofile=coverage.out ./...)
 done
@@ -132,7 +132,7 @@ Run the linter:
 
 ```bash
 # Run on all modules
-for dir in auth cli common core ingest query storage web/backend tools/event-seeder tools/normalizer-generator tools/ocsf-generator; do
+for dir in auth cli common core ingest query storage web/backend tools/normalizer-generator tools/ocsf-generator; do
   echo "Linting $dir"
   (cd "$dir" && golangci-lint run --timeout=5m)
 done
@@ -153,7 +153,7 @@ cd storage && go build -v -o ../bin/storage ./cmd/storage && cd ..
 cd query && go build -v -o ../bin/query ./cmd/query && cd ..
 cd web/backend && go build -v -o ../../bin/web ./cmd/web && cd ../..
 cd cli && go build -v -o ../bin/thawk . && cd ..
-cd tools/event-seeder && go build -v -o ../../bin/event-seeder . && cd ../..
+cd && go build -v -o ../../bin/event-seeder . && cd ../..
 ```
 
 **What CI checks:** All services must compile successfully.
@@ -183,14 +183,14 @@ echo "✓ All files properly formatted"
 
 echo ""
 echo "2. Running go mod tidy..."
-for dir in auth cli common core ingest query storage web/backend tools/event-seeder tools/normalizer-generator tools/ocsf-generator; do
+for dir in auth cli common core ingest query storage web/backend tools/normalizer-generator tools/ocsf-generator; do
   (cd "$dir" && go mod tidy)
 done
 echo "✓ All go.mod files tidy"
 
 echo ""
 echo "3. Running go vet..."
-for dir in auth cli common core ingest query storage web/backend tools/event-seeder tools/normalizer-generator tools/ocsf-generator; do
+for dir in auth cli common core ingest query storage web/backend tools/normalizer-generator tools/ocsf-generator; do
   echo "  Vetting $dir"
   (cd "$dir" && go vet ./...)
 done
@@ -198,7 +198,7 @@ echo "✓ go vet passed"
 
 echo ""
 echo "4. Running tests..."
-for dir in auth cli common core ingest query storage web/backend tools/event-seeder tools/normalizer-generator tools/ocsf-generator; do
+for dir in auth cli common core ingest query storage web/backend tools/normalizer-generator tools/ocsf-generator; do
   echo "  Testing $dir"
   (cd "$dir" && go test -race ./...)
 done
@@ -206,7 +206,7 @@ echo "✓ All tests passed"
 
 echo ""
 echo "5. Running linter (this may take a minute)..."
-for dir in auth cli common core ingest query storage web/backend tools/event-seeder tools/normalizer-generator tools/ocsf-generator; do
+for dir in auth cli common core ingest query storage web/backend tools/normalizer-generator tools/ocsf-generator; do
   echo "  Linting $dir"
   (cd "$dir" && golangci-lint run --timeout=5m)
 done

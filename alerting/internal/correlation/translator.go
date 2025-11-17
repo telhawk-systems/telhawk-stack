@@ -221,10 +221,10 @@ func (t *SimpleTranslator) buildTimeRangeFilter(tr *model.TimeRangeDef) (map[str
 }
 
 func (t *SimpleTranslator) translateAggregation(agg *model.Aggregation) (map[string]interface{}, error) {
-	field := t.translateFieldPath(agg.Field)
-
 	switch agg.Type {
 	case model.AggTypeTerms:
+		// Use keyword field for terms aggregations
+		field := t.translateAggregationFieldPath(agg.Field)
 		aggDef := map[string]interface{}{
 			"terms": map[string]interface{}{
 				"field": field,
@@ -246,6 +246,8 @@ func (t *SimpleTranslator) translateAggregation(agg *model.Aggregation) (map[str
 		return aggDef, nil
 
 	case model.AggTypeCardinality:
+		// Use keyword field for cardinality aggregations
+		field := t.translateAggregationFieldPath(agg.Field)
 		return map[string]interface{}{
 			"cardinality": map[string]interface{}{
 				"field": field,
@@ -253,14 +255,19 @@ func (t *SimpleTranslator) translateAggregation(agg *model.Aggregation) (map[str
 		}, nil
 
 	case model.AggTypeAvg:
+		field := t.translateFieldPath(agg.Field)
 		return map[string]interface{}{"avg": map[string]interface{}{"field": field}}, nil
 	case model.AggTypeSum:
+		field := t.translateFieldPath(agg.Field)
 		return map[string]interface{}{"sum": map[string]interface{}{"field": field}}, nil
 	case model.AggTypeMin:
+		field := t.translateFieldPath(agg.Field)
 		return map[string]interface{}{"min": map[string]interface{}{"field": field}}, nil
 	case model.AggTypeMax:
+		field := t.translateFieldPath(agg.Field)
 		return map[string]interface{}{"max": map[string]interface{}{"field": field}}, nil
 	case model.AggTypeStats:
+		field := t.translateFieldPath(agg.Field)
 		return map[string]interface{}{"stats": map[string]interface{}{"field": field}}, nil
 
 	default:
@@ -274,4 +281,38 @@ func (t *SimpleTranslator) translateFieldPath(path string) string {
 		return strings.TrimPrefix(path, ".")
 	}
 	return path
+}
+
+// translateAggregationFieldPath translates a field path for use in aggregations
+// For terms/cardinality aggregations on text fields, OpenSearch requires using the .keyword subfield
+func (t *SimpleTranslator) translateAggregationFieldPath(path string) string {
+	field := t.translateFieldPath(path)
+
+	// Add .keyword suffix for aggregatable fields
+	// OpenSearch text fields need .keyword for aggregations
+	// Numeric and date fields don't need this
+	if !strings.HasSuffix(field, ".keyword") && !isNumericOrDateField(field) {
+		return field + ".keyword"
+	}
+	return field
+}
+
+// isNumericOrDateField checks if a field is numeric or date type (doesn't need .keyword)
+func isNumericOrDateField(field string) bool {
+	// Common OCSF numeric/date fields that don't need .keyword
+	numericDateFields := []string{
+		"time", "time_dt", "timestamp",
+		"class_uid", "category_uid", "type_uid", "activity_id", "status_id",
+		"severity_id", "confidence_id", "impact_id",
+		"count", "port", "pid", "uid",
+	}
+
+	// Check if field ends with any of these
+	for _, ndf := range numericDateFields {
+		if strings.HasSuffix(field, ndf) {
+			return true
+		}
+	}
+
+	return false
 }

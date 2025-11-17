@@ -140,22 +140,6 @@ rules:
 EOF
 
 ./bin/thawk seeder run --config seeder.yaml
-
-# 4. Legacy standalone seeder (still supported):
-cd tools/event-seeder
-go build
-
-# Quick development dataset (100 events over last hour):
-./event-seeder -token YOUR_TOKEN -count 100 -time-spread 1h
-
-# Dashboard population (1000 events over last hour):
-./event-seeder -token YOUR_TOKEN -count 1000 -time-spread 1h
-
-# Production-like dataset (default: 50k events over 90 days):
-./event-seeder -token YOUR_TOKEN
-
-# Massive load testing (100k events, fast as possible):
-./event-seeder -token YOUR_TOKEN -count 100000 -batch-size 100
 ```
 
 **Rule-based generation details:**

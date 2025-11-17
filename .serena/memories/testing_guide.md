@@ -135,8 +135,6 @@ go test -v -args -test.v
 - `query/internal/scheduler/scheduler_test.go`: Query scheduler tests
 - `query/internal/notification/notification_test.go`: Notification tests
 
-### Tools Tests
-- `tools/event-seeder/main_test.go`: Event seeder utility tests
 
 ## Test Patterns
 

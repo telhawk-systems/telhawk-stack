@@ -76,14 +76,14 @@ func (e *EventCountEvaluator) Evaluate(ctx context.Context, schema *DetectionSch
 		return nil, fmt.Errorf("invalid time window: %w", err)
 	}
 
-	// Extract query from controller
-	detection, ok := schema.Controller["detection"].(map[string]interface{})
+	// Extract query from model.parameters (where it actually is in the rule schema)
+	paramsMap, ok := schema.Model["parameters"].(map[string]interface{})
 	if !ok {
-		return nil, fmt.Errorf("detection not found in controller")
+		return nil, fmt.Errorf("parameters not found in model")
 	}
-	queryInterface, ok := detection["query"]
+	queryInterface, ok := paramsMap["query"]
 	if !ok {
-		return nil, fmt.Errorf("query not found in controller.detection")
+		return nil, fmt.Errorf("query not found in model.parameters")
 	}
 
 	// Parse query object
@@ -102,16 +102,9 @@ func (e *EventCountEvaluator) Evaluate(ctx context.Context, schema *DetectionSch
 		return nil, fmt.Errorf("failed to execute count query: %w", err)
 	}
 
-	// Get threshold and operator from controller
-	thresholdFloat, ok := detection["threshold"].(float64)
-	if !ok {
-		return nil, fmt.Errorf("threshold not found or invalid in controller.detection")
-	}
-	threshold := int64(thresholdFloat)
+	// Get threshold and operator from params (already extracted)
+	threshold := int64(params.Threshold)
 	operator := params.Operator
-	if op, ok := detection["operator"].(string); ok {
-		operator = op
-	}
 
 	// Generate alerts for groups that exceed threshold
 	alerts := make([]*Alert, 0)
@@ -167,16 +160,56 @@ func (e *EventCountEvaluator) extractParameters(schema *DetectionSchema) (*Event
 	}
 
 	// Convert to EventCountParams
-	var params EventCountParams
-	data, err := json.Marshal(paramsInterface)
-	if err != nil {
-		return nil, err
-	}
-	if err := json.Unmarshal(data, &params); err != nil {
-		return nil, err
+	paramsMap, ok := paramsInterface.(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("parameters must be an object")
 	}
 
-	return &params, nil
+	params := &EventCountParams{}
+
+	// Extract time_window
+	if tw, ok := paramsMap["time_window"].(string); ok {
+		params.TimeWindow = tw
+	}
+
+	// Extract group_by
+	if gb, ok := paramsMap["group_by"].([]interface{}); ok {
+		params.GroupBy = make([]string, len(gb))
+		for i, v := range gb {
+			if s, ok := v.(string); ok {
+				params.GroupBy[i] = s
+			}
+		}
+	}
+
+	// Extract threshold (handle both int and object formats)
+	if threshold, ok := paramsMap["threshold"]; ok {
+		switch t := threshold.(type) {
+		case float64:
+			params.Threshold = int(t)
+		case int:
+			params.Threshold = t
+		case map[string]interface{}:
+			// Threshold is an object like {"value": 5, "operator": "gte"}
+			if val, ok := t["value"].(float64); ok {
+				params.Threshold = int(val)
+			}
+			if op, ok := t["operator"].(string); ok {
+				params.Operator = op
+			}
+		}
+	}
+
+	// Extract operator (if not already set from threshold object)
+	if params.Operator == "" {
+		if op, ok := paramsMap["operator"].(string); ok {
+			params.Operator = op
+		} else {
+			params.Operator = "gte" // Default operator
+		}
+	}
+
+	return params, nil
 }
 
 // meetsThreshold checks if count meets threshold with given operator
@@ -250,13 +283,57 @@ func NewValueCountEvaluator(queryExecutor *QueryExecutor, stateManager *StateMan
 // Evaluate executes value_count correlation logic
 func (e *ValueCountEvaluator) Evaluate(ctx context.Context, schema *DetectionSchema) ([]*Alert, error) {
 	// Extract parameters
-	var params ValueCountParams
-	paramsData, err := json.Marshal(schema.Model["parameters"])
-	if err != nil {
-		return nil, err
+	paramsMap, ok := schema.Model["parameters"].(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("parameters must be an object")
 	}
-	if err := json.Unmarshal(paramsData, &params); err != nil {
-		return nil, err
+
+	params := &ValueCountParams{}
+
+	// Extract time_window
+	if tw, ok := paramsMap["time_window"].(string); ok {
+		params.TimeWindow = tw
+	}
+
+	// Extract field
+	if f, ok := paramsMap["field"].(string); ok {
+		params.Field = f
+	}
+
+	// Extract group_by
+	if gb, ok := paramsMap["group_by"].([]interface{}); ok {
+		params.GroupBy = make([]string, len(gb))
+		for i, v := range gb {
+			if s, ok := v.(string); ok {
+				params.GroupBy[i] = s
+			}
+		}
+	}
+
+	// Extract threshold (handle both int and object formats)
+	if threshold, ok := paramsMap["threshold"]; ok {
+		switch t := threshold.(type) {
+		case float64:
+			params.Threshold = int(t)
+		case int:
+			params.Threshold = t
+		case map[string]interface{}:
+			if val, ok := t["value"].(float64); ok {
+				params.Threshold = int(val)
+			}
+			if op, ok := t["operator"].(string); ok {
+				params.Operator = op
+			}
+		}
+	}
+
+	// Extract operator (if not already set from threshold object)
+	if params.Operator == "" {
+		if op, ok := paramsMap["operator"].(string); ok {
+			params.Operator = op
+		} else {
+			params.Operator = "gte" // Default operator
+		}
 	}
 
 	if err := params.Validate(); err != nil {
@@ -269,14 +346,10 @@ func (e *ValueCountEvaluator) Evaluate(ctx context.Context, schema *DetectionSch
 		return nil, fmt.Errorf("invalid time window: %w", err)
 	}
 
-	// Extract and parse query
-	detection, ok := schema.Controller["detection"].(map[string]interface{})
+	// Extract query from model.parameters (paramsMap already declared above)
+	queryInterface, ok := paramsMap["query"]
 	if !ok {
-		return nil, fmt.Errorf("detection not found in controller")
-	}
-	queryInterface, ok := detection["query"]
-	if !ok {
-		return nil, fmt.Errorf("query not found in controller.detection")
+		return nil, fmt.Errorf("query not found in model.parameters")
 	}
 	var query model.Query
 	queryBytes, err := json.Marshal(queryInterface)
@@ -293,8 +366,8 @@ func (e *ValueCountEvaluator) Evaluate(ctx context.Context, schema *DetectionSch
 		return nil, fmt.Errorf("failed to execute cardinality query: %w", err)
 	}
 
-	// Get threshold
-	threshold := int64(schema.Controller["detection"].(map[string]interface{})["threshold"].(float64))
+	// Get threshold (already extracted in params)
+	threshold := int64(params.Threshold)
 
 	// Generate alerts
 	alerts := make([]*Alert, 0)

@@ -119,7 +119,7 @@ func main() {
 
 	// Import builtin detection rules
 	log.Println("Importing builtin detection rules...")
-	ruleImporter := importer.NewImporter("/etc/telhawk/alerting/rules", "http://rules:8084/api/v1/schemas")
+	ruleImporter := importer.NewImporter("/etc/telhawk/alerting/rules", "http://rules:8084/schemas")
 	importCtx, importCancel := context.WithTimeout(context.Background(), 30*time.Second)
 	if err := ruleImporter.Import(importCtx); err != nil {
 		log.Printf("Warning: Rule import encountered errors: %v", err)
