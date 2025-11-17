@@ -2,7 +2,8 @@ FROM golang:1.25-alpine AS builder
 
 WORKDIR /build
 
-COPY go.mod ./
+COPY go.mod go.sum ./
+COPY common/ ./common/
 RUN go mod download
 
 COPY core/ ./core/

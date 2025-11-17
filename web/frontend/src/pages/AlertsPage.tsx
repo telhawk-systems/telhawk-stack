@@ -292,7 +292,7 @@ export function AlertsPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`px-2 py-1 text-xs font-medium rounded-full border ${getStatusColor(alert.status)}`}>
-                          {alert.status.replace('_', ' ')}
+                          {alert.status ? alert.status.replace('_', ' ') : 'unknown'}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -411,7 +411,7 @@ export function AlertsPage() {
                   <span className="text-sm font-medium text-gray-500">Status</span>
                   <div className="mt-1">
                     <span className={`px-2 py-1 text-xs font-medium rounded-full border ${getStatusColor(selectedAlert.status)}`}>
-                      {selectedAlert.status.replace('_', ' ')}
+                      {selectedAlert.status ? selectedAlert.status.replace('_', ' ') : 'unknown'}
                     </span>
                   </div>
                 </div>

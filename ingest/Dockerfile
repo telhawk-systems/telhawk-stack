@@ -23,7 +23,7 @@ WORKDIR /app
 COPY --from=builder /build/ingest .
 
 # Copy default config file
-COPY --from=builder /build/config.yaml /etc/telhawk/ingest/config.yaml
+COPY --from=builder /build/ingest/config.yaml /etc/telhawk/ingest/config.yaml
 
 # Use nonroot user
 USER nonroot:nonroot
