@@ -505,7 +505,44 @@ class ApiClient {
       throw new Error('Failed to list alerts');
     }
 
-    return response.json();
+    const data = await response.json();
+
+    // Transform OpenSearch OCSF format to frontend format
+    const alerts = (data.alerts || []).map((alert: any) => ({
+      alert_id: alert._id || alert.finding_info?.uid || '',
+      detection_schema_id: alert.detection_schema_id || '',
+      detection_schema_version_id: alert.detection_schema_version_id || '',
+      detection_schema_title: alert.resources?.[0]?.name || 'Unknown Rule',
+      title: alert.finding_info?.title || 'Untitled Alert',
+      description: alert.finding_info?.desc || '',
+      severity: alert.severity || 'informational',
+      priority: this.calculatePriority(alert.severity),
+      status: 'open', // Default status - TODO: get from case association
+      triggered_at: alert.time ? new Date(alert.time).toISOString() : new Date().toISOString(),
+      event_count: alert.raw_data?.event_count || alert.matched_events?.length || 0,
+      fields: alert.raw_data || {},
+    }));
+
+    return {
+      alerts,
+      pagination: {
+        page: data.page || 1,
+        limit: data.limit || 20,
+        total: data.total || alerts.length,
+        total_pages: Math.ceil((data.total || alerts.length) / (data.limit || 20)),
+      },
+    };
+  }
+
+  private calculatePriority(severity: string): 'P1' | 'P2' | 'P3' | 'P4' {
+    switch (severity) {
+      case 'critical': return 'P1';
+      case 'high': return 'P2';
+      case 'medium': return 'P3';
+      case 'low':
+      case 'informational':
+      default: return 'P4';
+    }
   }
 
   async getAlert(id: string): Promise<AlertDetails> {

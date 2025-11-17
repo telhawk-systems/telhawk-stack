@@ -85,7 +85,17 @@ export function AlertsPage() {
   };
 
   const formatDate = (dateString: string) => {
+    if (!dateString) {
+      return 'N/A';
+    }
+
     const date = new Date(dateString);
+
+    // Check if date is invalid
+    if (isNaN(date.getTime())) {
+      return 'Invalid Date';
+    }
+
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
     const diffMins = Math.floor(diffMs / 60000);
