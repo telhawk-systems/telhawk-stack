@@ -508,20 +508,25 @@ class ApiClient {
     const data = await response.json();
 
     // Transform OpenSearch OCSF format to frontend format
-    const alerts = (data.alerts || []).map((alert: any) => ({
-      alert_id: alert._id || alert.finding_info?.uid || '',
-      detection_schema_id: alert.detection_schema_id || '',
-      detection_schema_version_id: alert.detection_schema_version_id || '',
-      detection_schema_title: alert.resources?.[0]?.name || 'Unknown Rule',
-      title: alert.finding_info?.title || 'Untitled Alert',
-      description: alert.finding_info?.desc || '',
-      severity: alert.severity || 'informational',
-      priority: this.calculatePriority(alert.severity),
-      status: 'open', // Default status - TODO: get from case association
-      triggered_at: alert.time ? new Date(alert.time).toISOString() : new Date().toISOString(),
-      event_count: alert.raw_data?.event_count || alert.matched_events?.length || 0,
-      fields: alert.raw_data || {},
-    }));
+    const alerts = (data.alerts || []).map((alert: any) => {
+      const rawData = alert.raw_data || {};
+      const description = alert.finding_info?.desc || '';
+
+      return {
+        alert_id: alert._id || alert.finding_info?.uid || '',
+        detection_schema_id: alert.detection_schema_id || '',
+        detection_schema_version_id: alert.detection_schema_version_id || '',
+        detection_schema_title: alert.resources?.[0]?.name || 'Unknown Rule',
+        title: alert.finding_info?.title || 'Untitled Alert',
+        description: this.renderTemplate(description, rawData),
+        severity: alert.severity || 'informational',
+        priority: this.calculatePriority(alert.severity),
+        status: 'open', // Default status - TODO: get from case association
+        triggered_at: alert.time ? new Date(alert.time).toISOString() : new Date().toISOString(),
+        event_count: rawData.event_count || alert.matched_events?.length || 0,
+        fields: rawData,
+      };
+    });
 
     return {
       alerts,
@@ -543,6 +548,48 @@ class ApiClient {
       case 'informational':
       default: return 'P4';
     }
+  }
+
+  private renderTemplate(template: string, data: any): string {
+    if (!template) return '';
+
+    let result = template;
+
+    // Replace {{event_count}}
+    if (data.event_count !== undefined) {
+      result = result.replace(/\{\{event_count\}\}/g, String(data.event_count));
+    }
+
+    // Replace {{threshold}}
+    if (data.threshold !== undefined) {
+      result = result.replace(/\{\{threshold\}\}/g, String(data.threshold));
+    }
+
+    // Replace {{time_window}}
+    if (data.time_window !== undefined) {
+      result = result.replace(/\{\{time_window\}\}/g, data.time_window);
+    }
+
+    // Handle group_by fields using group_key
+    if (data.group_key && Array.isArray(data.group_by) && data.group_by.length > 0) {
+      if (data.group_by.length === 1) {
+        // Single field grouping - group_key contains the value directly
+        const field = data.group_by[0].replace(/^\./, ''); // Remove leading dot
+        const templateVar = `{{${field}}}`;
+        result = result.replace(new RegExp(templateVar.replace(/\./g, '\\.'), 'g'), data.group_key);
+      } else {
+        // Multi-field grouping - assume first field gets the group_key
+        // This is a heuristic since the backend doesn't provide individual field values
+        const firstField = data.group_by[0].replace(/^\./, '');
+        const templateVar = `{{${firstField}}}`;
+        result = result.replace(new RegExp(templateVar.replace(/\./g, '\\.'), 'g'), data.group_key);
+      }
+    }
+
+    // Replace remaining unknown templates with a placeholder
+    result = result.replace(/\{\{[^}]+\}\}/g, '<unknown>');
+
+    return result;
   }
 
   async getAlert(id: string): Promise<AlertDetails> {

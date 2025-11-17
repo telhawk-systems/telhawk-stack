@@ -38,10 +38,15 @@ export function RulesPage() {
 
       const json = await response.json();
       // Parse JSON:API format
-      const schemas = (json.data || []).map((resource: any) => ({
-        id: resource.id,
-        ...resource.attributes,
-      }));
+      const schemas = (json.data || []).map((resource: any) => {
+        if (!resource.attributes.view) {
+          console.error('Schema missing view:', resource);
+        }
+        return {
+          id: resource.id,
+          ...resource.attributes,
+        };
+      });
       setSchemas(schemas);
       setTotalPages(json.meta?.pagination?.total_pages || 1);
     } catch (err) {
@@ -250,9 +255,9 @@ export function RulesPage() {
                       <td className="px-6 py-4">
                         <div>
                           <div className="text-sm font-medium text-gray-900">
-                            {schema.view.title}
+                            {schema.view?.title || 'Untitled Rule'}
                           </div>
-                          {schema.view.description_template && (
+                          {schema.view?.description_template && (
                             <div className="text-xs text-gray-500 mt-1">
                               {schema.view.description_template}
                             </div>
