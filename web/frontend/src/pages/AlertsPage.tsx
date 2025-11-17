@@ -43,15 +43,17 @@ export function AlertsPage() {
     fetchAlerts();
   }, [currentPage, severityFilter, statusFilter, priorityFilter]);
 
-  const handleUpdateStatus = async (alertId: string, newStatus: Alert['status']) => {
-    try {
-      await apiClient.updateAlert(alertId, { status: newStatus });
-      await fetchAlerts();
-    } catch (err) {
-      console.error('Error updating alert:', err);
-      alert(`Failed to update alert: ${err instanceof Error ? err.message : 'Unknown error'}`);
-    }
-  };
+  // TODO: Implement case creation/management for alert tracking
+  // Alerts in OpenSearch are immutable OCSF events - status tracking happens via Cases
+  // const handleUpdateStatus = async (alertId: string, newStatus: Alert['status']) => {
+  //   try {
+  //     await apiClient.updateAlert(alertId, { status: newStatus });
+  //     await fetchAlerts();
+  //   } catch (err) {
+  //     console.error('Error updating alert:', err);
+  //     alert(`Failed to update alert: ${err instanceof Error ? err.message : 'Unknown error'}`);
+  //   }
+  // };
 
   const getSeverityColor = (severity: string) => {
     switch (severity) {
@@ -317,32 +319,10 @@ export function AlertsPage() {
                             onClick={() => setSelectedAlert(alert)}
                             className="text-blue-600 hover:text-blue-900"
                           >
-                            View
+                            View Details
                           </button>
-                          {alert.status === 'open' && (
-                            <button
-                              onClick={() => handleUpdateStatus(alert.alert_id, 'investigating')}
-                              className="text-yellow-600 hover:text-yellow-900"
-                            >
-                              Investigate
-                            </button>
-                          )}
-                          {alert.status === 'investigating' && (
-                            <button
-                              onClick={() => handleUpdateStatus(alert.alert_id, 'resolved')}
-                              className="text-green-600 hover:text-green-900"
-                            >
-                              Resolve
-                            </button>
-                          )}
-                          {(alert.status === 'open' || alert.status === 'investigating') && (
-                            <button
-                              onClick={() => handleUpdateStatus(alert.alert_id, 'false_positive')}
-                              className="text-gray-600 hover:text-gray-900"
-                            >
-                              False Positive
-                            </button>
-                          )}
+                          {/* TODO: Implement case creation from alerts */}
+                          {/* Alert status updates not yet supported - use Cases for tracking */}
                         </div>
                       </td>
                     </tr>
