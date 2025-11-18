@@ -171,7 +171,12 @@ func (g *RuleBasedGenerator) generateForValueCount() ([]HECEvent, error) {
 			// Ensure src_endpoint has all required fields (ip, port, name, uid)
 			if srcEp, ok := event["src_endpoint"].(map[string]interface{}); ok {
 				if _, hasIP := srcEp["ip"]; !hasIP {
-					srcEp["ip"] = g.generateValueForField(".src_endpoint.ip")
+					// For port scanning, all events should have the same source IP
+					if i == 0 {
+						// Generate once and store in groupByValues for reuse
+						groupByValues[".src_endpoint.ip"] = g.generateValueForField(".src_endpoint.ip")
+					}
+					srcEp["ip"] = groupByValues[".src_endpoint.ip"]
 				}
 				if _, hasPort := srcEp["port"]; !hasPort {
 					srcEp["port"] = g.generateValueForField(".src_endpoint.port")
@@ -186,7 +191,12 @@ func (g *RuleBasedGenerator) generateForValueCount() ([]HECEvent, error) {
 			// Ensure dst_endpoint has all required fields (ip, port, name, uid)
 			if dstEp, ok := event["dst_endpoint"].(map[string]interface{}); ok {
 				if _, hasIP := dstEp["ip"]; !hasIP {
-					dstEp["ip"] = g.generateValueForField(".dst_endpoint.ip")
+					// For port scanning, all events should have the same destination IP (the target)
+					if i == 0 {
+						// Generate once and store in groupByValues for reuse
+						groupByValues[".dst_endpoint.ip"] = g.generateValueForField(".dst_endpoint.ip")
+					}
+					dstEp["ip"] = groupByValues[".dst_endpoint.ip"]
 				}
 				if _, hasPort := dstEp["port"]; !hasPort {
 					dstEp["port"] = g.generateValueForField(".dst_endpoint.port")
