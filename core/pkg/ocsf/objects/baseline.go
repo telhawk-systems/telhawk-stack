@@ -11,7 +11,6 @@ package objects
 import "fmt"
 
 type Baseline struct {
-	Object
 	ObservationParameter string         `json:"observation_parameter"`
 	ObservationType      string         `json:"observation_type,omitempty"`
 	Observations         []*Observation `json:"observations"`

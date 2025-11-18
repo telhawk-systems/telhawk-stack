@@ -9,7 +9,6 @@
 package objects
 
 type VendorAttributes struct {
-	Object
 	Severity   string `json:"severity,omitempty"`
 	SeverityId int    `json:"severity_id,omitempty"`
 }

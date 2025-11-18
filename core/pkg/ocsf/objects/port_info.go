@@ -9,7 +9,6 @@
 package objects
 
 type PortInfo struct {
-	Object
 	Port         int    `json:"port"`
 	ProtocolName string `json:"protocol_name,omitempty"`
 	ProtocolNum  int    `json:"protocol_num,omitempty"`

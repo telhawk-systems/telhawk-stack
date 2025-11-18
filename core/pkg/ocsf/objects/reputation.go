@@ -9,7 +9,6 @@
 package objects
 
 type Reputation struct {
-	Object
 	BaseScore float64 `json:"base_score"`
 	Provider  string  `json:"provider,omitempty"`
 	Score     string  `json:"score,omitempty"`

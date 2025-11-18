@@ -11,7 +11,6 @@ package objects
 import "fmt"
 
 type HttpCookie struct {
-	Object
 	Domain         string `json:"domain,omitempty"`
 	ExpirationTime int64  `json:"expiration_time,omitempty"`
 	HttpOnly       bool   `json:"http_only,omitempty"`

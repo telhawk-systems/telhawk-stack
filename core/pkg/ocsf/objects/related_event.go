@@ -11,7 +11,6 @@ package objects
 import "fmt"
 
 type RelatedEvent struct {
-	Object
 	Attacks       []*Attack         `json:"attacks,omitempty"`
 	Count         int               `json:"count,omitempty"`
 	CreatedTime   int64             `json:"created_time,omitempty"`

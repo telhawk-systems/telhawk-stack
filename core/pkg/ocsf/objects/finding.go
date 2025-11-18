@@ -11,7 +11,6 @@ package objects
 import "fmt"
 
 type Finding struct {
-	Object
 	CreatedTime    int64           `json:"created_time,omitempty"`
 	Desc           string          `json:"desc,omitempty"`
 	FirstSeenTime  int64           `json:"first_seen_time,omitempty"`

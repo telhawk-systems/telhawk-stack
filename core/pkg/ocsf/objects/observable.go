@@ -9,7 +9,6 @@
 package objects
 
 type Observable struct {
-	Object
 	EventUid   string      `json:"event_uid,omitempty"`
 	Name       string      `json:"name,omitempty"`
 	Reputation *Reputation `json:"reputation,omitempty"`

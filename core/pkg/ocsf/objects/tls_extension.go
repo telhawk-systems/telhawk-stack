@@ -9,7 +9,6 @@
 package objects
 
 type TlsExtension struct {
-	Object
 	Data   string `json:"data,omitempty"`
 	Type   string `json:"type,omitempty"`
 	TypeId int    `json:"type_id"`

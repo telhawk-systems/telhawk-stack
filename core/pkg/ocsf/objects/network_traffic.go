@@ -9,7 +9,6 @@
 package objects
 
 type NetworkTraffic struct {
-	Object
 	Bytes       int64 `json:"bytes,omitempty"`
 	BytesIn     int64 `json:"bytes_in,omitempty"`
 	BytesMissed int64 `json:"bytes_missed,omitempty"`

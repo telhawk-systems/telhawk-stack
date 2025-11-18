@@ -8,15 +8,38 @@
 
 package objects
 
+import "fmt"
+
 type AffectedPackage struct {
-	Package
-	FixedInVersion string       `json:"fixed_in_version,omitempty"`
-	Path           string       `json:"path,omitempty"`
-	Remediation    *Remediation `json:"remediation,omitempty"`
+	Architecture      string       `json:"architecture,omitempty"`
+	CpeName           string       `json:"cpe_name,omitempty"`
+	Epoch             int          `json:"epoch,omitempty"`
+	FixedInVersion    string       `json:"fixed_in_version,omitempty"`
+	Hash              *Fingerprint `json:"hash,omitempty"`
+	License           string       `json:"license,omitempty"`
+	LicenseUrl        string       `json:"license_url,omitempty"`
+	Name              string       `json:"name"`
+	PackageManager    string       `json:"package_manager,omitempty"`
+	PackageManagerUrl string       `json:"package_manager_url,omitempty"`
+	Path              string       `json:"path,omitempty"`
+	Purl              string       `json:"purl,omitempty"`
+	Release           string       `json:"release,omitempty"`
+	Remediation       *Remediation `json:"remediation,omitempty"`
+	SrcUrl            string       `json:"src_url,omitempty"`
+	Type              string       `json:"type,omitempty"`
+	TypeId            int          `json:"type_id,omitempty"`
+	Uid               string       `json:"uid,omitempty"`
+	VendorName        string       `json:"vendor_name,omitempty"`
+	Version           string       `json:"version"`
 }
 
 // Validate checks that all required fields are properly set
 func (o *AffectedPackage) Validate() error {
-	// No required string fields to validate
+	if o.Name == "" {
+		return fmt.Errorf("required field name is empty")
+	}
+	if o.Version == "" {
+		return fmt.Errorf("required field version is empty")
+	}
 	return nil
 }

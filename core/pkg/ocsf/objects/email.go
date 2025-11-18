@@ -9,7 +9,6 @@
 package objects
 
 type Email struct {
-	Object
 	Cc               []string      `json:"cc,omitempty"`
 	CcMailboxes      []string      `json:"cc_mailboxes,omitempty"`
 	DeliveredTo      string        `json:"delivered_to,omitempty"`

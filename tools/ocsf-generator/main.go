@@ -505,6 +505,10 @@ func generateValidator(class *EventClass) string {
 }
 
 func generateObjectValidator(object *ObjectSchema) string {
+	return generateObjectValidatorWithAttrs(object, object.Attributes)
+}
+
+func generateObjectValidatorWithAttrs(object *ObjectSchema, attrs map[string]json.RawMessage) string {
 	var buf strings.Builder
 	structName := toGoStructName(object.Name)
 
@@ -514,15 +518,16 @@ func generateObjectValidator(object *ObjectSchema) string {
 	// Track if we need to check any fields
 	hasValidation := false
 
-	// Check each attribute for required string fields
-	for attrName, rawAttr := range object.Attributes {
+	// Check each attribute for explicitly required string fields
+	for attrName, rawAttr := range attrs {
 		var attr AttributeRef
 		if err := json.Unmarshal(rawAttr, &attr); err != nil {
 			continue
 		}
 
-		// Skip optional and recommended fields
-		if attr.Requirement == "optional" || attr.Requirement == "recommended" {
+		// Only validate fields that are EXPLICITLY marked as "required"
+		// Fields with no requirement, "optional", or "recommended" are skipped
+		if attr.Requirement != "required" {
 			continue
 		}
 
@@ -813,43 +818,41 @@ func generateObjectFile(object *ObjectSchema, outputDir string) error {
 	buf.WriteString(generateFileHeader())
 	buf.WriteString("package objects\n\n")
 
-	// Check if we need fmt import for validation (required string fields only)
+	// We'll add fmt import conditionally later if needed for validation
 	needsFmt := false
-	for attrName, rawAttr := range object.Attributes {
-		var attr AttributeRef
-		if json.Unmarshal(rawAttr, &attr) == nil {
-			if attr.Requirement != "optional" && attr.Requirement != "recommended" {
-				goType := inferGoTypeSimple(attrName)
-				if goType == "string" {
-					needsFmt = true
-					break
-				}
-			}
-		}
-	}
-	if needsFmt {
-		buf.WriteString("import \"fmt\"\n\n")
-	}
 
 	structName := toGoStructName(object.Name)
 	buf.WriteString(fmt.Sprintf("type %s struct {\n", structName))
 
-	// Add embedded parent type if extends is specified
-	// Skip abstract types (those starting with underscore)
+	// Flatten parent attributes instead of embedding to avoid JSON marshaling conflicts
+	// Collect all attributes (parent + child) into a single map
+	allAttrs := make(map[string]json.RawMessage)
+
+	// Load parent attributes first if extends is specified
 	if object.Extends != "" && !strings.HasPrefix(object.Extends, "_") {
-		parentName := toGoStructName(object.Extends)
-		buf.WriteString(fmt.Sprintf("\t%s\n", parentName))
+		parentPath := filepath.Join(*schemaDir, "objects", object.Extends+".json")
+		if parentObject, err := loadObjectSchema(parentPath); err == nil {
+			// Add parent attributes (child will override if redefined)
+			for attrName, rawAttr := range parentObject.Attributes {
+				allAttrs[attrName] = rawAttr
+			}
+		}
+	}
+
+	// Add/override with child attributes
+	for attrName, rawAttr := range object.Attributes {
+		allAttrs[attrName] = rawAttr
 	}
 
 	// Sort attributes for consistent output
-	attrs := make([]string, 0, len(object.Attributes))
-	for name := range object.Attributes {
+	attrs := make([]string, 0, len(allAttrs))
+	for name := range allAttrs {
 		attrs = append(attrs, name)
 	}
 	sort.Strings(attrs)
 
 	for _, attrName := range attrs {
-		rawAttr := object.Attributes[attrName]
+		rawAttr := allAttrs[attrName]
 
 		// Try to parse as AttributeRef
 		var attr AttributeRef
@@ -871,12 +874,29 @@ func generateObjectFile(object *ObjectSchema, outputDir string) error {
 
 	buf.WriteString("}\n\n")
 
-	// Generate Validate method for objects
-	buf.WriteString(generateObjectValidator(object))
+	// Generate Validate method for objects (use flattened attributes)
+	validatorCode := generateObjectValidatorWithAttrs(object, allAttrs)
+
+	// Check if we need fmt import based on whether validation uses it
+	needsFmt = strings.Contains(validatorCode, "fmt.Errorf")
+
+	// Build final output with conditional fmt import
+	var finalBuf strings.Builder
+	finalBuf.WriteString(generateFileHeader())
+	finalBuf.WriteString("package objects\n\n")
+	if needsFmt {
+		finalBuf.WriteString("import \"fmt\"\n\n")
+	}
+	// Add the struct definition and validator (skip the header we already wrote)
+	structStart := strings.Index(buf.String(), "type "+structName)
+	if structStart >= 0 {
+		finalBuf.WriteString(buf.String()[structStart:])
+	}
+	finalBuf.WriteString(validatorCode)
 
 	// Write to file
 	outputPath := filepath.Join(outputDir, toGoFileName(object.Name))
-	return os.WriteFile(outputPath, []byte(buf.String()), 0644)
+	return os.WriteFile(outputPath, []byte(finalBuf.String()), 0644)
 }
 
 func inferGoTypeSimple(attrName string) string {

@@ -9,7 +9,6 @@
 package objects
 
 type Attack struct {
-	Object
 	Mitigation   *Mitigation   `json:"mitigation,omitempty"`
 	SubTechnique *SubTechnique `json:"sub_technique,omitempty"`
 	Tactic       *Tactic       `json:"tactic,omitempty"`

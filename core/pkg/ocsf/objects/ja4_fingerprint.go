@@ -11,7 +11,6 @@ package objects
 import "fmt"
 
 type Ja4Fingerprint struct {
-	Object
 	SectionA string `json:"section_a,omitempty"`
 	SectionB string `json:"section_b,omitempty"`
 	SectionC string `json:"section_c,omitempty"`

@@ -9,7 +9,6 @@
 package objects
 
 type PermissionAnalysisResult struct {
-	Object
 	ConditionKeys         []*KeyValueObject `json:"condition_keys,omitempty"`
 	GrantedPrivileges     []string          `json:"granted_privileges,omitempty"`
 	Policy                *Policy           `json:"policy,omitempty"`

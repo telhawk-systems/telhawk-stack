@@ -9,7 +9,6 @@
 package objects
 
 type AuthFactor struct {
-	Object
 	Device            *Device  `json:"device,omitempty"`
 	EmailAddr         string   `json:"email_addr,omitempty"`
 	FactorType        string   `json:"factor_type,omitempty"`

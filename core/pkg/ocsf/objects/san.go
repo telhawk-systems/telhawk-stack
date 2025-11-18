@@ -11,7 +11,6 @@ package objects
 import "fmt"
 
 type San struct {
-	Object
 	Name string `json:"name"`
 	Type string `json:"type"`
 }

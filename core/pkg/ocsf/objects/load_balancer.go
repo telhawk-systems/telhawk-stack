@@ -8,8 +8,6 @@
 
 package objects
 
-import "fmt"
-
 type LoadBalancer struct {
 	Classification      string                `json:"classification,omitempty"`
 	Code                int                   `json:"code,omitempty"`
@@ -26,11 +24,6 @@ type LoadBalancer struct {
 
 // Validate checks that all required fields are properly set
 func (o *LoadBalancer) Validate() error {
-	if o.Name == "" {
-		return fmt.Errorf("required field name is empty")
-	}
-	if o.Uid == "" {
-		return fmt.Errorf("required field uid is empty")
-	}
+	// No required string fields to validate
 	return nil
 }

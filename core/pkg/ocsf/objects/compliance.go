@@ -9,7 +9,6 @@
 package objects
 
 type Compliance struct {
-	Object
 	Assessments          []*Assessment     `json:"assessments,omitempty"`
 	Category             string            `json:"category,omitempty"`
 	Checks               []*Check          `json:"checks,omitempty"`

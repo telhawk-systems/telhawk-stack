@@ -9,7 +9,6 @@
 package objects
 
 type Parameter struct {
-	Object
 	Name      string `json:"name,omitempty"`
 	PostValue string `json:"post_value,omitempty"`
 	PreValue  string `json:"pre_value,omitempty"`

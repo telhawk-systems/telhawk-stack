@@ -11,7 +11,6 @@ package objects
 import "fmt"
 
 type Campaign struct {
-	Object
 	Name string `json:"name"`
 }
 

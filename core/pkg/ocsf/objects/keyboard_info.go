@@ -9,7 +9,6 @@
 package objects
 
 type KeyboardInfo struct {
-	Object
 	FunctionKeys    int    `json:"function_keys,omitempty"`
 	Ime             string `json:"ime,omitempty"`
 	KeyboardLayout  string `json:"keyboard_layout,omitempty"`

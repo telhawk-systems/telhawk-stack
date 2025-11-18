@@ -11,7 +11,6 @@ package objects
 import "fmt"
 
 type Enrichment struct {
-	Object
 	CreatedTime int64       `json:"created_time,omitempty"`
 	Data        string      `json:"data"`
 	Desc        string      `json:"desc,omitempty"`

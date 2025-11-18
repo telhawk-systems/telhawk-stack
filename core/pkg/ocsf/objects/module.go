@@ -9,7 +9,6 @@
 package objects
 
 type Module struct {
-	Object
 	BaseAddress        string              `json:"base_address,omitempty"`
 	File               *File               `json:"file,omitempty"`
 	FunctionInvocation *FunctionInvocation `json:"function_invocation,omitempty"`

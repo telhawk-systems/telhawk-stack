@@ -9,7 +9,6 @@
 package objects
 
 type Application struct {
-	Object
 	Criticality          string            `json:"criticality,omitempty"`
 	Data                 string            `json:"data,omitempty"`
 	Desc                 string            `json:"desc,omitempty"`

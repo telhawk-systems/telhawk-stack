@@ -9,7 +9,6 @@
 package objects
 
 type Sbom struct {
-	Object
 	CreatedTime        int64                `json:"created_time,omitempty"`
 	Package            *Package             `json:"package"`
 	Product            *Product             `json:"product,omitempty"`

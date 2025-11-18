@@ -9,7 +9,6 @@
 package objects
 
 type DeviceHwInfo struct {
-	Object
 	BiosDate          string        `json:"bios_date,omitempty"`
 	BiosManufacturer  string        `json:"bios_manufacturer,omitempty"`
 	BiosVer           string        `json:"bios_ver,omitempty"`

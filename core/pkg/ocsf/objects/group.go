@@ -8,8 +8,6 @@
 
 package objects
 
-import "fmt"
-
 type Group struct {
 	Desc       string   `json:"desc,omitempty"`
 	Domain     string   `json:"domain,omitempty"`
@@ -21,11 +19,6 @@ type Group struct {
 
 // Validate checks that all required fields are properly set
 func (o *Group) Validate() error {
-	if o.Uid == "" {
-		return fmt.Errorf("required field uid is empty")
-	}
-	if o.Name == "" {
-		return fmt.Errorf("required field name is empty")
-	}
+	// No required string fields to validate
 	return nil
 }

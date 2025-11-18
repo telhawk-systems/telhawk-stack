@@ -9,7 +9,6 @@
 package objects
 
 type Actor struct {
-	Object
 	AppName        string           `json:"app_name,omitempty"`
 	AppUid         string           `json:"app_uid,omitempty"`
 	Authorizations []*Authorization `json:"authorizations,omitempty"`

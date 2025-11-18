@@ -9,7 +9,6 @@
 package objects
 
 type Timespan struct {
-	Object
 	Duration       int64  `json:"duration,omitempty"`
 	DurationDays   int    `json:"duration_days,omitempty"`
 	DurationHours  int    `json:"duration_hours,omitempty"`

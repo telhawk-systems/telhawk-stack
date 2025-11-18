@@ -11,7 +11,6 @@ package objects
 import "fmt"
 
 type Trace struct {
-	Object
 	Duration  int64    `json:"duration,omitempty"`
 	EndTime   int64    `json:"end_time,omitempty"`
 	Flags     []string `json:"flags,omitempty"`

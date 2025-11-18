@@ -9,7 +9,6 @@
 package objects
 
 type KernelDriver struct {
-	Object
 	File *File `json:"file"`
 }
 

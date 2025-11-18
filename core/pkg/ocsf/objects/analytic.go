@@ -8,8 +8,6 @@
 
 package objects
 
-import "fmt"
-
 type Analytic struct {
 	Algorithm        string      `json:"algorithm,omitempty"`
 	Category         string      `json:"category,omitempty"`
@@ -26,11 +24,6 @@ type Analytic struct {
 
 // Validate checks that all required fields are properly set
 func (o *Analytic) Validate() error {
-	if o.Name == "" {
-		return fmt.Errorf("required field name is empty")
-	}
-	if o.Uid == "" {
-		return fmt.Errorf("required field uid is empty")
-	}
+	// No required string fields to validate
 	return nil
 }

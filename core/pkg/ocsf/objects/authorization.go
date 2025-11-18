@@ -9,7 +9,6 @@
 package objects
 
 type Authorization struct {
-	Object
 	Decision string  `json:"decision,omitempty"`
 	Policy   *Policy `json:"policy,omitempty"`
 }

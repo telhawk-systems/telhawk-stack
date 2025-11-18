@@ -9,7 +9,6 @@
 package objects
 
 type Check struct {
-	Object
 	Desc       string   `json:"desc,omitempty"`
 	Name       string   `json:"name,omitempty"`
 	Severity   string   `json:"severity,omitempty"`

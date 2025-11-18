@@ -11,7 +11,6 @@ package objects
 import "fmt"
 
 type Os struct {
-	Object
 	Build         string `json:"build,omitempty"`
 	Country       string `json:"country,omitempty"`
 	CpeName       string `json:"cpe_name,omitempty"`

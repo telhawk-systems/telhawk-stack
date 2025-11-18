@@ -9,20 +9,26 @@
 package objects
 
 type Process struct {
-	ProcessEntity
 	Ancestry             []*ProcessEntity       `json:"ancestry,omitempty"`
+	CmdLine              string                 `json:"cmd_line,omitempty"`
+	Cpid                 string                 `json:"cpid,omitempty"`
+	CreatedTime          int64                  `json:"created_time,omitempty"`
 	EnvironmentVariables []*EnvironmentVariable `json:"environment_variables,omitempty"`
 	File                 *File                  `json:"file,omitempty"`
 	Integrity            string                 `json:"integrity,omitempty"`
 	IntegrityId          int                    `json:"integrity_id,omitempty"`
 	Lineage              []string               `json:"lineage,omitempty"`
 	LoadedModules        []string               `json:"loaded_modules,omitempty"`
+	Name                 string                 `json:"name"`
 	ParentProcess        *Process               `json:"parent_process,omitempty"`
+	Path                 string                 `json:"path,omitempty"`
+	Pid                  int                    `json:"pid,omitempty"`
 	Ptid                 int64                  `json:"ptid,omitempty"`
 	Sandbox              string                 `json:"sandbox,omitempty"`
 	Session              *Session               `json:"session,omitempty"`
 	TerminatedTime       int64                  `json:"terminated_time,omitempty"`
 	Tid                  int                    `json:"tid,omitempty"`
+	Uid                  string                 `json:"uid"`
 	User                 *User                  `json:"user,omitempty"`
 	WorkingDirectory     string                 `json:"working_directory,omitempty"`
 	Xattributes          *Object                `json:"xattributes,omitempty"`

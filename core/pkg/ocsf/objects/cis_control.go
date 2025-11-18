@@ -11,7 +11,6 @@ package objects
 import "fmt"
 
 type CisControl struct {
-	Object
 	Desc    string `json:"desc,omitempty"`
 	Name    string `json:"name"`
 	Version string `json:"version,omitempty"`

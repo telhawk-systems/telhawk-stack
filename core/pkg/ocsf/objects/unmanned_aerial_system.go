@@ -9,16 +9,20 @@
 package objects
 
 type UnmannedAerialSystem struct {
-	Aircraft
-	HwInfo       *DeviceHwInfo `json:"hw_info,omitempty"`
-	Location     *Location     `json:"location,omitempty"`
-	Name         string        `json:"name,omitempty"`
-	SerialNumber string        `json:"serial_number,omitempty"`
-	Type         string        `json:"type,omitempty"`
-	TypeId       int           `json:"type_id,omitempty"`
-	Uid          string        `json:"uid,omitempty"`
-	UidAlt       string        `json:"uid_alt,omitempty"`
-	Uuid         string        `json:"uuid,omitempty"`
+	HwInfo         *DeviceHwInfo `json:"hw_info,omitempty"`
+	Location       *Location     `json:"location,omitempty"`
+	Model          string        `json:"model,omitempty"`
+	Name           string        `json:"name,omitempty"`
+	SerialNumber   string        `json:"serial_number,omitempty"`
+	Speed          string        `json:"speed,omitempty"`
+	SpeedAccuracy  string        `json:"speed_accuracy,omitempty"`
+	TrackDirection string        `json:"track_direction,omitempty"`
+	Type           string        `json:"type,omitempty"`
+	TypeId         int           `json:"type_id,omitempty"`
+	Uid            string        `json:"uid,omitempty"`
+	UidAlt         string        `json:"uid_alt,omitempty"`
+	Uuid           string        `json:"uuid,omitempty"`
+	VerticalSpeed  string        `json:"vertical_speed,omitempty"`
 }
 
 // Validate checks that all required fields are properly set

@@ -11,7 +11,6 @@ package objects
 import "fmt"
 
 type CisBenchmarkResult struct {
-	Object
 	Desc        string       `json:"desc,omitempty"`
 	Name        string       `json:"name"`
 	Remediation *Remediation `json:"remediation,omitempty"`

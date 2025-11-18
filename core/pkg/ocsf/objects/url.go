@@ -9,7 +9,6 @@
 package objects
 
 type Url struct {
-	Object
 	Categories   []string `json:"categories,omitempty"`
 	CategoryIds  []int    `json:"category_ids,omitempty"`
 	Domain       string   `json:"domain,omitempty"`

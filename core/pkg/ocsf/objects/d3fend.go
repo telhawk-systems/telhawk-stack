@@ -9,7 +9,6 @@
 package objects
 
 type D3fend struct {
-	Object
 	D3fTactic    *D3fTactic    `json:"d3f_tactic,omitempty"`
 	D3fTechnique *D3fTechnique `json:"d3f_technique,omitempty"`
 	Version      string        `json:"version,omitempty"`

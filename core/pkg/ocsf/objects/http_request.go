@@ -9,7 +9,6 @@
 package objects
 
 type HttpRequest struct {
-	Object
 	Args          string        `json:"args,omitempty"`
 	BodyLength    int           `json:"body_length,omitempty"`
 	HttpHeaders   []*HttpHeader `json:"http_headers,omitempty"`

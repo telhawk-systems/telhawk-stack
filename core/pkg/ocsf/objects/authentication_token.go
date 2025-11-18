@@ -9,7 +9,6 @@
 package objects
 
 type AuthenticationToken struct {
-	Object
 	CreatedTime       int64              `json:"created_time,omitempty"`
 	EncryptionDetails *EncryptionDetails `json:"encryption_details,omitempty"`
 	ExpirationTime    int64              `json:"expiration_time,omitempty"`

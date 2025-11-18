@@ -9,7 +9,6 @@
 package objects
 
 type Script struct {
-	Object
 	File          *File          `json:"file,omitempty"`
 	Hashes        []*Fingerprint `json:"hashes,omitempty"`
 	Name          string         `json:"name,omitempty"`

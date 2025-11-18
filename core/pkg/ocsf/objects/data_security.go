@@ -9,14 +9,26 @@
 package objects
 
 type DataSecurity struct {
-	DataClassification
-	DataLifecycleState   string  `json:"data_lifecycle_state,omitempty"`
-	DataLifecycleStateId int     `json:"data_lifecycle_state_id,omitempty"`
-	DetectionPattern     string  `json:"detection_pattern,omitempty"`
-	DetectionSystem      string  `json:"detection_system,omitempty"`
-	DetectionSystemId    int     `json:"detection_system_id,omitempty"`
-	PatternMatch         string  `json:"pattern_match,omitempty"`
-	Policy               *Policy `json:"policy,omitempty"`
+	Category             string              `json:"category,omitempty"`
+	CategoryId           int                 `json:"category_id,omitempty"`
+	ClassifierDetails    *ClassifierDetails  `json:"classifier_details,omitempty"`
+	Confidentiality      string              `json:"confidentiality,omitempty"`
+	ConfidentialityId    int                 `json:"confidentiality_id,omitempty"`
+	DataLifecycleState   string              `json:"data_lifecycle_state,omitempty"`
+	DataLifecycleStateId int                 `json:"data_lifecycle_state_id,omitempty"`
+	DetectionPattern     string              `json:"detection_pattern,omitempty"`
+	DetectionSystem      string              `json:"detection_system,omitempty"`
+	DetectionSystemId    int                 `json:"detection_system_id,omitempty"`
+	DiscoveryDetails     []*DiscoveryDetails `json:"discovery_details,omitempty"`
+	PatternMatch         string              `json:"pattern_match,omitempty"`
+	Policy               *Policy             `json:"policy,omitempty"`
+	Size                 int64               `json:"size,omitempty"`
+	SrcUrl               string              `json:"src_url,omitempty"`
+	Status               string              `json:"status,omitempty"`
+	StatusDetails        []string            `json:"status_details,omitempty"`
+	StatusId             int                 `json:"status_id,omitempty"`
+	Total                int                 `json:"total,omitempty"`
+	Uid                  string              `json:"uid,omitempty"`
 }
 
 // Validate checks that all required fields are properly set

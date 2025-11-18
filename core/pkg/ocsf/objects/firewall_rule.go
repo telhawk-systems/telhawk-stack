@@ -9,13 +9,18 @@
 package objects
 
 type FirewallRule struct {
-	Rule
+	Category      string   `json:"category,omitempty"`
 	Condition     string   `json:"condition,omitempty"`
+	Desc          string   `json:"desc,omitempty"`
 	Duration      int64    `json:"duration,omitempty"`
 	MatchDetails  []string `json:"match_details,omitempty"`
 	MatchLocation string   `json:"match_location,omitempty"`
+	Name          string   `json:"name"`
 	RateLimit     int      `json:"rate_limit,omitempty"`
 	Sensitivity   string   `json:"sensitivity,omitempty"`
+	Type          string   `json:"type,omitempty"`
+	Uid           string   `json:"uid"`
+	Version       string   `json:"version,omitempty"`
 }
 
 // Validate checks that all required fields are properly set

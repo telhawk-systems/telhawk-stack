@@ -8,8 +8,6 @@
 
 package objects
 
-import "fmt"
-
 type Product struct {
 	CpeName    string   `json:"cpe_name,omitempty"`
 	Feature    *Feature `json:"feature,omitempty"`
@@ -24,11 +22,6 @@ type Product struct {
 
 // Validate checks that all required fields are properly set
 func (o *Product) Validate() error {
-	if o.Name == "" {
-		return fmt.Errorf("required field name is empty")
-	}
-	if o.Uid == "" {
-		return fmt.Errorf("required field uid is empty")
-	}
+	// No required string fields to validate
 	return nil
 }

@@ -9,7 +9,6 @@
 package objects
 
 type OccurrenceDetails struct {
-	Object
 	CellName           string `json:"cell_name,omitempty"`
 	ColumnName         string `json:"column_name,omitempty"`
 	ColumnNumber       int    `json:"column_number,omitempty"`

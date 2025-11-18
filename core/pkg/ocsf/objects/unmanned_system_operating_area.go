@@ -9,16 +9,33 @@
 package objects
 
 type UnmannedSystemOperatingArea struct {
-	Location
-	AltitudeCeiling string      `json:"altitude_ceiling,omitempty"`
-	AltitudeFloor   string      `json:"altitude_floor,omitempty"`
-	Count           int         `json:"count,omitempty"`
-	EndTime         int64       `json:"end_time,omitempty"`
-	Locations       []*Location `json:"locations,omitempty"`
-	Radius          string      `json:"radius,omitempty"`
-	StartTime       int64       `json:"start_time,omitempty"`
-	Type            string      `json:"type,omitempty"`
-	TypeId          int         `json:"type_id,omitempty"`
+	AerialHeight             string      `json:"aerial_height,omitempty"`
+	AltitudeCeiling          string      `json:"altitude_ceiling,omitempty"`
+	AltitudeFloor            string      `json:"altitude_floor,omitempty"`
+	City                     string      `json:"city,omitempty"`
+	Continent                string      `json:"continent,omitempty"`
+	Coordinates              []float64   `json:"coordinates,omitempty"`
+	Count                    int         `json:"count,omitempty"`
+	Country                  string      `json:"country,omitempty"`
+	Desc                     string      `json:"desc,omitempty"`
+	EndTime                  int64       `json:"end_time,omitempty"`
+	GeodeticAltitude         string      `json:"geodetic_altitude,omitempty"`
+	GeodeticVerticalAccuracy string      `json:"geodetic_vertical_accuracy,omitempty"`
+	Geohash                  string      `json:"geohash,omitempty"`
+	HorizontalAccuracy       string      `json:"horizontal_accuracy,omitempty"`
+	IsOnPremises             bool        `json:"is_on_premises,omitempty"`
+	Isp                      string      `json:"isp,omitempty"`
+	Lat                      float64     `json:"lat,omitempty"`
+	Locations                []*Location `json:"locations,omitempty"`
+	Long                     float64     `json:"long,omitempty"`
+	PostalCode               string      `json:"postal_code,omitempty"`
+	PressureAltitude         string      `json:"pressure_altitude,omitempty"`
+	Provider                 string      `json:"provider,omitempty"`
+	Radius                   string      `json:"radius,omitempty"`
+	Region                   string      `json:"region,omitempty"`
+	StartTime                int64       `json:"start_time,omitempty"`
+	Type                     string      `json:"type,omitempty"`
+	TypeId                   int         `json:"type_id,omitempty"`
 }
 
 // Validate checks that all required fields are properly set

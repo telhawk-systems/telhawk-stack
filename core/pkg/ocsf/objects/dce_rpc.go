@@ -9,7 +9,6 @@
 package objects
 
 type DceRpc struct {
-	Object
 	Command         string        `json:"command,omitempty"`
 	CommandResponse string        `json:"command_response,omitempty"`
 	Flags           []string      `json:"flags"`

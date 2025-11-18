@@ -11,7 +11,6 @@ package objects
 import "fmt"
 
 type Metadata struct {
-	Object
 	CorrelationUid         string                `json:"correlation_uid,omitempty"`
 	Debug                  []string              `json:"debug,omitempty"`
 	EventCode              string                `json:"event_code,omitempty"`

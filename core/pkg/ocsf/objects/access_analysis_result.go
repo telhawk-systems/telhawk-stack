@@ -9,7 +9,6 @@
 package objects
 
 type AccessAnalysisResult struct {
-	Object
 	AccessLevel            string                   `json:"access_level,omitempty"`
 	AccessType             string                   `json:"access_type,omitempty"`
 	Accessors              []*User                  `json:"accessors"`

@@ -11,7 +11,6 @@ package objects
 import "fmt"
 
 type Epss struct {
-	Object
 	CreatedTime int64   `json:"created_time,omitempty"`
 	Percentile  float64 `json:"percentile,omitempty"`
 	Score       string  `json:"score"`

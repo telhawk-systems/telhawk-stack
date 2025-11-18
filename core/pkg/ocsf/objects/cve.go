@@ -11,7 +11,6 @@ package objects
 import "fmt"
 
 type Cve struct {
-	Object
 	CreatedTime  int64    `json:"created_time,omitempty"`
 	Cvss         []*Cvss  `json:"cvss,omitempty"`
 	Cwe          *Cwe     `json:"cwe,omitempty"`

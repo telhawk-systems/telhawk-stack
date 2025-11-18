@@ -11,7 +11,6 @@ package objects
 import "fmt"
 
 type KeyValueObject struct {
-	Object
 	Name   string   `json:"name"`
 	Value  string   `json:"value,omitempty"`
 	Values []string `json:"values,omitempty"`

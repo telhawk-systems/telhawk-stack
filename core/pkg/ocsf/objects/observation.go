@@ -11,7 +11,6 @@ package objects
 import "fmt"
 
 type Observation struct {
-	Object
 	Count    int       `json:"count,omitempty"`
 	Timespan *Timespan `json:"timespan,omitempty"`
 	Value    string    `json:"value"`

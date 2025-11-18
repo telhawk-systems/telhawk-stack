@@ -11,7 +11,6 @@ package objects
 import "fmt"
 
 type Api struct {
-	Object
 	Group     *Group    `json:"group,omitempty"`
 	Operation string    `json:"operation"`
 	Request   *Request  `json:"request,omitempty"`

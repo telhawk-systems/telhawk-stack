@@ -9,7 +9,6 @@
 package objects
 
 type AffectedCode struct {
-	Object
 	EndColumn   int          `json:"end_column,omitempty"`
 	EndLine     int          `json:"end_line,omitempty"`
 	File        *File        `json:"file"`

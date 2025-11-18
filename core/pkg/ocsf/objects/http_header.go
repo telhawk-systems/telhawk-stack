@@ -11,7 +11,6 @@ package objects
 import "fmt"
 
 type HttpHeader struct {
-	Object
 	Name  string `json:"name"`
 	Value string `json:"value"`
 }

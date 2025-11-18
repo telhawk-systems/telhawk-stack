@@ -11,7 +11,6 @@ package objects
 import "fmt"
 
 type Node struct {
-	Object
 	Data string `json:"data,omitempty"`
 	Desc string `json:"desc,omitempty"`
 	Name string `json:"name,omitempty"`

@@ -11,7 +11,6 @@ package objects
 import "fmt"
 
 type ThreatActor struct {
-	Object
 	Name   string `json:"name"`
 	Type   string `json:"type,omitempty"`
 	TypeId int    `json:"type_id,omitempty"`

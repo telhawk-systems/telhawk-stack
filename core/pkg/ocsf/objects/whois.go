@@ -9,7 +9,6 @@
 package objects
 
 type Whois struct {
-	Object
 	AutonomousSystem *AutonomousSystem `json:"autonomous_system,omitempty"`
 	CreatedTime      int64             `json:"created_time,omitempty"`
 	DnssecStatus     string            `json:"dnssec_status,omitempty"`

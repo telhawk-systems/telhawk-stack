@@ -9,7 +9,6 @@
 package objects
 
 type KillChainPhase struct {
-	Object
 	Phase   string `json:"phase,omitempty"`
 	PhaseId int    `json:"phase_id"`
 }

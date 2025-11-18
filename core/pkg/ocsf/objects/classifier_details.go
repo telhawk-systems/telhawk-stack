@@ -11,7 +11,6 @@ package objects
 import "fmt"
 
 type ClassifierDetails struct {
-	Object
 	Name string `json:"name,omitempty"`
 	Type string `json:"type"`
 	Uid  string `json:"uid,omitempty"`

@@ -11,7 +11,6 @@ package objects
 import "fmt"
 
 type Cwe struct {
-	Object
 	Caption string `json:"caption,omitempty"`
 	SrcUrl  string `json:"src_url,omitempty"`
 	Uid     string `json:"uid"`

@@ -9,7 +9,6 @@
 package objects
 
 type Session struct {
-	Object
 	Count            int    `json:"count,omitempty"`
 	CreatedTime      int64  `json:"created_time,omitempty"`
 	CredentialUid    string `json:"credential_uid,omitempty"`

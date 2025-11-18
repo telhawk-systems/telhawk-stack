@@ -11,7 +11,6 @@ package objects
 import "fmt"
 
 type Cvss struct {
-	Object
 	BaseScore    float64   `json:"base_score"`
 	Depth        string    `json:"depth,omitempty"`
 	Metrics      []*Metric `json:"metrics,omitempty"`

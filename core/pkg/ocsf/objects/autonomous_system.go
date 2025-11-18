@@ -9,7 +9,6 @@
 package objects
 
 type AutonomousSystem struct {
-	Object
 	Name   string `json:"name,omitempty"`
 	Number int    `json:"number,omitempty"`
 }

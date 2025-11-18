@@ -9,7 +9,6 @@
 package objects
 
 type Agent struct {
-	Object
 	Name       string    `json:"name,omitempty"`
 	Policies   []*Policy `json:"policies,omitempty"`
 	Type       string    `json:"type,omitempty"`

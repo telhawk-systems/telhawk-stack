@@ -9,7 +9,6 @@
 package objects
 
 type DiscoveryDetails struct {
-	Object
 	Count             int                  `json:"count,omitempty"`
 	OccurrenceDetails *OccurrenceDetails   `json:"occurrence_details,omitempty"`
 	Occurrences       []*OccurrenceDetails `json:"occurrences,omitempty"`

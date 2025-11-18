@@ -9,7 +9,6 @@
 package objects
 
 type IdentityActivityMetrics struct {
-	Object
 	FirstSeenTime           int64                     `json:"first_seen_time,omitempty"`
 	LastAuthenticationTime  int64                     `json:"last_authentication_time,omitempty"`
 	LastSeenTime            int64                     `json:"last_seen_time,omitempty"`

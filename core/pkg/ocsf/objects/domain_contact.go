@@ -9,7 +9,6 @@
 package objects
 
 type DomainContact struct {
-	Object
 	EmailAddr   string    `json:"email_addr,omitempty"`
 	Location    *Location `json:"location,omitempty"`
 	Name        string    `json:"name,omitempty"`

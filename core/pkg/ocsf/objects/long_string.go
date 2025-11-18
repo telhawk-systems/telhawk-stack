@@ -11,7 +11,6 @@ package objects
 import "fmt"
 
 type LongString struct {
-	Object
 	IsTruncated     bool   `json:"is_truncated,omitempty"`
 	UntruncatedSize int    `json:"untruncated_size,omitempty"`
 	Value           string `json:"value"`

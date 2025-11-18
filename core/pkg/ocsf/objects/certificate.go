@@ -11,7 +11,6 @@ package objects
 import "fmt"
 
 type Certificate struct {
-	Object
 	CreatedTime    int64          `json:"created_time,omitempty"`
 	ExpirationTime int64          `json:"expiration_time,omitempty"`
 	Fingerprints   []*Fingerprint `json:"fingerprints,omitempty"`

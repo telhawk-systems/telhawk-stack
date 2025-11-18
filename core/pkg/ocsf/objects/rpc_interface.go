@@ -11,7 +11,6 @@ package objects
 import "fmt"
 
 type RpcInterface struct {
-	Object
 	AckReason int    `json:"ack_reason,omitempty"`
 	AckResult int    `json:"ack_result,omitempty"`
 	Uuid      string `json:"uuid"`

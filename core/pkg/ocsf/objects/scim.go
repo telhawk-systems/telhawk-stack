@@ -9,7 +9,6 @@
 package objects
 
 type Scim struct {
-	Object
 	AuthProtocol               string `json:"auth_protocol,omitempty"`
 	AuthProtocolId             int    `json:"auth_protocol_id,omitempty"`
 	CreatedTime                int64  `json:"created_time,omitempty"`

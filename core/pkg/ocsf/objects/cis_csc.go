@@ -11,7 +11,6 @@ package objects
 import "fmt"
 
 type CisCsc struct {
-	Object
 	Control string `json:"control"`
 	Version string `json:"version,omitempty"`
 }

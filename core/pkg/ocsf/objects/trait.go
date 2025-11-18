@@ -8,8 +8,6 @@
 
 package objects
 
-import "fmt"
-
 type Trait struct {
 	Category string   `json:"category,omitempty"`
 	Name     string   `json:"name"`
@@ -20,11 +18,6 @@ type Trait struct {
 
 // Validate checks that all required fields are properly set
 func (o *Trait) Validate() error {
-	if o.Name == "" {
-		return fmt.Errorf("required field name is empty")
-	}
-	if o.Uid == "" {
-		return fmt.Errorf("required field uid is empty")
-	}
+	// No required string fields to validate
 	return nil
 }

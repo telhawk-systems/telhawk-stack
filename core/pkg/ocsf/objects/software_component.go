@@ -11,7 +11,6 @@ package objects
 import "fmt"
 
 type SoftwareComponent struct {
-	Object
 	Author           string       `json:"author,omitempty"`
 	Hash             *Fingerprint `json:"hash,omitempty"`
 	License          string       `json:"license,omitempty"`

@@ -11,7 +11,6 @@ package objects
 import "fmt"
 
 type Tls struct {
-	Object
 	Alert            int             `json:"alert,omitempty"`
 	Certificate      *Certificate    `json:"certificate,omitempty"`
 	CertificateChain []string        `json:"certificate_chain,omitempty"`

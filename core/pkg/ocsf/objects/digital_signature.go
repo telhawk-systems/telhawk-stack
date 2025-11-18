@@ -9,7 +9,6 @@
 package objects
 
 type DigitalSignature struct {
-	Object
 	Algorithm    string       `json:"algorithm,omitempty"`
 	AlgorithmId  int          `json:"algorithm_id"`
 	Certificate  *Certificate `json:"certificate,omitempty"`

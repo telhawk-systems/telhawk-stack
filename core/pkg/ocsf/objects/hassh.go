@@ -9,7 +9,6 @@
 package objects
 
 type Hassh struct {
-	Object
 	Algorithm   string       `json:"algorithm,omitempty"`
 	Fingerprint *Fingerprint `json:"fingerprint"`
 }

@@ -11,7 +11,6 @@ package objects
 import "fmt"
 
 type FindingInfo struct {
-	Object
 	Analytic           *Analytic         `json:"analytic,omitempty"`
 	AttackGraph        *Graph            `json:"attack_graph,omitempty"`
 	Attacks            []*Attack         `json:"attacks,omitempty"`

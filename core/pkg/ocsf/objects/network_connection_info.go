@@ -9,7 +9,6 @@
 package objects
 
 type NetworkConnectionInfo struct {
-	Object
 	Boundary      string   `json:"boundary,omitempty"`
 	BoundaryId    int      `json:"boundary_id,omitempty"`
 	CommunityUid  string   `json:"community_uid,omitempty"`

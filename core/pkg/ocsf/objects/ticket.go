@@ -9,7 +9,6 @@
 package objects
 
 type Ticket struct {
-	Object
 	SrcUrl        string   `json:"src_url,omitempty"`
 	Status        string   `json:"status,omitempty"`
 	StatusDetails []string `json:"status_details,omitempty"`

@@ -9,7 +9,6 @@
 package objects
 
 type Location struct {
-	Object
 	AerialHeight             string    `json:"aerial_height,omitempty"`
 	City                     string    `json:"city,omitempty"`
 	Continent                string    `json:"continent,omitempty"`

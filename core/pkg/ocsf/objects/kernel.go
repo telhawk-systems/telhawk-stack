@@ -11,7 +11,6 @@ package objects
 import "fmt"
 
 type Kernel struct {
-	Object
 	IsSystem   bool   `json:"is_system,omitempty"`
 	Name       string `json:"name"`
 	Path       string `json:"path,omitempty"`

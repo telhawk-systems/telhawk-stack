@@ -9,7 +9,6 @@
 package objects
 
 type Container struct {
-	Object
 	Hash          *Fingerprint      `json:"hash,omitempty"`
 	Image         *Image            `json:"image,omitempty"`
 	Labels        []string          `json:"labels,omitempty"`

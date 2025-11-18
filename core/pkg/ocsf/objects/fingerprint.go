@@ -11,7 +11,6 @@ package objects
 import "fmt"
 
 type Fingerprint struct {
-	Object
 	Algorithm   string `json:"algorithm,omitempty"`
 	AlgorithmId int    `json:"algorithm_id"`
 	Value       string `json:"value"`

@@ -9,7 +9,6 @@
 package objects
 
 type KbArticle struct {
-	Object
 	AvgTimespan    *Timespan `json:"avg_timespan,omitempty"`
 	Bulletin       string    `json:"bulletin,omitempty"`
 	Classification string    `json:"classification,omitempty"`

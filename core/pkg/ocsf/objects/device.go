@@ -9,7 +9,7 @@
 package objects
 
 type Device struct {
-	Endpoint
+	AgentList             []*Agent            `json:"agent_list,omitempty"`
 	AutoscaleUid          string              `json:"autoscale_uid,omitempty"`
 	BootTime              int64               `json:"boot_time,omitempty"`
 	BootUid               string              `json:"boot_uid,omitempty"`
@@ -20,11 +20,15 @@ type Device struct {
 	FirstSeenTime         int64               `json:"first_seen_time,omitempty"`
 	Groups                []*Group            `json:"groups,omitempty"`
 	Hostname              string              `json:"hostname,omitempty"`
+	HwInfo                *DeviceHwInfo       `json:"hw_info,omitempty"`
 	Hypervisor            string              `json:"hypervisor,omitempty"`
 	Iccid                 string              `json:"iccid,omitempty"`
 	Image                 *Image              `json:"image,omitempty"`
 	Imei                  string              `json:"imei,omitempty"`
 	ImeiList              []string            `json:"imei_list,omitempty"`
+	InstanceUid           string              `json:"instance_uid,omitempty"`
+	InterfaceName         string              `json:"interface_name,omitempty"`
+	InterfaceUid          string              `json:"interface_uid,omitempty"`
 	Ip                    string              `json:"ip,omitempty"`
 	IsBackedUp            bool                `json:"is_backed_up,omitempty"`
 	IsCompliant           bool                `json:"is_compliant,omitempty"`
@@ -36,24 +40,31 @@ type Device struct {
 	IsTrusted             bool                `json:"is_trusted,omitempty"`
 	LastSeenTime          int64               `json:"last_seen_time,omitempty"`
 	Location              *Location           `json:"location,omitempty"`
+	Mac                   string              `json:"mac,omitempty"`
 	Meid                  string              `json:"meid,omitempty"`
 	Model                 string              `json:"model,omitempty"`
 	ModifiedTime          int64               `json:"modified_time,omitempty"`
 	Name                  string              `json:"name,omitempty"`
 	NetworkInterfaces     []*NetworkInterface `json:"network_interfaces,omitempty"`
 	Org                   *Organization       `json:"org,omitempty"`
+	Os                    *Os                 `json:"os,omitempty"`
 	OsMachineUuid         string              `json:"os_machine_uuid,omitempty"`
+	Owner                 *User               `json:"owner,omitempty"`
 	Region                string              `json:"region,omitempty"`
 	RiskLevel             string              `json:"risk_level,omitempty"`
 	RiskLevelId           int                 `json:"risk_level_id,omitempty"`
 	RiskScore             int                 `json:"risk_score,omitempty"`
 	Subnet                string              `json:"subnet,omitempty"`
+	SubnetUid             string              `json:"subnet_uid,omitempty"`
 	Type                  string              `json:"type,omitempty"`
 	TypeId                int                 `json:"type_id"`
 	Udid                  string              `json:"udid,omitempty"`
 	Uid                   string              `json:"uid,omitempty"`
 	UidAlt                string              `json:"uid_alt,omitempty"`
 	VendorName            string              `json:"vendor_name,omitempty"`
+	VlanUid               string              `json:"vlan_uid,omitempty"`
+	VpcUid                string              `json:"vpc_uid,omitempty"`
+	Zone                  string              `json:"zone,omitempty"`
 }
 
 // Validate checks that all required fields are properly set

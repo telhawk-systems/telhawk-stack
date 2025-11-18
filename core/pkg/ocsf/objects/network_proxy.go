@@ -9,7 +9,18 @@
 package objects
 
 type NetworkProxy struct {
-	NetworkEndpoint
+	AutonomousSystem *AutonomousSystem `json:"autonomous_system,omitempty"`
+	IntermediateIps  []string          `json:"intermediate_ips,omitempty"`
+	Isp              string            `json:"isp,omitempty"`
+	IspOrg           string            `json:"isp_org,omitempty"`
+	NetworkScope     string            `json:"network_scope,omitempty"`
+	NetworkScopeId   int               `json:"network_scope_id,omitempty"`
+	Port             int               `json:"port,omitempty"`
+	ProxyEndpoint    *NetworkProxy     `json:"proxy_endpoint,omitempty"`
+	SvcName          string            `json:"svc_name,omitempty"`
+	Type             string            `json:"type"`
+	TypeId           int               `json:"type_id"`
+	Uid              string            `json:"uid"`
 }
 
 // Validate checks that all required fields are properly set

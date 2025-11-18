@@ -9,7 +9,6 @@
 package objects
 
 type Response struct {
-	Object
 	Code         int          `json:"code,omitempty"`
 	Containers   []*Container `json:"containers,omitempty"`
 	Data         string       `json:"data,omitempty"`

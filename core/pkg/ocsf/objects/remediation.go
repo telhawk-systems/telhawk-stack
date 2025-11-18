@@ -11,7 +11,6 @@ package objects
 import "fmt"
 
 type Remediation struct {
-	Object
 	CisControls   []*CisControl `json:"cis_controls,omitempty"`
 	Desc          string        `json:"desc"`
 	KbArticleList []*KbArticle  `json:"kb_article_list,omitempty"`

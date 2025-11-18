@@ -11,7 +11,6 @@ package objects
 import "fmt"
 
 type Cloud struct {
-	Object
 	Account        *Account      `json:"account,omitempty"`
 	CloudPartition string        `json:"cloud_partition,omitempty"`
 	Org            *Organization `json:"org,omitempty"`

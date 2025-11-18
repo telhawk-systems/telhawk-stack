@@ -9,7 +9,6 @@
 package objects
 
 type Display struct {
-	Object
 	ColorDepth          int `json:"color_depth,omitempty"`
 	PhysicalHeight      int `json:"physical_height,omitempty"`
 	PhysicalOrientation int `json:"physical_orientation,omitempty"`

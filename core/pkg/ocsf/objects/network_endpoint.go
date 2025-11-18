@@ -8,31 +8,40 @@
 
 package objects
 
-import "fmt"
-
 type NetworkEndpoint struct {
-	Endpoint
+	AgentList        []*Agent          `json:"agent_list,omitempty"`
 	AutonomousSystem *AutonomousSystem `json:"autonomous_system,omitempty"`
+	Domain           string            `json:"domain,omitempty"`
+	Hostname         string            `json:"hostname,omitempty"`
+	HwInfo           *DeviceHwInfo     `json:"hw_info,omitempty"`
+	InstanceUid      string            `json:"instance_uid,omitempty"`
+	InterfaceName    string            `json:"interface_name,omitempty"`
+	InterfaceUid     string            `json:"interface_uid,omitempty"`
 	IntermediateIps  []string          `json:"intermediate_ips,omitempty"`
+	Ip               string            `json:"ip,omitempty"`
 	Isp              string            `json:"isp,omitempty"`
 	IspOrg           string            `json:"isp_org,omitempty"`
+	Location         *Location         `json:"location,omitempty"`
+	Mac              string            `json:"mac,omitempty"`
+	Name             string            `json:"name"`
 	NetworkScope     string            `json:"network_scope,omitempty"`
 	NetworkScopeId   int               `json:"network_scope_id,omitempty"`
+	Os               *Os               `json:"os,omitempty"`
+	Owner            *User             `json:"owner,omitempty"`
 	Port             int               `json:"port,omitempty"`
 	ProxyEndpoint    *NetworkProxy     `json:"proxy_endpoint,omitempty"`
+	SubnetUid        string            `json:"subnet_uid,omitempty"`
 	SvcName          string            `json:"svc_name,omitempty"`
 	Type             string            `json:"type"`
 	TypeId           int               `json:"type_id"`
 	Uid              string            `json:"uid"`
+	VlanUid          string            `json:"vlan_uid,omitempty"`
+	VpcUid           string            `json:"vpc_uid,omitempty"`
+	Zone             string            `json:"zone,omitempty"`
 }
 
 // Validate checks that all required fields are properly set
 func (o *NetworkEndpoint) Validate() error {
-	if o.Type == "" {
-		return fmt.Errorf("required field type is empty")
-	}
-	if o.Uid == "" {
-		return fmt.Errorf("required field uid is empty")
-	}
+	// No required string fields to validate
 	return nil
 }

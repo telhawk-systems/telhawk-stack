@@ -9,7 +9,6 @@
 package objects
 
 type HttpResponse struct {
-	Object
 	BodyLength  int           `json:"body_length,omitempty"`
 	Code        int           `json:"code"`
 	ContentType string        `json:"content_type,omitempty"`

@@ -11,7 +11,6 @@ package objects
 import "fmt"
 
 type ProgrammaticCredential struct {
-	Object
 	LastUsedTime int64  `json:"last_used_time,omitempty"`
 	Type         string `json:"type,omitempty"`
 	Uid          string `json:"uid"`

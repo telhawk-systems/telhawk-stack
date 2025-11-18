@@ -9,7 +9,6 @@
 package objects
 
 type SecurityState struct {
-	Object
 	State   string `json:"state,omitempty"`
 	StateId int    `json:"state_id,omitempty"`
 }

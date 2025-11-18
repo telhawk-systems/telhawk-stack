@@ -9,7 +9,6 @@
 package objects
 
 type LdapPerson struct {
-	Object
 	CostCenter     string            `json:"cost_center,omitempty"`
 	CreatedTime    int64             `json:"created_time,omitempty"`
 	DeletedTime    int64             `json:"deleted_time,omitempty"`

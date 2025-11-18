@@ -11,7 +11,6 @@ package objects
 import "fmt"
 
 type Job struct {
-	Object
 	CmdLine     string `json:"cmd_line,omitempty"`
 	CreatedTime int64  `json:"created_time,omitempty"`
 	Desc        string `json:"desc,omitempty"`

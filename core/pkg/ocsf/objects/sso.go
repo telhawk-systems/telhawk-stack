@@ -9,7 +9,6 @@
 package objects
 
 type Sso struct {
-	Object
 	AuthProtocol     string       `json:"auth_protocol,omitempty"`
 	AuthProtocolId   int          `json:"auth_protocol_id,omitempty"`
 	Certificate      *Certificate `json:"certificate,omitempty"`

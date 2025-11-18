@@ -9,7 +9,6 @@
 package objects
 
 type EndpointConnection struct {
-	Object
 	Code            int              `json:"code,omitempty"`
 	NetworkEndpoint *NetworkEndpoint `json:"network_endpoint,omitempty"`
 }

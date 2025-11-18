@@ -9,7 +9,6 @@
 package objects
 
 type AdditionalRestriction struct {
-	Object
 	Policy   *Policy `json:"policy"`
 	Status   string  `json:"status,omitempty"`
 	StatusId int     `json:"status_id,omitempty"`

@@ -9,7 +9,6 @@
 package objects
 
 type DataClassification struct {
-	Object
 	Category          string              `json:"category,omitempty"`
 	CategoryId        int                 `json:"category_id,omitempty"`
 	ClassifierDetails *ClassifierDetails  `json:"classifier_details,omitempty"`

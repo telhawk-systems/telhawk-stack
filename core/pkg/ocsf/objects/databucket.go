@@ -8,8 +8,6 @@
 
 package objects
 
-import "fmt"
-
 type Databucket struct {
 	AgentList            []*Agent           `json:"agent_list,omitempty"`
 	CloudPartition       string             `json:"cloud_partition,omitempty"`
@@ -41,11 +39,6 @@ type Databucket struct {
 
 // Validate checks that all required fields are properly set
 func (o *Databucket) Validate() error {
-	if o.Name == "" {
-		return fmt.Errorf("required field name is empty")
-	}
-	if o.Uid == "" {
-		return fmt.Errorf("required field uid is empty")
-	}
+	// No required string fields to validate
 	return nil
 }

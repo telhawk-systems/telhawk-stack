@@ -11,7 +11,6 @@ package objects
 import "fmt"
 
 type Package struct {
-	Object
 	Architecture      string       `json:"architecture,omitempty"`
 	CpeName           string       `json:"cpe_name,omitempty"`
 	Epoch             int          `json:"epoch,omitempty"`
@@ -33,11 +32,11 @@ type Package struct {
 
 // Validate checks that all required fields are properly set
 func (o *Package) Validate() error {
-	if o.Name == "" {
-		return fmt.Errorf("required field name is empty")
-	}
 	if o.Version == "" {
 		return fmt.Errorf("required field version is empty")
+	}
+	if o.Name == "" {
+		return fmt.Errorf("required field name is empty")
 	}
 	return nil
 }

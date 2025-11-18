@@ -11,7 +11,6 @@ package objects
 import "fmt"
 
 type Osint struct {
-	Object
 	Answers                []*DnsAnswer        `json:"answers,omitempty"`
 	Attacks                []*Attack           `json:"attacks,omitempty"`
 	AutonomousSystem       *AutonomousSystem   `json:"autonomous_system,omitempty"`

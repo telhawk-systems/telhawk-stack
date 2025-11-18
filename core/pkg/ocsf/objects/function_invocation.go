@@ -9,7 +9,6 @@
 package objects
 
 type FunctionInvocation struct {
-	Object
 	Error       string       `json:"error,omitempty"`
 	Parameters  []*Parameter `json:"parameters,omitempty"`
 	ReturnValue string       `json:"return_value,omitempty"`

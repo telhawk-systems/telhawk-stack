@@ -9,7 +9,6 @@
 package objects
 
 type EmailAuth struct {
-	Object
 	Dkim          string `json:"dkim,omitempty"`
 	DkimDomain    string `json:"dkim_domain,omitempty"`
 	DkimSignature string `json:"dkim_signature,omitempty"`

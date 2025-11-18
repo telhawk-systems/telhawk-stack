@@ -9,7 +9,6 @@
 package objects
 
 type EncryptionDetails struct {
-	Object
 	Algorithm   string `json:"algorithm,omitempty"`
 	AlgorithmId int    `json:"algorithm_id,omitempty"`
 	KeyLength   int    `json:"key_length,omitempty"`
