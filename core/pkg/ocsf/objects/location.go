@@ -29,3 +29,9 @@ type Location struct {
 	Provider                 string    `json:"provider,omitempty"`
 	Region                   string    `json:"region,omitempty"`
 }
+
+// Validate checks that all required fields are properly set
+func (o *Location) Validate() error {
+	// No required string fields to validate
+	return nil
+}

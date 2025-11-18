@@ -8,6 +8,8 @@
 
 package objects
 
+import "fmt"
+
 type Node struct {
 	Object
 	Data string `json:"data,omitempty"`
@@ -15,4 +17,12 @@ type Node struct {
 	Name string `json:"name,omitempty"`
 	Type string `json:"type,omitempty"`
 	Uid  string `json:"uid"`
+}
+
+// Validate checks that all required fields are properly set
+func (o *Node) Validate() error {
+	if o.Uid == "" {
+		return fmt.Errorf("required field uid is empty")
+	}
+	return nil
 }

@@ -9,6 +9,7 @@
 package network
 
 import (
+	"fmt"
 	"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf"
 	"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf/objects"
 	"time"
@@ -59,4 +60,10 @@ func NewHttpActivity(activityID int) *HttpActivity {
 			},
 		},
 	}
+}
+
+// Validate checks that all required fields are properly set
+func (e *HttpActivity) Validate() error {
+	// No required string fields to validate
+	return nil
 }

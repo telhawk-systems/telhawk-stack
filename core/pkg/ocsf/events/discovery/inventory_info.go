@@ -9,6 +9,7 @@
 package discovery
 
 import (
+	"fmt"
 	"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf"
 	"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf/objects"
 	"time"
@@ -44,4 +45,10 @@ func NewInventoryInfo(activityID int) *InventoryInfo {
 			},
 		},
 	}
+}
+
+// Validate checks that all required fields are properly set
+func (e *InventoryInfo) Validate() error {
+	// No required string fields to validate
+	return nil
 }

@@ -55,3 +55,9 @@ type Device struct {
 	UidAlt                string              `json:"uid_alt,omitempty"`
 	VendorName            string              `json:"vendor_name,omitempty"`
 }
+
+// Validate checks that all required fields are properly set
+func (o *Device) Validate() error {
+	// No required string fields to validate
+	return nil
+}

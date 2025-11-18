@@ -8,6 +8,8 @@
 
 package objects
 
+import "fmt"
+
 type QueryInfo struct {
 	Bytes       int64  `json:"bytes,omitempty"`
 	Data        string `json:"data,omitempty"`
@@ -15,4 +17,18 @@ type QueryInfo struct {
 	QueryString string `json:"query_string"`
 	QueryTime   int64  `json:"query_time,omitempty"`
 	Uid         string `json:"uid"`
+}
+
+// Validate checks that all required fields are properly set
+func (o *QueryInfo) Validate() error {
+	if o.QueryString == "" {
+		return fmt.Errorf("required field query_string is empty")
+	}
+	if o.Uid == "" {
+		return fmt.Errorf("required field uid is empty")
+	}
+	if o.Name == "" {
+		return fmt.Errorf("required field name is empty")
+	}
+	return nil
 }

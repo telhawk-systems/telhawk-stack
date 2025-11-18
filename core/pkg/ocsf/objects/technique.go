@@ -8,8 +8,21 @@
 
 package objects
 
+import "fmt"
+
 type Technique struct {
 	Name   string `json:"name"`
 	SrcUrl string `json:"src_url,omitempty"`
 	Uid    string `json:"uid"`
+}
+
+// Validate checks that all required fields are properly set
+func (o *Technique) Validate() error {
+	if o.Uid == "" {
+		return fmt.Errorf("required field uid is empty")
+	}
+	if o.Name == "" {
+		return fmt.Errorf("required field name is empty")
+	}
+	return nil
 }

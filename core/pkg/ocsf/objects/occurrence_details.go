@@ -20,3 +20,9 @@ type OccurrenceDetails struct {
 	RowNumber          int    `json:"row_number,omitempty"`
 	StartLine          int    `json:"start_line,omitempty"`
 }
+
+// Validate checks that all required fields are properly set
+func (o *OccurrenceDetails) Validate() error {
+	// No required string fields to validate
+	return nil
+}

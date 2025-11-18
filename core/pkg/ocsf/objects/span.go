@@ -8,6 +8,8 @@
 
 package objects
 
+import "fmt"
+
 type Span struct {
 	Object
 	Duration   int64    `json:"duration,omitempty"`
@@ -19,4 +21,12 @@ type Span struct {
 	StartTime  int64    `json:"start_time"`
 	StatusCode string   `json:"status_code,omitempty"`
 	Uid        string   `json:"uid"`
+}
+
+// Validate checks that all required fields are properly set
+func (o *Span) Validate() error {
+	if o.Uid == "" {
+		return fmt.Errorf("required field uid is empty")
+	}
+	return nil
 }

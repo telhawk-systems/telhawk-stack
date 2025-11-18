@@ -24,3 +24,9 @@ type NetworkConnectionInfo struct {
 	TcpFlags      int      `json:"tcp_flags,omitempty"`
 	Uid           string   `json:"uid,omitempty"`
 }
+
+// Validate checks that all required fields are properly set
+func (o *NetworkConnectionInfo) Validate() error {
+	// No required string fields to validate
+	return nil
+}

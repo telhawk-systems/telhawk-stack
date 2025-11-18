@@ -8,10 +8,20 @@
 
 package objects
 
+import "fmt"
+
 type Epss struct {
 	Object
 	CreatedTime int64   `json:"created_time,omitempty"`
 	Percentile  float64 `json:"percentile,omitempty"`
 	Score       string  `json:"score"`
 	Version     string  `json:"version,omitempty"`
+}
+
+// Validate checks that all required fields are properly set
+func (o *Epss) Validate() error {
+	if o.Score == "" {
+		return fmt.Errorf("required field score is empty")
+	}
+	return nil
 }

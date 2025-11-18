@@ -18,3 +18,9 @@ type DomainContact struct {
 	TypeId      int       `json:"type_id"`
 	Uid         string    `json:"uid,omitempty"`
 }
+
+// Validate checks that all required fields are properly set
+func (o *DomainContact) Validate() error {
+	// No required string fields to validate
+	return nil
+}

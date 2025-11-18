@@ -11,3 +11,9 @@ package objects
 type NetworkProxy struct {
 	NetworkEndpoint
 }
+
+// Validate checks that all required fields are properly set
+func (o *NetworkProxy) Validate() error {
+	// No required string fields to validate
+	return nil
+}

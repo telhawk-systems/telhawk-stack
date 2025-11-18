@@ -8,9 +8,19 @@
 
 package objects
 
+import "fmt"
+
 type Fingerprint struct {
 	Object
 	Algorithm   string `json:"algorithm,omitempty"`
 	AlgorithmId int    `json:"algorithm_id"`
 	Value       string `json:"value"`
+}
+
+// Validate checks that all required fields are properly set
+func (o *Fingerprint) Validate() error {
+	if o.Value == "" {
+		return fmt.Errorf("required field value is empty")
+	}
+	return nil
 }

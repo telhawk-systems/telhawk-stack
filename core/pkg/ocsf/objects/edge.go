@@ -8,6 +8,8 @@
 
 package objects
 
+import "fmt"
+
 type Edge struct {
 	Data       string `json:"data,omitempty"`
 	IsDirected bool   `json:"is_directed,omitempty"`
@@ -16,4 +18,15 @@ type Edge struct {
 	Source     string `json:"source"`
 	Target     string `json:"target"`
 	Uid        string `json:"uid,omitempty"`
+}
+
+// Validate checks that all required fields are properly set
+func (o *Edge) Validate() error {
+	if o.Source == "" {
+		return fmt.Errorf("required field source is empty")
+	}
+	if o.Target == "" {
+		return fmt.Errorf("required field target is empty")
+	}
+	return nil
 }

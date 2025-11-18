@@ -8,6 +8,8 @@
 
 package objects
 
+import "fmt"
+
 type Ja4Fingerprint struct {
 	Object
 	SectionA string `json:"section_a,omitempty"`
@@ -17,4 +19,12 @@ type Ja4Fingerprint struct {
 	Type     string `json:"type,omitempty"`
 	TypeId   int    `json:"type_id"`
 	Value    string `json:"value"`
+}
+
+// Validate checks that all required fields are properly set
+func (o *Ja4Fingerprint) Validate() error {
+	if o.Value == "" {
+		return fmt.Errorf("required field value is empty")
+	}
+	return nil
 }

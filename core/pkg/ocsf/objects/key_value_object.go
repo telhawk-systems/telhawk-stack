@@ -8,9 +8,19 @@
 
 package objects
 
+import "fmt"
+
 type KeyValueObject struct {
 	Object
 	Name   string   `json:"name"`
 	Value  string   `json:"value,omitempty"`
 	Values []string `json:"values,omitempty"`
+}
+
+// Validate checks that all required fields are properly set
+func (o *KeyValueObject) Validate() error {
+	if o.Name == "" {
+		return fmt.Errorf("required field name is empty")
+	}
+	return nil
 }

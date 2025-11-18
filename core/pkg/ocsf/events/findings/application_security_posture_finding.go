@@ -9,6 +9,7 @@
 package findings
 
 import (
+	"fmt"
 	"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf"
 	"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf/objects"
 	"time"
@@ -47,4 +48,10 @@ func NewApplicationSecurityPostureFinding(activityID int) *ApplicationSecurityPo
 			},
 		},
 	}
+}
+
+// Validate checks that all required fields are properly set
+func (e *ApplicationSecurityPostureFinding) Validate() error {
+	// No required string fields to validate
+	return nil
 }

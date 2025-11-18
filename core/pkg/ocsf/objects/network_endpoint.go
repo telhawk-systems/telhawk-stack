@@ -8,6 +8,8 @@
 
 package objects
 
+import "fmt"
+
 type NetworkEndpoint struct {
 	Endpoint
 	AutonomousSystem *AutonomousSystem `json:"autonomous_system,omitempty"`
@@ -22,4 +24,15 @@ type NetworkEndpoint struct {
 	Type             string            `json:"type"`
 	TypeId           int               `json:"type_id"`
 	Uid              string            `json:"uid"`
+}
+
+// Validate checks that all required fields are properly set
+func (o *NetworkEndpoint) Validate() error {
+	if o.Type == "" {
+		return fmt.Errorf("required field type is empty")
+	}
+	if o.Uid == "" {
+		return fmt.Errorf("required field uid is empty")
+	}
+	return nil
 }

@@ -296,6 +296,7 @@ services:
     expose:
       - "8083"
     environment:
+      - DEBUG_DUMP_JSON=${DEBUG_DUMP_JSON:-false}
       - STORAGE_SERVER_TLS_ENABLED=${STORAGE_TLS_ENABLED:-false}
       - STORAGE_SERVER_TLS_CERT_FILE=/certs/storage.pem
       - STORAGE_SERVER_TLS_KEY_FILE=/certs/storage-key.pem

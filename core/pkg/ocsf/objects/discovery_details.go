@@ -16,3 +16,9 @@ type DiscoveryDetails struct {
 	Type              string               `json:"type,omitempty"`
 	Value             string               `json:"value,omitempty"`
 }
+
+// Validate checks that all required fields are properly set
+func (o *DiscoveryDetails) Validate() error {
+	// No required string fields to validate
+	return nil
+}

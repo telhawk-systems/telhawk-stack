@@ -19,3 +19,9 @@ type AffectedCode struct {
 	StartColumn int          `json:"start_column,omitempty"`
 	StartLine   int          `json:"start_line,omitempty"`
 }
+
+// Validate checks that all required fields are properly set
+func (o *AffectedCode) Validate() error {
+	// No required string fields to validate
+	return nil
+}

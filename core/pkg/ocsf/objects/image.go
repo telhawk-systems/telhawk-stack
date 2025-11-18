@@ -8,6 +8,8 @@
 
 package objects
 
+import "fmt"
+
 type Image struct {
 	Labels []string          `json:"labels,omitempty"`
 	Name   string            `json:"name"`
@@ -15,4 +17,15 @@ type Image struct {
 	Tag    string            `json:"tag,omitempty"`
 	Tags   []*KeyValueObject `json:"tags,omitempty"`
 	Uid    string            `json:"uid"`
+}
+
+// Validate checks that all required fields are properly set
+func (o *Image) Validate() error {
+	if o.Name == "" {
+		return fmt.Errorf("required field name is empty")
+	}
+	if o.Uid == "" {
+		return fmt.Errorf("required field uid is empty")
+	}
+	return nil
 }

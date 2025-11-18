@@ -9,6 +9,7 @@
 package findings
 
 import (
+	"fmt"
 	"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf"
 	"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf/objects"
 	"time"
@@ -49,4 +50,10 @@ func NewIamAnalysisFinding(activityID int) *IamAnalysisFinding {
 			},
 		},
 	}
+}
+
+// Validate checks that all required fields are properly set
+func (e *IamAnalysisFinding) Validate() error {
+	// No required string fields to validate
+	return nil
 }

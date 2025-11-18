@@ -14,3 +14,9 @@ type D3fend struct {
 	D3fTechnique *D3fTechnique `json:"d3f_technique,omitempty"`
 	Version      string        `json:"version,omitempty"`
 }
+
+// Validate checks that all required fields are properly set
+func (o *D3fend) Validate() error {
+	// No required string fields to validate
+	return nil
+}

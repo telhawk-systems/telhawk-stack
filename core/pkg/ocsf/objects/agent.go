@@ -19,3 +19,9 @@ type Agent struct {
 	VendorName string    `json:"vendor_name,omitempty"`
 	Version    string    `json:"version,omitempty"`
 }
+
+// Validate checks that all required fields are properly set
+func (o *Agent) Validate() error {
+	// No required string fields to validate
+	return nil
+}

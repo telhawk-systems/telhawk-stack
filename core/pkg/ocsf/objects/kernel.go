@@ -8,6 +8,8 @@
 
 package objects
 
+import "fmt"
+
 type Kernel struct {
 	Object
 	IsSystem   bool   `json:"is_system,omitempty"`
@@ -16,4 +18,12 @@ type Kernel struct {
 	SystemCall string `json:"system_call,omitempty"`
 	Type       string `json:"type,omitempty"`
 	TypeId     int    `json:"type_id"`
+}
+
+// Validate checks that all required fields are properly set
+func (o *Kernel) Validate() error {
+	if o.Name == "" {
+		return fmt.Errorf("required field name is empty")
+	}
+	return nil
 }

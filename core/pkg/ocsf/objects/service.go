@@ -8,10 +8,23 @@
 
 package objects
 
+import "fmt"
+
 type Service struct {
 	Labels  []string          `json:"labels,omitempty"`
 	Name    string            `json:"name"`
 	Tags    []*KeyValueObject `json:"tags,omitempty"`
 	Uid     string            `json:"uid"`
 	Version string            `json:"version,omitempty"`
+}
+
+// Validate checks that all required fields are properly set
+func (o *Service) Validate() error {
+	if o.Name == "" {
+		return fmt.Errorf("required field name is empty")
+	}
+	if o.Uid == "" {
+		return fmt.Errorf("required field uid is empty")
+	}
+	return nil
 }

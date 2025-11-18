@@ -8,8 +8,18 @@
 
 package objects
 
+import "fmt"
+
 type DnsQuery struct {
 	Hostname string `json:"hostname"`
 	Opcode   string `json:"opcode,omitempty"`
 	OpcodeId int    `json:"opcode_id,omitempty"`
+}
+
+// Validate checks that all required fields are properly set
+func (o *DnsQuery) Validate() error {
+	if o.Hostname == "" {
+		return fmt.Errorf("required field hostname is empty")
+	}
+	return nil
 }

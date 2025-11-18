@@ -7,6 +7,7 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/brianvoe/gofakeit/v6"
@@ -180,6 +181,12 @@ func (r *Runner) sendBatch(events []HECEvent) error {
 		if err := encoder.Encode(event); err != nil {
 			return fmt.Errorf("failed to encode event: %w", err)
 		}
+	}
+
+	// DEBUG: Print first event JSON if DEBUG_DUMP_JSON is set
+	if os.Getenv("DEBUG_DUMP_JSON") == "true" && len(events) > 0 {
+		eventJSON, _ := json.MarshalIndent(events[0], "", "  ")
+		log.Printf("=== DEBUG: First HEC event JSON ===\n%s\n=== END DEBUG ===", string(eventJSON))
 	}
 
 	req, err := http.NewRequest("POST", r.Config.Defaults.HECURL+"/services/collector/event", &buf)

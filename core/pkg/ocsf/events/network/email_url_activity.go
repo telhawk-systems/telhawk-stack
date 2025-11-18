@@ -9,6 +9,7 @@
 package network
 
 import (
+	"fmt"
 	"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf"
 	"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf/objects"
 	"time"
@@ -50,4 +51,12 @@ func NewEmailUrlActivity(activityID int) *EmailUrlActivity {
 			},
 		},
 	}
+}
+
+// Validate checks that all required fields are properly set
+func (e *EmailUrlActivity) Validate() error {
+	if e.EmailUid == "" {
+		return fmt.Errorf("required field email_uid is empty")
+	}
+	return nil
 }

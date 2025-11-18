@@ -297,6 +297,7 @@ func generateEventClassFile(class *EventClass, categoryUID int, outputDir, packa
 	buf.WriteString(generateFileHeader())
 	buf.WriteString(fmt.Sprintf("package %s\n\n", packageName))
 	buf.WriteString("import (\n")
+	buf.WriteString("\t\"fmt\"\n")
 	buf.WriteString("\t\"time\"\n")
 	buf.WriteString("\t\"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf\"\n")
 	if needsObjects {
@@ -361,6 +362,9 @@ func generateEventClassFile(class *EventClass, categoryUID int, outputDir, packa
 	// Generate constructor helper
 	buf.WriteString(generateConstructor(class, categoryUID))
 
+	// Generate Validate method
+	buf.WriteString(generateValidator(class))
+
 	// Write to file
 	outputPath := filepath.Join(outputDir, toGoFileName(class.Name))
 	return os.WriteFile(outputPath, []byte(buf.String()), 0644)
@@ -417,6 +421,97 @@ func generateConstructor(class *EventClass, categoryUID int) string {
 	buf.WriteString("\t\t\t},\n")
 	buf.WriteString("\t\t},\n")
 	buf.WriteString("\t}\n")
+	buf.WriteString("}\n\n")
+
+	return buf.String()
+}
+
+func generateValidator(class *EventClass) string {
+	var buf strings.Builder
+	structName := toGoStructName(class.Name)
+
+	buf.WriteString(fmt.Sprintf("// Validate checks that all required fields are properly set\n"))
+	buf.WriteString(fmt.Sprintf("func (e *%s) Validate() error {\n", structName))
+
+	// Track if we need to check any fields
+	hasValidation := false
+
+	// Check each attribute for required string fields
+	for attrName, rawAttr := range class.Attributes {
+		var attr AttributeRef
+		if err := json.Unmarshal(rawAttr, &attr); err != nil {
+			continue
+		}
+
+		// Skip optional and recommended fields
+		if attr.Requirement == "optional" || attr.Requirement == "recommended" {
+			continue
+		}
+
+		// Skip base event fields
+		if isBaseField(attrName) {
+			continue
+		}
+
+		// Check if it's a string type that needs validation
+		goType := inferGoTypeWithObjects(attrName)
+		if goType == "string" {
+			hasValidation = true
+			fieldName := toGoFieldName(attrName)
+			buf.WriteString(fmt.Sprintf("\tif e.%s == \"\" {\n", fieldName))
+			buf.WriteString(fmt.Sprintf("\t\treturn fmt.Errorf(\"required field %s is empty\")\n", attrName))
+			buf.WriteString("\t}\n")
+		}
+	}
+
+	if !hasValidation {
+		buf.WriteString("\t// No required string fields to validate\n")
+	}
+
+	buf.WriteString("\treturn nil\n")
+	buf.WriteString("}\n\n")
+
+	return buf.String()
+}
+
+func generateObjectValidator(object *ObjectSchema) string {
+	var buf strings.Builder
+	structName := toGoStructName(object.Name)
+
+	buf.WriteString(fmt.Sprintf("// Validate checks that all required fields are properly set\n"))
+	buf.WriteString(fmt.Sprintf("func (o *%s) Validate() error {\n", structName))
+
+	// Track if we need to check any fields
+	hasValidation := false
+
+	// Check each attribute for required string fields
+	for attrName, rawAttr := range object.Attributes {
+		var attr AttributeRef
+		if err := json.Unmarshal(rawAttr, &attr); err != nil {
+			continue
+		}
+
+		// Skip optional and recommended fields
+		if attr.Requirement == "optional" || attr.Requirement == "recommended" {
+			continue
+		}
+
+		// Check if it's a string type that needs validation
+		goType := inferGoTypeSimple(attrName)
+		if goType == "string" {
+			hasValidation = true
+			fieldName := toGoFieldName(attrName)
+			buf.WriteString(fmt.Sprintf("\tif o.%s == \"\" {\n", fieldName))
+			buf.WriteString(fmt.Sprintf("\t\treturn fmt.Errorf(\"required field %s is empty\")\n", attrName))
+			buf.WriteString("\t}\n")
+		}
+	}
+
+	if !hasValidation {
+		buf.WriteString("\t// No required string fields to validate\n")
+	}
+
+	buf.WriteString("\treturn nil\n")
 	buf.WriteString("}\n\n")
 
 	return buf.String()
@@ -660,6 +755,24 @@ func generateObjectFile(object *ObjectSchema, outputDir string) error {
 	buf.WriteString(generateFileHeader())
 	buf.WriteString("package objects\n\n")
 
+	// Check if we need fmt import for validation (required string fields only)
+	needsFmt := false
+	for attrName, rawAttr := range object.Attributes {
+		var attr AttributeRef
+		if json.Unmarshal(rawAttr, &attr) == nil {
+			if attr.Requirement != "optional" && attr.Requirement != "recommended" {
+				goType := inferGoTypeSimple(attrName)
+				if goType == "string" {
+					needsFmt = true
+					break
+				}
+			}
+		}
+	}
+	if needsFmt {
+		buf.WriteString("import \"fmt\"\n\n")
+	}
+
 	structName := toGoStructName(object.Name)
 	buf.WriteString(fmt.Sprintf("type %s struct {\n", structName))
 
@@ -698,7 +811,10 @@ func generateObjectFile(object *ObjectSchema, outputDir string) error {
 		buf.WriteString(fmt.Sprintf("\t%s %s `json:\"%s%s\"`\n", fieldName, goType, jsonTag, omit))
 	}
 
-	buf.WriteString("}\n")
+	buf.WriteString("}\n\n")
+
+	// Generate Validate method for objects
+	buf.WriteString(generateObjectValidator(object))
 
 	// Write to file
 	outputPath := filepath.Join(outputDir, toGoFileName(object.Name))

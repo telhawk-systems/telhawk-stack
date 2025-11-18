@@ -16,3 +16,9 @@ type DceRpc struct {
 	Opnum           int           `json:"opnum,omitempty"`
 	RpcInterface    *RpcInterface `json:"rpc_interface"`
 }
+
+// Validate checks that all required fields are properly set
+func (o *DceRpc) Validate() error {
+	// No required string fields to validate
+	return nil
+}

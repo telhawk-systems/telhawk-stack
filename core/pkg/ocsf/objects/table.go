@@ -8,6 +8,8 @@
 
 package objects
 
+import "fmt"
+
 type Table struct {
 	CreatedTime  int64    `json:"created_time,omitempty"`
 	Desc         string   `json:"desc,omitempty"`
@@ -16,4 +18,15 @@ type Table struct {
 	Name         string   `json:"name"`
 	Size         int64    `json:"size,omitempty"`
 	Uid          string   `json:"uid"`
+}
+
+// Validate checks that all required fields are properly set
+func (o *Table) Validate() error {
+	if o.Uid == "" {
+		return fmt.Errorf("required field uid is empty")
+	}
+	if o.Name == "" {
+		return fmt.Errorf("required field name is empty")
+	}
+	return nil
 }

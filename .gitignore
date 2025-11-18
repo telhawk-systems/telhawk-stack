@@ -76,3 +76,4 @@ alerting/alerting
 .gitignore
 rules/rules
 docs/CLEANLINESS_TODO.md
+cli/thawk

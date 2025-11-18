@@ -20,3 +20,9 @@ type AuthFactor struct {
 	Provider          string   `json:"provider,omitempty"`
 	SecurityQuestions []string `json:"security_questions,omitempty"`
 }
+
+// Validate checks that all required fields are properly set
+func (o *AuthFactor) Validate() error {
+	// No required string fields to validate
+	return nil
+}

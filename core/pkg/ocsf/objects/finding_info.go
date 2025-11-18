@@ -8,6 +8,8 @@
 
 package objects
 
+import "fmt"
+
 type FindingInfo struct {
 	Object
 	Analytic           *Analytic         `json:"analytic,omitempty"`
@@ -32,4 +34,12 @@ type FindingInfo struct {
 	Types              []string          `json:"types,omitempty"`
 	Uid                string            `json:"uid"`
 	UidAlt             string            `json:"uid_alt,omitempty"`
+}
+
+// Validate checks that all required fields are properly set
+func (o *FindingInfo) Validate() error {
+	if o.Uid == "" {
+		return fmt.Errorf("required field uid is empty")
+	}
+	return nil
 }

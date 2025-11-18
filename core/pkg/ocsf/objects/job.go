@@ -8,6 +8,8 @@
 
 package objects
 
+import "fmt"
+
 type Job struct {
 	Object
 	CmdLine     string `json:"cmd_line,omitempty"`
@@ -20,4 +22,12 @@ type Job struct {
 	RunState    string `json:"run_state,omitempty"`
 	RunStateId  int    `json:"run_state_id,omitempty"`
 	User        *User  `json:"user,omitempty"`
+}
+
+// Validate checks that all required fields are properly set
+func (o *Job) Validate() error {
+	if o.Name == "" {
+		return fmt.Errorf("required field name is empty")
+	}
+	return nil
 }

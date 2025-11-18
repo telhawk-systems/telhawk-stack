@@ -9,6 +9,7 @@
 package iam
 
 import (
+	"fmt"
 	"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf"
 	"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf/objects"
 	"time"
@@ -71,4 +72,12 @@ func NewAuthentication(activityID int) *Authentication {
 			},
 		},
 	}
+}
+
+// Validate checks that all required fields are properly set
+func (e *Authentication) Validate() error {
+	if e.StatusDetail == "" {
+		return fmt.Errorf("required field status_detail is empty")
+	}
+	return nil
 }

@@ -8,6 +8,8 @@
 
 package objects
 
+import "fmt"
+
 type HttpCookie struct {
 	Object
 	Domain         string `json:"domain,omitempty"`
@@ -20,4 +22,15 @@ type HttpCookie struct {
 	Samesite       string `json:"samesite,omitempty"`
 	Secure         bool   `json:"secure,omitempty"`
 	Value          string `json:"value"`
+}
+
+// Validate checks that all required fields are properly set
+func (o *HttpCookie) Validate() error {
+	if o.Name == "" {
+		return fmt.Errorf("required field name is empty")
+	}
+	if o.Value == "" {
+		return fmt.Errorf("required field value is empty")
+	}
+	return nil
 }

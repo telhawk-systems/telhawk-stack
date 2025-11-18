@@ -32,3 +32,9 @@ type LdapPerson struct {
 	Surname        string            `json:"surname,omitempty"`
 	Tags           []*KeyValueObject `json:"tags,omitempty"`
 }
+
+// Validate checks that all required fields are properly set
+func (o *LdapPerson) Validate() error {
+	// No required string fields to validate
+	return nil
+}

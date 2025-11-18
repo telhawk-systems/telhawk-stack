@@ -31,3 +31,9 @@ type User struct {
 	Uid                     string                    `json:"uid,omitempty"`
 	UidAlt                  string                    `json:"uid_alt,omitempty"`
 }
+
+// Validate checks that all required fields are properly set
+func (o *User) Validate() error {
+	// No required string fields to validate
+	return nil
+}

@@ -26,3 +26,9 @@ type Compliance struct {
 	StatusDetails        []string          `json:"status_details,omitempty"`
 	StatusId             int               `json:"status_id,omitempty"`
 }
+
+// Validate checks that all required fields are properly set
+func (o *Compliance) Validate() error {
+	// No required string fields to validate
+	return nil
+}

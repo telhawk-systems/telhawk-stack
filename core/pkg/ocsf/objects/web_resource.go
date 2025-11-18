@@ -8,6 +8,8 @@
 
 package objects
 
+import "fmt"
+
 type WebResource struct {
 	Data      string `json:"data,omitempty"`
 	Desc      string `json:"desc,omitempty"`
@@ -15,4 +17,18 @@ type WebResource struct {
 	Type      string `json:"type"`
 	Uid       string `json:"uid"`
 	UrlString string `json:"url_string,omitempty"`
+}
+
+// Validate checks that all required fields are properly set
+func (o *WebResource) Validate() error {
+	if o.Name == "" {
+		return fmt.Errorf("required field name is empty")
+	}
+	if o.Type == "" {
+		return fmt.Errorf("required field type is empty")
+	}
+	if o.Uid == "" {
+		return fmt.Errorf("required field uid is empty")
+	}
+	return nil
 }

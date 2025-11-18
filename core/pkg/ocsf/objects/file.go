@@ -8,6 +8,8 @@
 
 package objects
 
+import "fmt"
+
 type File struct {
 	AccessedTime       int64              `json:"accessed_time,omitempty"`
 	Accessor           *User              `json:"accessor,omitempty"`
@@ -50,4 +52,12 @@ type File struct {
 	Version            string             `json:"version,omitempty"`
 	Volume             string             `json:"volume,omitempty"`
 	Xattributes        *Object            `json:"xattributes,omitempty"`
+}
+
+// Validate checks that all required fields are properly set
+func (o *File) Validate() error {
+	if o.Name == "" {
+		return fmt.Errorf("required field name is empty")
+	}
+	return nil
 }

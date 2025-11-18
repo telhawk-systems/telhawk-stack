@@ -17,3 +17,9 @@ type AccessAnalysisResult struct {
 	ConditionKeys          []*KeyValueObject        `json:"condition_keys,omitempty"`
 	GrantedPrivileges      []string                 `json:"granted_privileges,omitempty"`
 }
+
+// Validate checks that all required fields are properly set
+func (o *AccessAnalysisResult) Validate() error {
+	// No required string fields to validate
+	return nil
+}

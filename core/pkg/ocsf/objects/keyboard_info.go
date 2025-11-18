@@ -16,3 +16,9 @@ type KeyboardInfo struct {
 	KeyboardSubtype int    `json:"keyboard_subtype,omitempty"`
 	KeyboardType    string `json:"keyboard_type,omitempty"`
 }
+
+// Validate checks that all required fields are properly set
+func (o *KeyboardInfo) Validate() error {
+	// No required string fields to validate
+	return nil
+}

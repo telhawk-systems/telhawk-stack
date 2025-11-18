@@ -15,3 +15,9 @@ type Reputation struct {
 	Score     string  `json:"score,omitempty"`
 	ScoreId   int     `json:"score_id"`
 }
+
+// Validate checks that all required fields are properly set
+func (o *Reputation) Validate() error {
+	// No required string fields to validate
+	return nil
+}

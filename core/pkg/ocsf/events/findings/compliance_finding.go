@@ -9,6 +9,7 @@
 package findings
 
 import (
+	"fmt"
 	"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf"
 	"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf/objects"
 	"time"
@@ -47,4 +48,10 @@ func NewComplianceFinding(activityID int) *ComplianceFinding {
 			},
 		},
 	}
+}
+
+// Validate checks that all required fields are properly set
+func (e *ComplianceFinding) Validate() error {
+	// No required string fields to validate
+	return nil
 }

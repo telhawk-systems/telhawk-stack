@@ -13,3 +13,9 @@ type KillChainPhase struct {
 	Phase   string `json:"phase,omitempty"`
 	PhaseId int    `json:"phase_id"`
 }
+
+// Validate checks that all required fields are properly set
+func (o *KillChainPhase) Validate() error {
+	// No required string fields to validate
+	return nil
+}

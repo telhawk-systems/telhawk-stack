@@ -27,3 +27,9 @@ type Whois struct {
 	Subdomains       []string          `json:"subdomains,omitempty"`
 	Subnet           string            `json:"subnet,omitempty"`
 }
+
+// Validate checks that all required fields are properly set
+func (o *Whois) Validate() error {
+	// No required string fields to validate
+	return nil
+}

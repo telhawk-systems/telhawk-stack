@@ -9,6 +9,7 @@
 package unmanned_systems
 
 import (
+	"fmt"
 	"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf"
 	"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf/objects"
 	"time"
@@ -59,4 +60,10 @@ func NewDroneFlightsActivity(activityID int) *DroneFlightsActivity {
 			},
 		},
 	}
+}
+
+// Validate checks that all required fields are properly set
+func (e *DroneFlightsActivity) Validate() error {
+	// No required string fields to validate
+	return nil
 }

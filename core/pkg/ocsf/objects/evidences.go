@@ -37,3 +37,9 @@ type Evidences struct {
 	Verdict            string                 `json:"verdict,omitempty"`
 	VerdictId          int                    `json:"verdict_id,omitempty"`
 }
+
+// Validate checks that all required fields are properly set
+func (o *Evidences) Validate() error {
+	// No required string fields to validate
+	return nil
+}

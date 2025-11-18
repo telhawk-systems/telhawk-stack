@@ -8,6 +8,8 @@
 
 package objects
 
+import "fmt"
+
 type RelatedEvent struct {
 	Object
 	Attacks       []*Attack         `json:"attacks,omitempty"`
@@ -31,4 +33,12 @@ type RelatedEvent struct {
 	TypeName      string            `json:"type_name,omitempty"`
 	TypeUid       int64             `json:"type_uid,omitempty"`
 	Uid           string            `json:"uid"`
+}
+
+// Validate checks that all required fields are properly set
+func (o *RelatedEvent) Validate() error {
+	if o.Uid == "" {
+		return fmt.Errorf("required field uid is empty")
+	}
+	return nil
 }

@@ -12,3 +12,9 @@ type KernelDriver struct {
 	Object
 	File *File `json:"file"`
 }
+
+// Validate checks that all required fields are properly set
+func (o *KernelDriver) Validate() error {
+	// No required string fields to validate
+	return nil
+}

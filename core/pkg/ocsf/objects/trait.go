@@ -8,10 +8,23 @@
 
 package objects
 
+import "fmt"
+
 type Trait struct {
 	Category string   `json:"category,omitempty"`
 	Name     string   `json:"name"`
 	Type     string   `json:"type,omitempty"`
 	Uid      string   `json:"uid"`
 	Values   []string `json:"values,omitempty"`
+}
+
+// Validate checks that all required fields are properly set
+func (o *Trait) Validate() error {
+	if o.Name == "" {
+		return fmt.Errorf("required field name is empty")
+	}
+	if o.Uid == "" {
+		return fmt.Errorf("required field uid is empty")
+	}
+	return nil
 }

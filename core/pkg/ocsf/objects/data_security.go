@@ -18,3 +18,9 @@ type DataSecurity struct {
 	PatternMatch         string  `json:"pattern_match,omitempty"`
 	Policy               *Policy `json:"policy,omitempty"`
 }
+
+// Validate checks that all required fields are properly set
+func (o *DataSecurity) Validate() error {
+	// No required string fields to validate
+	return nil
+}

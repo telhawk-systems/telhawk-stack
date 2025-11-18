@@ -1,0 +1,7 @@
+version: "1.0"
+defaults:
+  hec_url: http://localhost:8088
+  token: "simple-test-token-12345"
+  count: 100
+  time_spread: 1h
+  batch_size: 50

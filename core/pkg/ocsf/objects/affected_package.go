@@ -14,3 +14,9 @@ type AffectedPackage struct {
 	Path           string       `json:"path,omitempty"`
 	Remediation    *Remediation `json:"remediation,omitempty"`
 }
+
+// Validate checks that all required fields are properly set
+func (o *AffectedPackage) Validate() error {
+	// No required string fields to validate
+	return nil
+}

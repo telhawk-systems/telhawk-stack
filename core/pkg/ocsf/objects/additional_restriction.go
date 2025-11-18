@@ -14,3 +14,9 @@ type AdditionalRestriction struct {
 	Status   string  `json:"status,omitempty"`
 	StatusId int     `json:"status_id,omitempty"`
 }
+
+// Validate checks that all required fields are properly set
+func (o *AdditionalRestriction) Validate() error {
+	// No required string fields to validate
+	return nil
+}

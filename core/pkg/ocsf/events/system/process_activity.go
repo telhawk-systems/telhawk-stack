@@ -9,6 +9,7 @@
 package system
 
 import (
+	"fmt"
 	"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf"
 	"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf/objects"
 	"time"
@@ -60,4 +61,12 @@ func NewProcessActivity(activityID int) *ProcessActivity {
 			},
 		},
 	}
+}
+
+// Validate checks that all required fields are properly set
+func (e *ProcessActivity) Validate() error {
+	if e.LaunchType == "" {
+		return fmt.Errorf("required field launch_type is empty")
+	}
+	return nil
 }

@@ -8,7 +8,17 @@
 
 package objects
 
+import "fmt"
+
 type AnalysisTarget struct {
 	Name string `json:"name"`
 	Type string `json:"type,omitempty"`
+}
+
+// Validate checks that all required fields are properly set
+func (o *AnalysisTarget) Validate() error {
+	if o.Name == "" {
+		return fmt.Errorf("required field name is empty")
+	}
+	return nil
 }

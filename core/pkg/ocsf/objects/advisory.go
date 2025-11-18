@@ -8,6 +8,8 @@
 
 package objects
 
+import "fmt"
+
 type Advisory struct {
 	Object
 	AvgTimespan    *Timespan `json:"avg_timespan,omitempty"`
@@ -28,4 +30,12 @@ type Advisory struct {
 	SrcUrl         string    `json:"src_url,omitempty"`
 	Title          string    `json:"title,omitempty"`
 	Uid            string    `json:"uid"`
+}
+
+// Validate checks that all required fields are properly set
+func (o *Advisory) Validate() error {
+	if o.Uid == "" {
+		return fmt.Errorf("required field uid is empty")
+	}
+	return nil
 }

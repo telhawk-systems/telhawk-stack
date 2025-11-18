@@ -9,6 +9,7 @@
 package system
 
 import (
+	"fmt"
 	"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf"
 	"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf/objects"
 	"time"
@@ -66,4 +67,10 @@ func NewEventLogActvity(activityID int) *EventLogActvity {
 			},
 		},
 	}
+}
+
+// Validate checks that all required fields are properly set
+func (e *EventLogActvity) Validate() error {
+	// No required string fields to validate
+	return nil
 }

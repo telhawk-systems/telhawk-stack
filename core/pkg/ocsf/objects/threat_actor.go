@@ -8,9 +8,19 @@
 
 package objects
 
+import "fmt"
+
 type ThreatActor struct {
 	Object
 	Name   string `json:"name"`
 	Type   string `json:"type,omitempty"`
 	TypeId int    `json:"type_id,omitempty"`
+}
+
+// Validate checks that all required fields are properly set
+func (o *ThreatActor) Validate() error {
+	if o.Name == "" {
+		return fmt.Errorf("required field name is empty")
+	}
+	return nil
 }

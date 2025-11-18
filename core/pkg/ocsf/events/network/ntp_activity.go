@@ -9,6 +9,7 @@
 package network
 
 import (
+	"fmt"
 	"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf"
 	"time"
 )
@@ -59,4 +60,12 @@ func NewNtpActivity(activityID int) *NtpActivity {
 			},
 		},
 	}
+}
+
+// Validate checks that all required fields are properly set
+func (e *NtpActivity) Validate() error {
+	if e.Version == "" {
+		return fmt.Errorf("required field version is empty")
+	}
+	return nil
 }

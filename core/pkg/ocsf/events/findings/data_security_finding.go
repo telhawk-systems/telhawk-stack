@@ -9,6 +9,7 @@
 package findings
 
 import (
+	"fmt"
 	"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf"
 	"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf/objects"
 	"time"
@@ -71,4 +72,10 @@ func NewDataSecurityFinding(activityID int) *DataSecurityFinding {
 			},
 		},
 	}
+}
+
+// Validate checks that all required fields are properly set
+func (e *DataSecurityFinding) Validate() error {
+	// No required string fields to validate
+	return nil
 }

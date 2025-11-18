@@ -13,3 +13,9 @@ type Hassh struct {
 	Algorithm   string       `json:"algorithm,omitempty"`
 	Fingerprint *Fingerprint `json:"fingerprint"`
 }
+
+// Validate checks that all required fields are properly set
+func (o *Hassh) Validate() error {
+	// No required string fields to validate
+	return nil
+}

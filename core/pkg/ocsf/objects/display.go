@@ -16,3 +16,9 @@ type Display struct {
 	PhysicalWidth       int `json:"physical_width,omitempty"`
 	ScaleFactor         int `json:"scale_factor,omitempty"`
 }
+
+// Validate checks that all required fields are properly set
+func (o *Display) Validate() error {
+	// No required string fields to validate
+	return nil
+}

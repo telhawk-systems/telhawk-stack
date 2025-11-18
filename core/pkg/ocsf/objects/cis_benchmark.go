@@ -8,9 +8,19 @@
 
 package objects
 
+import "fmt"
+
 type CisBenchmark struct {
 	Object
 	CisControls []*CisControl `json:"cis_controls,omitempty"`
 	Desc        string        `json:"desc,omitempty"`
 	Name        string        `json:"name"`
+}
+
+// Validate checks that all required fields are properly set
+func (o *CisBenchmark) Validate() error {
+	if o.Name == "" {
+		return fmt.Errorf("required field name is empty")
+	}
+	return nil
 }

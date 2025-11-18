@@ -9,6 +9,7 @@
 package iam
 
 import (
+	"fmt"
 	"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf"
 	"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf/objects"
 	"time"
@@ -51,4 +52,10 @@ func NewUserAccess(activityID int) *UserAccess {
 			},
 		},
 	}
+}
+
+// Validate checks that all required fields are properly set
+func (e *UserAccess) Validate() error {
+	// No required string fields to validate
+	return nil
 }

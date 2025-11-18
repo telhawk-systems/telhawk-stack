@@ -8,6 +8,8 @@
 
 package objects
 
+import "fmt"
+
 type Cve struct {
 	Object
 	CreatedTime  int64    `json:"created_time,omitempty"`
@@ -24,4 +26,12 @@ type Cve struct {
 	Title        string   `json:"title,omitempty"`
 	Type         string   `json:"type,omitempty"`
 	Uid          string   `json:"uid"`
+}
+
+// Validate checks that all required fields are properly set
+func (o *Cve) Validate() error {
+	if o.Uid == "" {
+		return fmt.Errorf("required field uid is empty")
+	}
+	return nil
 }

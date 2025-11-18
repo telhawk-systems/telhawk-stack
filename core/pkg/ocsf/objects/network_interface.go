@@ -8,6 +8,8 @@
 
 package objects
 
+import "fmt"
+
 type NetworkInterface struct {
 	Hostname     string      `json:"hostname,omitempty"`
 	Ip           string      `json:"ip,omitempty"`
@@ -19,4 +21,12 @@ type NetworkInterface struct {
 	Type         string      `json:"type,omitempty"`
 	TypeId       int         `json:"type_id,omitempty"`
 	Uid          string      `json:"uid,omitempty"`
+}
+
+// Validate checks that all required fields are properly set
+func (o *NetworkInterface) Validate() error {
+	if o.Name == "" {
+		return fmt.Errorf("required field name is empty")
+	}
+	return nil
 }

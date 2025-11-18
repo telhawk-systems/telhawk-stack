@@ -8,6 +8,8 @@
 
 package objects
 
+import "fmt"
+
 type Cloud struct {
 	Object
 	Account        *Account      `json:"account,omitempty"`
@@ -17,4 +19,12 @@ type Cloud struct {
 	Provider       string        `json:"provider"`
 	Region         string        `json:"region,omitempty"`
 	Zone           string        `json:"zone,omitempty"`
+}
+
+// Validate checks that all required fields are properly set
+func (o *Cloud) Validate() error {
+	if o.Provider == "" {
+		return fmt.Errorf("required field provider is empty")
+	}
+	return nil
 }

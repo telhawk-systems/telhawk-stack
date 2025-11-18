@@ -8,6 +8,8 @@
 
 package objects
 
+import "fmt"
+
 type SoftwareComponent struct {
 	Object
 	Author           string       `json:"author,omitempty"`
@@ -21,4 +23,15 @@ type SoftwareComponent struct {
 	Type             string       `json:"type,omitempty"`
 	TypeId           int          `json:"type_id,omitempty"`
 	Version          string       `json:"version"`
+}
+
+// Validate checks that all required fields are properly set
+func (o *SoftwareComponent) Validate() error {
+	if o.Version == "" {
+		return fmt.Errorf("required field version is empty")
+	}
+	if o.Name == "" {
+		return fmt.Errorf("required field name is empty")
+	}
+	return nil
 }

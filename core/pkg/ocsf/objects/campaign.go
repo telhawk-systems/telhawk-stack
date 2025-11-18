@@ -8,7 +8,17 @@
 
 package objects
 
+import "fmt"
+
 type Campaign struct {
 	Object
 	Name string `json:"name"`
+}
+
+// Validate checks that all required fields are properly set
+func (o *Campaign) Validate() error {
+	if o.Name == "" {
+		return fmt.Errorf("required field name is empty")
+	}
+	return nil
 }

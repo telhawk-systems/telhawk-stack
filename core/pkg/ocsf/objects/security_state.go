@@ -13,3 +13,9 @@ type SecurityState struct {
 	State   string `json:"state,omitempty"`
 	StateId int    `json:"state_id,omitempty"`
 }
+
+// Validate checks that all required fields are properly set
+func (o *SecurityState) Validate() error {
+	// No required string fields to validate
+	return nil
+}

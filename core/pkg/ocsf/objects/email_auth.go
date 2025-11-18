@@ -18,3 +18,9 @@ type EmailAuth struct {
 	DmarcPolicy   string `json:"dmarc_policy,omitempty"`
 	Spf           string `json:"spf,omitempty"`
 }
+
+// Validate checks that all required fields are properly set
+func (o *EmailAuth) Validate() error {
+	// No required string fields to validate
+	return nil
+}

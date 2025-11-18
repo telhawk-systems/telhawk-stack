@@ -8,6 +8,8 @@
 
 package objects
 
+import "fmt"
+
 type DnsAnswer struct {
 	Class   string   `json:"class,omitempty"`
 	FlagIds []int    `json:"flag_ids,omitempty"`
@@ -15,4 +17,12 @@ type DnsAnswer struct {
 	Rdata   string   `json:"rdata"`
 	Ttl     int      `json:"ttl,omitempty"`
 	Type    string   `json:"type,omitempty"`
+}
+
+// Validate checks that all required fields are properly set
+func (o *DnsAnswer) Validate() error {
+	if o.Rdata == "" {
+		return fmt.Errorf("required field rdata is empty")
+	}
+	return nil
 }

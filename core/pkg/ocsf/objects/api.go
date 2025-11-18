@@ -8,6 +8,8 @@
 
 package objects
 
+import "fmt"
+
 type Api struct {
 	Object
 	Group     *Group    `json:"group,omitempty"`
@@ -16,4 +18,12 @@ type Api struct {
 	Response  *Response `json:"response,omitempty"`
 	Service   *Service  `json:"service,omitempty"`
 	Version   string    `json:"version,omitempty"`
+}
+
+// Validate checks that all required fields are properly set
+func (o *Api) Validate() error {
+	if o.Operation == "" {
+		return fmt.Errorf("required field operation is empty")
+	}
+	return nil
 }

@@ -8,6 +8,8 @@
 
 package objects
 
+import "fmt"
+
 type Policy struct {
 	Data      string `json:"data,omitempty"`
 	Desc      string `json:"desc,omitempty"`
@@ -17,4 +19,15 @@ type Policy struct {
 	Type      string `json:"type,omitempty"`
 	Uid       string `json:"uid"`
 	Version   string `json:"version,omitempty"`
+}
+
+// Validate checks that all required fields are properly set
+func (o *Policy) Validate() error {
+	if o.Name == "" {
+		return fmt.Errorf("required field name is empty")
+	}
+	if o.Uid == "" {
+		return fmt.Errorf("required field uid is empty")
+	}
+	return nil
 }

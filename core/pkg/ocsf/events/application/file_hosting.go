@@ -9,6 +9,7 @@
 package application
 
 import (
+	"fmt"
 	"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf"
 	"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf/objects"
 	"time"
@@ -77,4 +78,10 @@ func NewFileHosting(activityID int) *FileHosting {
 			},
 		},
 	}
+}
+
+// Validate checks that all required fields are properly set
+func (e *FileHosting) Validate() error {
+	// No required string fields to validate
+	return nil
 }

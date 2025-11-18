@@ -8,10 +8,23 @@
 
 package objects
 
+import "fmt"
+
 type RpcInterface struct {
 	Object
 	AckReason int    `json:"ack_reason,omitempty"`
 	AckResult int    `json:"ack_result,omitempty"`
 	Uuid      string `json:"uuid"`
 	Version   string `json:"version"`
+}
+
+// Validate checks that all required fields are properly set
+func (o *RpcInterface) Validate() error {
+	if o.Uuid == "" {
+		return fmt.Errorf("required field uuid is empty")
+	}
+	if o.Version == "" {
+		return fmt.Errorf("required field version is empty")
+	}
+	return nil
 }

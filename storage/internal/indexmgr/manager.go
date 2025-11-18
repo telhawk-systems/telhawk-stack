@@ -250,7 +250,7 @@ func (m *IndexManager) getOCSFMappings() map[string]interface{} {
 						"type": "ip",
 					},
 					"port": map[string]interface{}{
-						"type": "integer",
+						"type": "keyword",
 					},
 					"hostname": map[string]interface{}{
 						"type": "keyword",
@@ -264,7 +264,7 @@ func (m *IndexManager) getOCSFMappings() map[string]interface{} {
 						"type": "ip",
 					},
 					"port": map[string]interface{}{
-						"type": "integer",
+						"type": "keyword",
 					},
 					"hostname": map[string]interface{}{
 						"type": "keyword",

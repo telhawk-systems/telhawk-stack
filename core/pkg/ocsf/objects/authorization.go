@@ -13,3 +13,9 @@ type Authorization struct {
 	Decision string  `json:"decision,omitempty"`
 	Policy   *Policy `json:"policy,omitempty"`
 }
+
+// Validate checks that all required fields are properly set
+func (o *Authorization) Validate() error {
+	// No required string fields to validate
+	return nil
+}

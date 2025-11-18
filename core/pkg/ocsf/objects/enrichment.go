@@ -8,6 +8,8 @@
 
 package objects
 
+import "fmt"
+
 type Enrichment struct {
 	Object
 	CreatedTime int64       `json:"created_time,omitempty"`
@@ -20,4 +22,18 @@ type Enrichment struct {
 	SrcUrl      string      `json:"src_url,omitempty"`
 	Type        string      `json:"type,omitempty"`
 	Value       string      `json:"value"`
+}
+
+// Validate checks that all required fields are properly set
+func (o *Enrichment) Validate() error {
+	if o.Name == "" {
+		return fmt.Errorf("required field name is empty")
+	}
+	if o.Value == "" {
+		return fmt.Errorf("required field value is empty")
+	}
+	if o.Data == "" {
+		return fmt.Errorf("required field data is empty")
+	}
+	return nil
 }

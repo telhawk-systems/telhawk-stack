@@ -26,3 +26,9 @@ type ResourceDetails struct {
 	Version              string   `json:"version,omitempty"`
 	Zone                 string   `json:"zone,omitempty"`
 }
+
+// Validate checks that all required fields are properly set
+func (o *ResourceDetails) Validate() error {
+	// No required string fields to validate
+	return nil
+}

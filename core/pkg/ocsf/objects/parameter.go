@@ -14,3 +14,9 @@ type Parameter struct {
 	PostValue string `json:"post_value,omitempty"`
 	PreValue  string `json:"pre_value,omitempty"`
 }
+
+// Validate checks that all required fields are properly set
+func (o *Parameter) Validate() error {
+	// No required string fields to validate
+	return nil
+}

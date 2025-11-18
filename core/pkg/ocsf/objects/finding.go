@@ -8,6 +8,8 @@
 
 package objects
 
+import "fmt"
+
 type Finding struct {
 	Object
 	CreatedTime    int64           `json:"created_time,omitempty"`
@@ -24,4 +26,15 @@ type Finding struct {
 	Title          string          `json:"title"`
 	Types          []string        `json:"types,omitempty"`
 	Uid            string          `json:"uid"`
+}
+
+// Validate checks that all required fields are properly set
+func (o *Finding) Validate() error {
+	if o.Title == "" {
+		return fmt.Errorf("required field title is empty")
+	}
+	if o.Uid == "" {
+		return fmt.Errorf("required field uid is empty")
+	}
+	return nil
 }

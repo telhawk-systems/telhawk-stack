@@ -8,9 +8,19 @@
 
 package objects
 
+import "fmt"
+
 type LongString struct {
 	Object
 	IsTruncated     bool   `json:"is_truncated,omitempty"`
 	UntruncatedSize int    `json:"untruncated_size,omitempty"`
 	Value           string `json:"value"`
+}
+
+// Validate checks that all required fields are properly set
+func (o *LongString) Validate() error {
+	if o.Value == "" {
+		return fmt.Errorf("required field value is empty")
+	}
+	return nil
 }

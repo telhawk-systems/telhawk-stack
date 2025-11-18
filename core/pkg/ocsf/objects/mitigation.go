@@ -8,9 +8,22 @@
 
 package objects
 
+import "fmt"
+
 type Mitigation struct {
 	Countermeasures []*D3fend `json:"countermeasures,omitempty"`
 	Name            string    `json:"name"`
 	SrcUrl          string    `json:"src_url,omitempty"`
 	Uid             string    `json:"uid"`
+}
+
+// Validate checks that all required fields are properly set
+func (o *Mitigation) Validate() error {
+	if o.Name == "" {
+		return fmt.Errorf("required field name is empty")
+	}
+	if o.Uid == "" {
+		return fmt.Errorf("required field uid is empty")
+	}
+	return nil
 }

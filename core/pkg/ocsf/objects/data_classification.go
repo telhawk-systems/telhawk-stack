@@ -25,3 +25,9 @@ type DataClassification struct {
 	Total             int                 `json:"total,omitempty"`
 	Uid               string              `json:"uid,omitempty"`
 }
+
+// Validate checks that all required fields are properly set
+func (o *DataClassification) Validate() error {
+	// No required string fields to validate
+	return nil
+}

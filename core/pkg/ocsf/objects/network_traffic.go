@@ -21,3 +21,9 @@ type NetworkTraffic struct {
 	PacketsIn   int64 `json:"packets_in,omitempty"`
 	PacketsOut  int64 `json:"packets_out,omitempty"`
 }
+
+// Validate checks that all required fields are properly set
+func (o *NetworkTraffic) Validate() error {
+	// No required string fields to validate
+	return nil
+}

@@ -9,6 +9,7 @@
 package application
 
 import (
+	"fmt"
 	"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf"
 	"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf/objects"
 	"time"
@@ -55,4 +56,10 @@ func NewWebResourceAccessActivity(activityID int) *WebResourceAccessActivity {
 			},
 		},
 	}
+}
+
+// Validate checks that all required fields are properly set
+func (e *WebResourceAccessActivity) Validate() error {
+	// No required string fields to validate
+	return nil
 }

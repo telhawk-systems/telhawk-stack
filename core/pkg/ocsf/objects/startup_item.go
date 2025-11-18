@@ -8,6 +8,8 @@
 
 package objects
 
+import "fmt"
+
 type StartupItem struct {
 	Driver      *KernelDriver `json:"driver,omitempty"`
 	Job         *Job          `json:"job,omitempty"`
@@ -21,4 +23,12 @@ type StartupItem struct {
 	StartTypeId int           `json:"start_type_id"`
 	Type        string        `json:"type,omitempty"`
 	TypeId      int           `json:"type_id,omitempty"`
+}
+
+// Validate checks that all required fields are properly set
+func (o *StartupItem) Validate() error {
+	if o.Name == "" {
+		return fmt.Errorf("required field name is empty")
+	}
+	return nil
 }

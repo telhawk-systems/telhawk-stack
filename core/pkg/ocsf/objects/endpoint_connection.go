@@ -13,3 +13,9 @@ type EndpointConnection struct {
 	Code            int              `json:"code,omitempty"`
 	NetworkEndpoint *NetworkEndpoint `json:"network_endpoint,omitempty"`
 }
+
+// Validate checks that all required fields are properly set
+func (o *EndpointConnection) Validate() error {
+	// No required string fields to validate
+	return nil
+}

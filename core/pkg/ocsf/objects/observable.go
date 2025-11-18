@@ -18,3 +18,9 @@ type Observable struct {
 	TypeUid    int64       `json:"type_uid,omitempty"`
 	Value      string      `json:"value,omitempty"`
 }
+
+// Validate checks that all required fields are properly set
+func (o *Observable) Validate() error {
+	// No required string fields to validate
+	return nil
+}

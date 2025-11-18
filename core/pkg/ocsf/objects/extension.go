@@ -8,8 +8,24 @@
 
 package objects
 
+import "fmt"
+
 type Extension struct {
 	Name    string `json:"name"`
 	Uid     string `json:"uid"`
 	Version string `json:"version"`
+}
+
+// Validate checks that all required fields are properly set
+func (o *Extension) Validate() error {
+	if o.Name == "" {
+		return fmt.Errorf("required field name is empty")
+	}
+	if o.Uid == "" {
+		return fmt.Errorf("required field uid is empty")
+	}
+	if o.Version == "" {
+		return fmt.Errorf("required field version is empty")
+	}
+	return nil
 }

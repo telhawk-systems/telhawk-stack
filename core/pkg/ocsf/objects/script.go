@@ -19,3 +19,9 @@ type Script struct {
 	TypeId        int            `json:"type_id"`
 	Uid           string         `json:"uid,omitempty"`
 }
+
+// Validate checks that all required fields are properly set
+func (o *Script) Validate() error {
+	// No required string fields to validate
+	return nil
+}

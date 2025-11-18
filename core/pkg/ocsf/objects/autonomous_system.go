@@ -13,3 +13,9 @@ type AutonomousSystem struct {
 	Name   string `json:"name,omitempty"`
 	Number int    `json:"number,omitempty"`
 }
+
+// Validate checks that all required fields are properly set
+func (o *AutonomousSystem) Validate() error {
+	// No required string fields to validate
+	return nil
+}

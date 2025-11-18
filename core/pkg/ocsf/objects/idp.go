@@ -24,3 +24,9 @@ type Idp struct {
 	Uid          string        `json:"uid,omitempty"`
 	UrlString    string        `json:"url_string,omitempty"`
 }
+
+// Validate checks that all required fields are properly set
+func (o *Idp) Validate() error {
+	// No required string fields to validate
+	return nil
+}

@@ -16,3 +16,9 @@ type Assessment struct {
 	Policy        *Policy `json:"policy,omitempty"`
 	Uid           string  `json:"uid,omitempty"`
 }
+
+// Validate checks that all required fields are properly set
+func (o *Assessment) Validate() error {
+	// No required string fields to validate
+	return nil
+}

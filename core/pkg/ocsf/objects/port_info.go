@@ -8,9 +8,19 @@
 
 package objects
 
+import "fmt"
+
 type PortInfo struct {
 	Object
 	Port         string `json:"port"`
 	ProtocolName string `json:"protocol_name,omitempty"`
 	ProtocolNum  int    `json:"protocol_num,omitempty"`
+}
+
+// Validate checks that all required fields are properly set
+func (o *PortInfo) Validate() error {
+	if o.Port == "" {
+		return fmt.Errorf("required field port is empty")
+	}
+	return nil
 }

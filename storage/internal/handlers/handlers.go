@@ -138,6 +138,11 @@ func (h *StorageHandler) indexEvents(ctx context.Context, events []map[string]in
 			continue
 		}
 
+		// DEBUG: Log JSON being sent to OpenSearch (controlled by DEBUG_DUMP_JSON env var)
+		if os.Getenv("DEBUG_DUMP_JSON") == "true" {
+			log.Printf("=== DEBUG: JSON being indexed to OpenSearch ===\n%s\n=== END DEBUG ===", string(data))
+		}
+
 		err = bi.Add(ctx, opensearchutil.BulkIndexerItem{
 			Action: "index",
 			Body:   bytes.NewReader(data),

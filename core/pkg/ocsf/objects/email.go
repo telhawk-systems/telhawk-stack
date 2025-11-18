@@ -39,3 +39,9 @@ type Email struct {
 	Urls             []*Url        `json:"urls,omitempty"`
 	XOriginatingIp   []string      `json:"x_originating_ip,omitempty"`
 }
+
+// Validate checks that all required fields are properly set
+func (o *Email) Validate() error {
+	// No required string fields to validate
+	return nil
+}

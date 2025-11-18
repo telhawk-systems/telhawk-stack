@@ -14,3 +14,9 @@ type TlsExtension struct {
 	Type   string `json:"type,omitempty"`
 	TypeId int    `json:"type_id"`
 }
+
+// Validate checks that all required fields are properly set
+func (o *TlsExtension) Validate() error {
+	// No required string fields to validate
+	return nil
+}

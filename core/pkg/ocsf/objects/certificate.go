@@ -8,6 +8,8 @@
 
 package objects
 
+import "fmt"
+
 type Certificate struct {
 	Object
 	CreatedTime    int64          `json:"created_time,omitempty"`
@@ -20,4 +22,15 @@ type Certificate struct {
 	Subject        string         `json:"subject,omitempty"`
 	Uid            string         `json:"uid,omitempty"`
 	Version        string         `json:"version,omitempty"`
+}
+
+// Validate checks that all required fields are properly set
+func (o *Certificate) Validate() error {
+	if o.SerialNumber == "" {
+		return fmt.Errorf("required field serial_number is empty")
+	}
+	if o.Issuer == "" {
+		return fmt.Errorf("required field issuer is empty")
+	}
+	return nil
 }

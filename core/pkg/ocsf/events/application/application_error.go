@@ -9,6 +9,7 @@
 package application
 
 import (
+	"fmt"
 	"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf"
 	"time"
 )
@@ -47,4 +48,12 @@ func NewApplicationError(activityID int) *ApplicationError {
 			},
 		},
 	}
+}
+
+// Validate checks that all required fields are properly set
+func (e *ApplicationError) Validate() error {
+	if e.Message == "" {
+		return fmt.Errorf("required field message is empty")
+	}
+	return nil
 }

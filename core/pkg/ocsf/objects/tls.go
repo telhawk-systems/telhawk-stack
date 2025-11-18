@@ -8,6 +8,8 @@
 
 package objects
 
+import "fmt"
+
 type Tls struct {
 	Object
 	Alert            int             `json:"alert,omitempty"`
@@ -25,4 +27,12 @@ type Tls struct {
 	Sni              string          `json:"sni,omitempty"`
 	TlsExtensionList []*TlsExtension `json:"tls_extension_list,omitempty"`
 	Version          string          `json:"version"`
+}
+
+// Validate checks that all required fields are properly set
+func (o *Tls) Validate() error {
+	if o.Version == "" {
+		return fmt.Errorf("required field version is empty")
+	}
+	return nil
 }

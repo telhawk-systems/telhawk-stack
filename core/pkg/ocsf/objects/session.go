@@ -24,3 +24,9 @@ type Session struct {
 	UidAlt           string `json:"uid_alt,omitempty"`
 	Uuid             string `json:"uuid,omitempty"`
 }
+
+// Validate checks that all required fields are properly set
+func (o *Session) Validate() error {
+	// No required string fields to validate
+	return nil
+}

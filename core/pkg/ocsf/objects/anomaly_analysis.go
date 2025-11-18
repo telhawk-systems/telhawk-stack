@@ -13,3 +13,9 @@ type AnomalyAnalysis struct {
 	Anomalies       []*Anomaly        `json:"anomalies"`
 	Baselines       []*Baseline       `json:"baselines,omitempty"`
 }
+
+// Validate checks that all required fields are properly set
+func (o *AnomalyAnalysis) Validate() error {
+	// No required string fields to validate
+	return nil
+}

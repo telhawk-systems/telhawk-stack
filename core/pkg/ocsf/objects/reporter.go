@@ -15,3 +15,9 @@ type Reporter struct {
 	Org      *Organization `json:"org,omitempty"`
 	Uid      string        `json:"uid,omitempty"`
 }
+
+// Validate checks that all required fields are properly set
+func (o *Reporter) Validate() error {
+	// No required string fields to validate
+	return nil
+}

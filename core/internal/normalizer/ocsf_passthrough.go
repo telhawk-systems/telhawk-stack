@@ -68,6 +68,18 @@ func (OCSFPassthroughNormalizer) Normalize(ctx context.Context, envelope *model.
 		return nil, fmt.Errorf("unmarshal ocsf event: %w", err)
 	}
 
+	// Validate endpoints have required fields
+	if event.SrcEndpoint != nil {
+		if err := event.SrcEndpoint.Validate(); err != nil {
+			return nil, fmt.Errorf("invalid src_endpoint: %w", err)
+		}
+	}
+	if event.DstEndpoint != nil {
+		if err := event.DstEndpoint.Validate(); err != nil {
+			return nil, fmt.Errorf("invalid dst_endpoint: %w", err)
+		}
+	}
+
 	// Set/override envelope metadata
 	event.ObservedTime = envelope.ReceivedAt
 	if event.Raw.Data == nil {

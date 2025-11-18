@@ -17,3 +17,9 @@ type Attack struct {
 	Technique    *Technique    `json:"technique,omitempty"`
 	Version      string        `json:"version,omitempty"`
 }
+
+// Validate checks that all required fields are properly set
+func (o *Attack) Validate() error {
+	// No required string fields to validate
+	return nil
+}

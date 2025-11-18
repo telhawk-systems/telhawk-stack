@@ -13,3 +13,9 @@ type VendorAttributes struct {
 	Severity   string `json:"severity,omitempty"`
 	SeverityId int    `json:"severity_id,omitempty"`
 }
+
+// Validate checks that all required fields are properly set
+func (o *VendorAttributes) Validate() error {
+	// No required string fields to validate
+	return nil
+}

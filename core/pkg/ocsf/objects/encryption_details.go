@@ -16,3 +16,9 @@ type EncryptionDetails struct {
 	KeyUid      string `json:"key_uid,omitempty"`
 	Type        string `json:"type,omitempty"`
 }
+
+// Validate checks that all required fields are properly set
+func (o *EncryptionDetails) Validate() error {
+	// No required string fields to validate
+	return nil
+}

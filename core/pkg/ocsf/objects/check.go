@@ -20,3 +20,9 @@ type Check struct {
 	Uid        string   `json:"uid,omitempty"`
 	Version    string   `json:"version,omitempty"`
 }
+
+// Validate checks that all required fields are properly set
+func (o *Check) Validate() error {
+	// No required string fields to validate
+	return nil
+}

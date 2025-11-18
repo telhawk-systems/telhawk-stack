@@ -8,6 +8,8 @@
 
 package objects
 
+import "fmt"
+
 type ManagedEntity struct {
 	Data     string        `json:"data,omitempty"`
 	Device   *Device       `json:"device,omitempty"`
@@ -22,4 +24,15 @@ type ManagedEntity struct {
 	Uid      string        `json:"uid"`
 	User     *User         `json:"user,omitempty"`
 	Version  string        `json:"version,omitempty"`
+}
+
+// Validate checks that all required fields are properly set
+func (o *ManagedEntity) Validate() error {
+	if o.Name == "" {
+		return fmt.Errorf("required field name is empty")
+	}
+	if o.Uid == "" {
+		return fmt.Errorf("required field uid is empty")
+	}
+	return nil
 }

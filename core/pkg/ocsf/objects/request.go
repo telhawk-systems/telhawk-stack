@@ -8,10 +8,20 @@
 
 package objects
 
+import "fmt"
+
 type Request struct {
 	Object
 	Containers []*Container `json:"containers,omitempty"`
 	Data       string       `json:"data,omitempty"`
 	Flags      []string     `json:"flags,omitempty"`
 	Uid        string       `json:"uid"`
+}
+
+// Validate checks that all required fields are properly set
+func (o *Request) Validate() error {
+	if o.Uid == "" {
+		return fmt.Errorf("required field uid is empty")
+	}
+	return nil
 }

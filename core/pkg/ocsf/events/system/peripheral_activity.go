@@ -9,6 +9,7 @@
 package system
 
 import (
+	"fmt"
 	"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf"
 	"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf/objects"
 	"time"
@@ -51,4 +52,10 @@ func NewPeripheralActivity(activityID int) *PeripheralActivity {
 			},
 		},
 	}
+}
+
+// Validate checks that all required fields are properly set
+func (e *PeripheralActivity) Validate() error {
+	// No required string fields to validate
+	return nil
 }

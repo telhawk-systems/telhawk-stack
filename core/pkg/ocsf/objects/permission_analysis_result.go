@@ -16,3 +16,9 @@ type PermissionAnalysisResult struct {
 	UnusedPrivilegesCount int               `json:"unused_privileges_count,omitempty"`
 	UnusedServicesCount   int               `json:"unused_services_count,omitempty"`
 }
+
+// Validate checks that all required fields are properly set
+func (o *PermissionAnalysisResult) Validate() error {
+	// No required string fields to validate
+	return nil
+}

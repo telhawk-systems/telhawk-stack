@@ -8,6 +8,8 @@
 
 package objects
 
+import "fmt"
+
 type Graph struct {
 	Desc            string  `json:"desc,omitempty"`
 	Edges           []*Edge `json:"edges,omitempty"`
@@ -18,4 +20,15 @@ type Graph struct {
 	QueryLanguageId int     `json:"query_language_id,omitempty"`
 	Type            string  `json:"type,omitempty"`
 	Uid             string  `json:"uid"`
+}
+
+// Validate checks that all required fields are properly set
+func (o *Graph) Validate() error {
+	if o.Name == "" {
+		return fmt.Errorf("required field name is empty")
+	}
+	if o.Uid == "" {
+		return fmt.Errorf("required field uid is empty")
+	}
+	return nil
 }

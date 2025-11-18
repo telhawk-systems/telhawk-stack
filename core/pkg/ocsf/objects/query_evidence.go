@@ -29,3 +29,9 @@ type QueryEvidence struct {
 	User              *User                  `json:"user,omitempty"`
 	Users             []*User                `json:"users,omitempty"`
 }
+
+// Validate checks that all required fields are properly set
+func (o *QueryEvidence) Validate() error {
+	// No required string fields to validate
+	return nil
+}

@@ -168,7 +168,7 @@ func (g *RuleBasedGenerator) generateForValueCount() ([]HECEvent, error) {
 		classUID, ok := event["class_uid"].(float64)
 		if ok && int(classUID) == 4001 { // Network Activity
 			log.Printf("  DEBUG: Enriching network endpoints for OCSF compliance")
-			// Ensure src_endpoint has both IP and port
+			// Ensure src_endpoint has all required fields (ip, port, name, uid)
 			if srcEp, ok := event["src_endpoint"].(map[string]interface{}); ok {
 				if _, hasIP := srcEp["ip"]; !hasIP {
 					srcEp["ip"] = g.generateValueForField(".src_endpoint.ip")
@@ -176,14 +176,26 @@ func (g *RuleBasedGenerator) generateForValueCount() ([]HECEvent, error) {
 				if _, hasPort := srcEp["port"]; !hasPort {
 					srcEp["port"] = g.generateValueForField(".src_endpoint.port")
 				}
+				if _, hasName := srcEp["name"]; !hasName {
+					srcEp["name"] = ""
+				}
+				if _, hasUID := srcEp["uid"]; !hasUID {
+					srcEp["uid"] = ""
+				}
 			}
-			// Ensure dst_endpoint has both IP and port
+			// Ensure dst_endpoint has all required fields (ip, port, name, uid)
 			if dstEp, ok := event["dst_endpoint"].(map[string]interface{}); ok {
 				if _, hasIP := dstEp["ip"]; !hasIP {
 					dstEp["ip"] = g.generateValueForField(".dst_endpoint.ip")
 				}
 				if _, hasPort := dstEp["port"]; !hasPort {
 					dstEp["port"] = g.generateValueForField(".dst_endpoint.port")
+				}
+				if _, hasName := dstEp["name"]; !hasName {
+					dstEp["name"] = ""
+				}
+				if _, hasUID := dstEp["uid"]; !hasUID {
+					dstEp["uid"] = ""
 				}
 			}
 		}

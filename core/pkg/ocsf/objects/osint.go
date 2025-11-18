@@ -8,6 +8,8 @@
 
 package objects
 
+import "fmt"
+
 type Osint struct {
 	Object
 	Answers                []*DnsAnswer        `json:"answers,omitempty"`
@@ -57,4 +59,12 @@ type Osint struct {
 	VendorName             string              `json:"vendor_name,omitempty"`
 	Vulnerabilities        []*Vulnerability    `json:"vulnerabilities,omitempty"`
 	Whois                  *Whois              `json:"whois,omitempty"`
+}
+
+// Validate checks that all required fields are properly set
+func (o *Osint) Validate() error {
+	if o.Value == "" {
+		return fmt.Errorf("required field value is empty")
+	}
+	return nil
 }

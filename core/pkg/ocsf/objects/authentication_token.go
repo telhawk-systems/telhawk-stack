@@ -18,3 +18,9 @@ type AuthenticationToken struct {
 	Type              string             `json:"type,omitempty"`
 	TypeId            int                `json:"type_id,omitempty"`
 }
+
+// Validate checks that all required fields are properly set
+func (o *AuthenticationToken) Validate() error {
+	// No required string fields to validate
+	return nil
+}

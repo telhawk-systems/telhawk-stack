@@ -9,6 +9,7 @@
 package remediation
 
 import (
+	"fmt"
 	"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf"
 	"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf/objects"
 	"time"
@@ -43,4 +44,10 @@ func NewNetworkRemediationActivity(activityID int) *NetworkRemediationActivity {
 			},
 		},
 	}
+}
+
+// Validate checks that all required fields are properly set
+func (e *NetworkRemediationActivity) Validate() error {
+	// No required string fields to validate
+	return nil
 }

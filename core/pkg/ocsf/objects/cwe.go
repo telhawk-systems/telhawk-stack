@@ -8,9 +8,19 @@
 
 package objects
 
+import "fmt"
+
 type Cwe struct {
 	Object
 	Caption string `json:"caption,omitempty"`
 	SrcUrl  string `json:"src_url,omitempty"`
 	Uid     string `json:"uid"`
+}
+
+// Validate checks that all required fields are properly set
+func (o *Cwe) Validate() error {
+	if o.Uid == "" {
+		return fmt.Errorf("required field uid is empty")
+	}
+	return nil
 }

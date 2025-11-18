@@ -22,3 +22,9 @@ type Url struct {
 	Subdomain    string   `json:"subdomain,omitempty"`
 	UrlString    string   `json:"url_string,omitempty"`
 }
+
+// Validate checks that all required fields are properly set
+func (o *Url) Validate() error {
+	// No required string fields to validate
+	return nil
+}

@@ -9,6 +9,7 @@
 package application
 
 import (
+	"fmt"
 	"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf"
 	"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf/objects"
 	"time"
@@ -66,4 +67,10 @@ func NewDatastoreActivity(activityID int) *DatastoreActivity {
 			},
 		},
 	}
+}
+
+// Validate checks that all required fields are properly set
+func (e *DatastoreActivity) Validate() error {
+	// No required string fields to validate
+	return nil
 }

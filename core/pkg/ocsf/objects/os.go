@@ -8,6 +8,8 @@
 
 package objects
 
+import "fmt"
+
 type Os struct {
 	Object
 	Build         string `json:"build,omitempty"`
@@ -23,4 +25,12 @@ type Os struct {
 	Type          string `json:"type,omitempty"`
 	TypeId        int    `json:"type_id"`
 	Version       string `json:"version,omitempty"`
+}
+
+// Validate checks that all required fields are properly set
+func (o *Os) Validate() error {
+	if o.Name == "" {
+		return fmt.Errorf("required field name is empty")
+	}
+	return nil
 }

@@ -23,3 +23,9 @@ type Container struct {
 	Tags          []*KeyValueObject `json:"tags,omitempty"`
 	Uid           string            `json:"uid,omitempty"`
 }
+
+// Validate checks that all required fields are properly set
+func (o *Container) Validate() error {
+	// No required string fields to validate
+	return nil
+}

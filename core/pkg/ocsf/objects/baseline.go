@@ -8,10 +8,20 @@
 
 package objects
 
+import "fmt"
+
 type Baseline struct {
 	Object
 	ObservationParameter string         `json:"observation_parameter"`
 	ObservationType      string         `json:"observation_type,omitempty"`
 	Observations         []*Observation `json:"observations"`
 	ObservedPattern      string         `json:"observed_pattern,omitempty"`
+}
+
+// Validate checks that all required fields are properly set
+func (o *Baseline) Validate() error {
+	if o.ObservationParameter == "" {
+		return fmt.Errorf("required field observation_parameter is empty")
+	}
+	return nil
 }

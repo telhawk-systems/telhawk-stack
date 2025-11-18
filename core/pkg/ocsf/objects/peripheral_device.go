@@ -8,6 +8,8 @@
 
 package objects
 
+import "fmt"
+
 type PeripheralDevice struct {
 	Class        string   `json:"class,omitempty"`
 	Model        string   `json:"model,omitempty"`
@@ -18,4 +20,12 @@ type PeripheralDevice struct {
 	Uid          string   `json:"uid,omitempty"`
 	VendorIdList []string `json:"vendor_id_list,omitempty"`
 	VendorName   string   `json:"vendor_name,omitempty"`
+}
+
+// Validate checks that all required fields are properly set
+func (o *PeripheralDevice) Validate() error {
+	if o.Name == "" {
+		return fmt.Errorf("required field name is empty")
+	}
+	return nil
 }

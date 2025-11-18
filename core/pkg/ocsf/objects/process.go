@@ -27,3 +27,9 @@ type Process struct {
 	WorkingDirectory     string                 `json:"working_directory,omitempty"`
 	Xattributes          *Object                `json:"xattributes,omitempty"`
 }
+
+// Validate checks that all required fields are properly set
+func (o *Process) Validate() error {
+	// No required string fields to validate
+	return nil
+}

@@ -8,6 +8,8 @@
 
 package objects
 
+import "fmt"
+
 type Remediation struct {
 	Object
 	CisControls   []*CisControl `json:"cis_controls,omitempty"`
@@ -15,4 +17,12 @@ type Remediation struct {
 	KbArticleList []*KbArticle  `json:"kb_article_list,omitempty"`
 	KbArticles    []string      `json:"kb_articles,omitempty"`
 	References    []string      `json:"references,omitempty"`
+}
+
+// Validate checks that all required fields are properly set
+func (o *Remediation) Validate() error {
+	if o.Desc == "" {
+		return fmt.Errorf("required field desc is empty")
+	}
+	return nil
 }

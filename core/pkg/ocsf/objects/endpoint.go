@@ -8,6 +8,8 @@
 
 package objects
 
+import "fmt"
+
 type Endpoint struct {
 	AgentList     []*Agent      `json:"agent_list,omitempty"`
 	Domain        string        `json:"domain,omitempty"`
@@ -29,4 +31,15 @@ type Endpoint struct {
 	VlanUid       string        `json:"vlan_uid,omitempty"`
 	VpcUid        string        `json:"vpc_uid,omitempty"`
 	Zone          string        `json:"zone,omitempty"`
+}
+
+// Validate checks that all required fields are properly set
+func (o *Endpoint) Validate() error {
+	if o.Uid == "" {
+		return fmt.Errorf("required field uid is empty")
+	}
+	if o.Name == "" {
+		return fmt.Errorf("required field name is empty")
+	}
+	return nil
 }

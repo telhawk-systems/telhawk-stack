@@ -8,6 +8,8 @@
 
 package objects
 
+import "fmt"
+
 type Trace struct {
 	Object
 	Duration  int64    `json:"duration,omitempty"`
@@ -17,4 +19,12 @@ type Trace struct {
 	Span      *Span    `json:"span,omitempty"`
 	StartTime int64    `json:"start_time,omitempty"`
 	Uid       string   `json:"uid"`
+}
+
+// Validate checks that all required fields are properly set
+func (o *Trace) Validate() error {
+	if o.Uid == "" {
+		return fmt.Errorf("required field uid is empty")
+	}
+	return nil
 }

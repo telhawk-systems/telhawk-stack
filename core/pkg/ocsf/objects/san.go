@@ -8,8 +8,21 @@
 
 package objects
 
+import "fmt"
+
 type San struct {
 	Object
 	Name string `json:"name"`
 	Type string `json:"type"`
+}
+
+// Validate checks that all required fields are properly set
+func (o *San) Validate() error {
+	if o.Name == "" {
+		return fmt.Errorf("required field name is empty")
+	}
+	if o.Type == "" {
+		return fmt.Errorf("required field type is empty")
+	}
+	return nil
 }

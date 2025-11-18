@@ -19,3 +19,9 @@ type Actor struct {
 	Session        *Session         `json:"session,omitempty"`
 	User           *User            `json:"user,omitempty"`
 }
+
+// Validate checks that all required fields are properly set
+func (o *Actor) Validate() error {
+	// No required string fields to validate
+	return nil
+}

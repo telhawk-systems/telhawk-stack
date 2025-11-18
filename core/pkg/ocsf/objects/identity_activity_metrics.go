@@ -16,3 +16,9 @@ type IdentityActivityMetrics struct {
 	PasswordLastUsedTime    int64                     `json:"password_last_used_time,omitempty"`
 	ProgrammaticCredentials []*ProgrammaticCredential `json:"programmatic_credentials,omitempty"`
 }
+
+// Validate checks that all required fields are properly set
+func (o *IdentityActivityMetrics) Validate() error {
+	// No required string fields to validate
+	return nil
+}

@@ -9,6 +9,7 @@
 package network
 
 import (
+	"fmt"
 	"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf"
 	"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf/objects"
 	"time"
@@ -60,4 +61,10 @@ func NewDhcpActivity(activityID int) *DhcpActivity {
 			},
 		},
 	}
+}
+
+// Validate checks that all required fields are properly set
+func (e *DhcpActivity) Validate() error {
+	// No required string fields to validate
+	return nil
 }

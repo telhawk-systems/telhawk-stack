@@ -8,6 +8,8 @@
 
 package objects
 
+import "fmt"
+
 type Metadata struct {
 	Object
 	CorrelationUid         string                `json:"correlation_uid,omitempty"`
@@ -42,4 +44,12 @@ type Metadata struct {
 	Uid                    string                `json:"uid,omitempty"`
 	UntruncatedSize        int                   `json:"untruncated_size,omitempty"`
 	Version                string                `json:"version"`
+}
+
+// Validate checks that all required fields are properly set
+func (o *Metadata) Validate() error {
+	if o.Version == "" {
+		return fmt.Errorf("required field version is empty")
+	}
+	return nil
 }

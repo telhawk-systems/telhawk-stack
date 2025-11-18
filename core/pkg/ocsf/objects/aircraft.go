@@ -20,3 +20,9 @@ type Aircraft struct {
 	UidAlt         string    `json:"uid_alt,omitempty"`
 	VerticalSpeed  string    `json:"vertical_speed,omitempty"`
 }
+
+// Validate checks that all required fields are properly set
+func (o *Aircraft) Validate() error {
+	// No required string fields to validate
+	return nil
+}

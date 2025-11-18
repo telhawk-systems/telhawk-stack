@@ -8,9 +8,19 @@
 
 package objects
 
+import "fmt"
+
 type Observation struct {
 	Object
 	Count    int       `json:"count,omitempty"`
 	Timespan *Timespan `json:"timespan,omitempty"`
 	Value    string    `json:"value"`
+}
+
+// Validate checks that all required fields are properly set
+func (o *Observation) Validate() error {
+	if o.Value == "" {
+		return fmt.Errorf("required field value is empty")
+	}
+	return nil
 }

@@ -8,8 +8,21 @@
 
 package objects
 
+import "fmt"
+
 type D3fTactic struct {
 	Name   string `json:"name"`
 	SrcUrl string `json:"src_url,omitempty"`
 	Uid    string `json:"uid"`
+}
+
+// Validate checks that all required fields are properly set
+func (o *D3fTactic) Validate() error {
+	if o.Name == "" {
+		return fmt.Errorf("required field name is empty")
+	}
+	if o.Uid == "" {
+		return fmt.Errorf("required field uid is empty")
+	}
+	return nil
 }

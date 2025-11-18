@@ -8,9 +8,22 @@
 
 package objects
 
+import "fmt"
+
 type Scan struct {
 	Name   string `json:"name"`
 	Type   string `json:"type,omitempty"`
 	TypeId int    `json:"type_id"`
 	Uid    string `json:"uid"`
+}
+
+// Validate checks that all required fields are properly set
+func (o *Scan) Validate() error {
+	if o.Uid == "" {
+		return fmt.Errorf("required field uid is empty")
+	}
+	if o.Name == "" {
+		return fmt.Errorf("required field name is empty")
+	}
+	return nil
 }

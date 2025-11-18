@@ -10,3 +10,9 @@ package objects
 
 type Object struct {
 }
+
+// Validate checks that all required fields are properly set
+func (o *Object) Validate() error {
+	// No required string fields to validate
+	return nil
+}

@@ -14,3 +14,9 @@ type FunctionInvocation struct {
 	Parameters  []*Parameter `json:"parameters,omitempty"`
 	ReturnValue string       `json:"return_value,omitempty"`
 }
+
+// Validate checks that all required fields are properly set
+func (o *FunctionInvocation) Validate() error {
+	// No required string fields to validate
+	return nil
+}

@@ -22,3 +22,9 @@ type HttpRequest struct {
 	Version       string        `json:"version,omitempty"`
 	XForwardedFor []string      `json:"x_forwarded_for,omitempty"`
 }
+
+// Validate checks that all required fields are properly set
+func (o *HttpRequest) Validate() error {
+	// No required string fields to validate
+	return nil
+}

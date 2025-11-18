@@ -19,3 +19,9 @@ type HttpResponse struct {
 	Message     string        `json:"message,omitempty"`
 	Status      string        `json:"status,omitempty"`
 }
+
+// Validate checks that all required fields are properly set
+func (o *HttpResponse) Validate() error {
+	// No required string fields to validate
+	return nil
+}

@@ -9,6 +9,7 @@
 package discovery
 
 import (
+	"fmt"
 	"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf"
 	"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf/objects"
 	"time"
@@ -46,4 +47,10 @@ func NewConfigState(activityID int) *ConfigState {
 			},
 		},
 	}
+}
+
+// Validate checks that all required fields are properly set
+func (e *ConfigState) Validate() error {
+	// No required string fields to validate
+	return nil
 }

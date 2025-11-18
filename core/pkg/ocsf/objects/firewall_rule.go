@@ -17,3 +17,9 @@ type FirewallRule struct {
 	RateLimit     int      `json:"rate_limit,omitempty"`
 	Sensitivity   string   `json:"sensitivity,omitempty"`
 }
+
+// Validate checks that all required fields are properly set
+func (o *FirewallRule) Validate() error {
+	// No required string fields to validate
+	return nil
+}

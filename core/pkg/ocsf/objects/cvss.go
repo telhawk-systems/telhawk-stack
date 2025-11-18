@@ -8,6 +8,8 @@
 
 package objects
 
+import "fmt"
+
 type Cvss struct {
 	Object
 	BaseScore    float64   `json:"base_score"`
@@ -19,4 +21,12 @@ type Cvss struct {
 	VectorString string    `json:"vector_string,omitempty"`
 	VendorName   string    `json:"vendor_name,omitempty"`
 	Version      string    `json:"version"`
+}
+
+// Validate checks that all required fields are properly set
+func (o *Cvss) Validate() error {
+	if o.Version == "" {
+		return fmt.Errorf("required field version is empty")
+	}
+	return nil
 }

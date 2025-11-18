@@ -8,9 +8,19 @@
 
 package objects
 
+import "fmt"
+
 type ClassifierDetails struct {
 	Object
 	Name string `json:"name,omitempty"`
 	Type string `json:"type"`
 	Uid  string `json:"uid,omitempty"`
+}
+
+// Validate checks that all required fields are properly set
+func (o *ClassifierDetails) Validate() error {
+	if o.Type == "" {
+		return fmt.Errorf("required field type is empty")
+	}
+	return nil
 }

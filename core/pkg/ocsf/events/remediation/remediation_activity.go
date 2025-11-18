@@ -9,6 +9,7 @@
 package remediation
 
 import (
+	"fmt"
 	"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf"
 	"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf/objects"
 	"time"
@@ -54,4 +55,12 @@ func NewRemediationActivity(activityID int) *RemediationActivity {
 			},
 		},
 	}
+}
+
+// Validate checks that all required fields are properly set
+func (e *RemediationActivity) Validate() error {
+	if e.CommandUid == "" {
+		return fmt.Errorf("required field command_uid is empty")
+	}
+	return nil
 }

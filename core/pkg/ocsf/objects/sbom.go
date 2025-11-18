@@ -19,3 +19,9 @@ type Sbom struct {
 	Uid                string               `json:"uid,omitempty"`
 	Version            string               `json:"version,omitempty"`
 }
+
+// Validate checks that all required fields are properly set
+func (o *Sbom) Validate() error {
+	// No required string fields to validate
+	return nil
+}

@@ -9,6 +9,7 @@
 package findings
 
 import (
+	"fmt"
 	"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf"
 	"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf/objects"
 	"time"
@@ -58,4 +59,12 @@ func NewFinding(activityID int) *Finding {
 			},
 		},
 	}
+}
+
+// Validate checks that all required fields are properly set
+func (e *Finding) Validate() error {
+	if e.ActivityName == "" {
+		return fmt.Errorf("required field activity_name is empty")
+	}
+	return nil
 }

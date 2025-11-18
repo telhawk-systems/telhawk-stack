@@ -8,8 +8,18 @@
 
 package objects
 
+import "fmt"
+
 type CisCsc struct {
 	Object
 	Control string `json:"control"`
 	Version string `json:"version,omitempty"`
+}
+
+// Validate checks that all required fields are properly set
+func (o *CisCsc) Validate() error {
+	if o.Control == "" {
+		return fmt.Errorf("required field control is empty")
+	}
+	return nil
 }

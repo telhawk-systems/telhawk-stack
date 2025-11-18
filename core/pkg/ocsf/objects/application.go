@@ -31,3 +31,9 @@ type Application struct {
 	Url                  *Url              `json:"url,omitempty"`
 	Version              string            `json:"version,omitempty"`
 }
+
+// Validate checks that all required fields are properly set
+func (o *Application) Validate() error {
+	// No required string fields to validate
+	return nil
+}

@@ -25,3 +25,9 @@ type Logger struct {
 	UntruncatedSize int      `json:"untruncated_size,omitempty"`
 	Version         string   `json:"version,omitempty"`
 }
+
+// Validate checks that all required fields are properly set
+func (o *Logger) Validate() error {
+	// No required string fields to validate
+	return nil
+}

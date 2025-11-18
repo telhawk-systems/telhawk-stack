@@ -9,6 +9,7 @@
 package network
 
 import (
+	"fmt"
 	"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf"
 	"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf/objects"
 	"time"
@@ -56,4 +57,10 @@ func NewNetworkActivity(activityID int) *NetworkActivity {
 			},
 		},
 	}
+}
+
+// Validate checks that all required fields are properly set
+func (e *NetworkActivity) Validate() error {
+	// No required string fields to validate
+	return nil
 }

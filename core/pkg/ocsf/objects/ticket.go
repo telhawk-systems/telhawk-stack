@@ -19,3 +19,9 @@ type Ticket struct {
 	TypeId        int      `json:"type_id,omitempty"`
 	Uid           string   `json:"uid,omitempty"`
 }
+
+// Validate checks that all required fields are properly set
+func (o *Ticket) Validate() error {
+	// No required string fields to validate
+	return nil
+}
