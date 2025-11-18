@@ -164,10 +164,34 @@ func (g *RuleBasedGenerator) generateForValueCount() ([]HECEvent, error) {
 		uniqueValue := g.generateUniqueValueForField(countField, i)
 		g.setFieldValue(event, countField, uniqueValue)
 
+		// Ensure network endpoints have both IP and port for OCSF compliance
+		classUID, ok := event["class_uid"].(float64)
+		if ok && int(classUID) == 4001 { // Network Activity
+			log.Printf("  DEBUG: Enriching network endpoints for OCSF compliance")
+			// Ensure src_endpoint has both IP and port
+			if srcEp, ok := event["src_endpoint"].(map[string]interface{}); ok {
+				if _, hasIP := srcEp["ip"]; !hasIP {
+					srcEp["ip"] = g.generateValueForField(".src_endpoint.ip")
+				}
+				if _, hasPort := srcEp["port"]; !hasPort {
+					srcEp["port"] = g.generateValueForField(".src_endpoint.port")
+				}
+			}
+			// Ensure dst_endpoint has both IP and port
+			if dstEp, ok := event["dst_endpoint"].(map[string]interface{}); ok {
+				if _, hasIP := dstEp["ip"]; !hasIP {
+					dstEp["ip"] = g.generateValueForField(".dst_endpoint.ip")
+				}
+				if _, hasPort := dstEp["port"]; !hasPort {
+					dstEp["port"] = g.generateValueForField(".dst_endpoint.port")
+				}
+			}
+		}
+
 		// Debug: print first event
 		if i == 0 {
 			log.Printf("  DEBUG: First event structure:")
-			log.Printf("    class_uid: %v", event["class_uid"])
+			log.Printf("    class_uid: %v (type: %T)", event["class_uid"], event["class_uid"])
 			log.Printf("    src_endpoint: %v", event["src_endpoint"])
 			log.Printf("    dst_endpoint: %v", event["dst_endpoint"])
 			log.Printf("    Field '%s' = %v", countField, uniqueValue)
