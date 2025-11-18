@@ -26,11 +26,11 @@ type Certificate struct {
 
 // Validate checks that all required fields are properly set
 func (o *Certificate) Validate() error {
-	if o.SerialNumber == "" {
-		return fmt.Errorf("required field serial_number is empty")
-	}
 	if o.Issuer == "" {
 		return fmt.Errorf("required field issuer is empty")
+	}
+	if o.SerialNumber == "" {
+		return fmt.Errorf("required field serial_number is empty")
 	}
 	return nil
 }

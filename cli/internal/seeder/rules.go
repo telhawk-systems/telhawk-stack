@@ -81,11 +81,30 @@ func ParseRuleFile(path string) (*DetectionRule, error) {
 	return &rule, nil
 }
 
-// LoadRulesFromDirectory loads all JSON rule files from a directory
-func LoadRulesFromDirectory(dirPath string) ([]*DetectionRule, error) {
+// LoadRulesFromDirectory loads all JSON rule files from a directory or a single file
+func LoadRulesFromDirectory(path string) ([]*DetectionRule, error) {
 	var rules []*DetectionRule
 
-	entries, err := os.ReadDir(dirPath)
+	// Check if path is a file or directory
+	fileInfo, err := os.Stat(path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to stat path: %w", err)
+	}
+
+	// If it's a file, just parse it directly
+	if !fileInfo.IsDir() {
+		if !strings.HasSuffix(path, ".json") {
+			return nil, fmt.Errorf("file must have .json extension")
+		}
+		rule, err := ParseRuleFile(path)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse rule file: %w", err)
+		}
+		return []*DetectionRule{rule}, nil
+	}
+
+	// Otherwise, it's a directory - read all JSON files
+	entries, err := os.ReadDir(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read rules directory: %w", err)
 	}
@@ -100,7 +119,7 @@ func LoadRulesFromDirectory(dirPath string) ([]*DetectionRule, error) {
 			continue
 		}
 
-		rulePath := filepath.Join(dirPath, entry.Name())
+		rulePath := filepath.Join(path, entry.Name())
 		rule, err := ParseRuleFile(rulePath)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse %s: %w", entry.Name(), err)

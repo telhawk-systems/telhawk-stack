@@ -18,7 +18,7 @@ type NetworkEndpoint struct {
 	IspOrg           string            `json:"isp_org,omitempty"`
 	NetworkScope     string            `json:"network_scope,omitempty"`
 	NetworkScopeId   int               `json:"network_scope_id,omitempty"`
-	Port             string            `json:"port,omitempty"`
+	Port             int               `json:"port,omitempty"`
 	ProxyEndpoint    *NetworkProxy     `json:"proxy_endpoint,omitempty"`
 	SvcName          string            `json:"svc_name,omitempty"`
 	Type             string            `json:"type"`

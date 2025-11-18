@@ -26,14 +26,14 @@ type Enrichment struct {
 
 // Validate checks that all required fields are properly set
 func (o *Enrichment) Validate() error {
-	if o.Name == "" {
-		return fmt.Errorf("required field name is empty")
-	}
 	if o.Value == "" {
 		return fmt.Errorf("required field value is empty")
 	}
 	if o.Data == "" {
 		return fmt.Errorf("required field data is empty")
+	}
+	if o.Name == "" {
+		return fmt.Errorf("required field name is empty")
 	}
 	return nil
 }

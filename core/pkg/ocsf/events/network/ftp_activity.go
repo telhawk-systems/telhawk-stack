@@ -9,7 +9,6 @@
 package network
 
 import (
-	"fmt"
 	"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf"
 	"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf/objects"
 	"time"
@@ -25,7 +24,7 @@ type FtpActivity struct {
 	CommandResponses []string      `json:"command_responses,omitempty"`
 	File             *objects.File `json:"file,omitempty"`
 	Name             string        `json:"name,omitempty"`
-	Port             string        `json:"port,omitempty"`
+	Port             int           `json:"port,omitempty"`
 	Type             string        `json:"type,omitempty"`
 }
 

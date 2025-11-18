@@ -73,6 +73,16 @@ type ValidationRules struct {
 	EnumFields        map[string][]string // field_name -> valid values
 }
 
+type Dictionary struct {
+	Attributes map[string]DictionaryAttribute `json:"attributes"`
+}
+
+type DictionaryAttribute struct {
+	Caption     string `json:"caption"`
+	Description string `json:"description"`
+	Type        string `json:"type"`
+}
+
 var (
 	schemaDir = flag.String("schema", "../../ocsf-schema", "Path to OCSF schema directory")
 	outputDir = flag.String("output", "../../core/internal/normalizer/generated", "Output directory for generated code")
@@ -81,6 +91,7 @@ var (
 	fieldMappings      FieldMappings
 	sourceTypePatterns SourceTypePatterns
 	categories         Categories
+	dictionary         Dictionary
 )
 
 func main() {
@@ -551,6 +562,7 @@ func generateHelpersFile() error {
 	buf.WriteString(generateHeader())
 	buf.WriteString("package generated\n\n")
 	buf.WriteString("import (\n")
+	buf.WriteString("\t\"fmt\"\n")
 	buf.WriteString("\t\"strings\"\n")
 	buf.WriteString("\t\"time\"\n\n")
 	buf.WriteString("\t\"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf\"\n")
@@ -635,6 +647,38 @@ func ExtractSeverity(payload map[string]interface{}) (int, string) {
 	default:
 		return ocsf.SeverityUnknown, "Unknown"
 	}
+}
+
+// ExtractNetworkEndpoint extracts network endpoint information
+func ExtractNetworkEndpoint(ep map[string]interface{}) *objects.NetworkEndpoint {
+	endpoint := &objects.NetworkEndpoint{}
+
+	// IP address (field is "Ip" in OCSF NetworkEndpoint)
+	if ip, ok := ep["ip"].(string); ok {
+		endpoint.Ip = ip
+	}
+
+	// Port - OCSF uses string for port (can be numeric like "443" or named like "https")
+	// Handle both integer and string types from input
+	if port, ok := ep["port"].(int); ok {
+		endpoint.Port = fmt.Sprintf("%d", port)
+	} else if port, ok := ep["port"].(float64); ok {
+		endpoint.Port = fmt.Sprintf("%d", int(port))
+	} else if portStr, ok := ep["port"].(string); ok {
+		endpoint.Port = portStr
+	}
+
+	// Hostname/name
+	if name, ok := ep["name"].(string); ok {
+		endpoint.Name = name
+	}
+
+	// UID
+	if uid, ok := ep["uid"].(string); ok {
+		endpoint.Uid = uid
+	}
+
+	return endpoint
 }
 `)
 

@@ -36,6 +36,18 @@ type EnumValue struct {
 
 type Dictionary struct {
 	Attributes map[string]DictAttribute `json:"attributes"`
+	Types      TypesSection             `json:"types"`
+}
+
+type TypesSection struct {
+	Attributes map[string]TypeDefinition `json:"attributes"`
+}
+
+type TypeDefinition struct {
+	Type        string `json:"type"`
+	Caption     string `json:"caption"`
+	Description string `json:"description"`
+	TypeName    string `json:"type_name"`
 }
 
 type DictAttribute struct {
@@ -293,11 +305,29 @@ func generateEventClassFile(class *EventClass, categoryUID int, outputDir, packa
 		}
 	}
 
+	// Check if we need fmt import (only if there are required string fields)
+	needsFmt := false
+	for attrName, rawAttr := range class.Attributes {
+		var attr AttributeRef
+		if err := json.Unmarshal(rawAttr, &attr); err == nil {
+			// Skip optional/recommended and base fields
+			if attr.Requirement != "optional" && attr.Requirement != "recommended" && !isBaseField(attrName) {
+				goType := inferGoTypeWithObjects(attrName)
+				if goType == "string" {
+					needsFmt = true
+					break
+				}
+			}
+		}
+	}
+
 	// Package and imports
 	buf.WriteString(generateFileHeader())
 	buf.WriteString(fmt.Sprintf("package %s\n\n", packageName))
 	buf.WriteString("import (\n")
-	buf.WriteString("\t\"fmt\"\n")
+	if needsFmt {
+		buf.WriteString("\t\"fmt\"\n")
+	}
 	buf.WriteString("\t\"time\"\n")
 	buf.WriteString("\t\"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf\"\n")
 	if needsObjects {
@@ -590,6 +620,10 @@ func inferGoTypeWithObjects(attrName string) string {
 }
 
 func mapOCSFTypeToGo(ocsfType string, attrName string, inObjectsPackage bool) string {
+	// Resolve extended types recursively
+	resolvedType := resolveExtendedType(ocsfType, 0)
+
+	// Base primitive type mappings
 	typeMap := map[string]string{
 		"string_t":    "string",
 		"integer_t":   "int",
@@ -599,13 +633,13 @@ func mapOCSFTypeToGo(ocsfType string, attrName string, inObjectsPackage bool) st
 		"timestamp_t": "int64", // Unix timestamp in milliseconds
 	}
 
-	if goType, ok := typeMap[ocsfType]; ok {
+	if goType, ok := typeMap[resolvedType]; ok {
 		return goType
 	}
 
 	// CRITICAL: NO interface{} or map[string]interface{}
 	// These lose type safety and violate our policy
-	switch ocsfType {
+	switch resolvedType {
 	case "json_t":
 		// Log warning - this needs a proper type definition
 		if *verbose {
@@ -622,8 +656,8 @@ func mapOCSFTypeToGo(ocsfType string, attrName string, inObjectsPackage bool) st
 	}
 
 	// If it's an object type (no _t suffix), use pointer to objects package
-	if !strings.HasSuffix(ocsfType, "_t") && ocsfType != "" {
-		typeName := toGoStructName(ocsfType)
+	if !strings.HasSuffix(resolvedType, "_t") && resolvedType != "" {
+		typeName := toGoStructName(resolvedType)
 		if inObjectsPackage {
 			// Within objects package, use local type reference
 			return "*" + typeName
@@ -633,6 +667,30 @@ func mapOCSFTypeToGo(ocsfType string, attrName string, inObjectsPackage bool) st
 	}
 
 	return "string"
+}
+
+// resolveExtendedType recursively resolves extended types to their base primitive types
+// For example: port_t -> integer_t -> int
+// maxDepth prevents infinite recursion
+func resolveExtendedType(ocsfType string, depth int) string {
+	const maxDepth = 10
+	if depth > maxDepth {
+		if *verbose {
+			fmt.Printf("WARNING: Max recursion depth reached resolving type %s\n", ocsfType)
+		}
+		return ocsfType
+	}
+
+	// Check if this is an extended type defined in dictionary.types
+	if typeDef, ok := globalDictionary.Types.Attributes[ocsfType]; ok {
+		// Extended type found, recursively resolve its underlying type
+		if typeDef.Type != "" && typeDef.Type != ocsfType {
+			return resolveExtendedType(typeDef.Type, depth+1)
+		}
+	}
+
+	// No further resolution needed
+	return ocsfType
 }
 
 func cleanDescription(desc string) string {

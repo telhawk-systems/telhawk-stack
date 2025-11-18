@@ -30,11 +30,11 @@ type Finding struct {
 
 // Validate checks that all required fields are properly set
 func (o *Finding) Validate() error {
-	if o.Title == "" {
-		return fmt.Errorf("required field title is empty")
-	}
 	if o.Uid == "" {
 		return fmt.Errorf("required field uid is empty")
+	}
+	if o.Title == "" {
+		return fmt.Errorf("required field title is empty")
 	}
 	return nil
 }

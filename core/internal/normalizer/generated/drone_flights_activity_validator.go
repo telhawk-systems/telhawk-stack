@@ -52,12 +52,12 @@ func (DroneFlightsActivityValidator) Validate(ctx context.Context, event *ocsf.E
 			return fmt.Errorf("invalid activity_id: %d (valid values: 0, 1, 2, 99)", event.ActivityID)
 		}
 	}
+	// TODO: Validate enum field 'auth_protocol_id' (valid values: 0, 1, 2, 3, 4, 5, 6, 7, 8, 99)
 	if event.StatusID != 0 {
 		// Status validation - OCSF defines standard status codes
 		if event.StatusID < 0 || event.StatusID > 99 {
 			return fmt.Errorf("invalid status_id: %d", event.StatusID)
 		}
 	}
-	// TODO: Validate enum field 'auth_protocol_id' (valid values: 0, 1, 2, 3, 4, 5, 6, 7, 8, 99)
 	return nil
 }

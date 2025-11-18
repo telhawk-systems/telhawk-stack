@@ -15,7 +15,7 @@ type Url struct {
 	Domain       string   `json:"domain,omitempty"`
 	Hostname     string   `json:"hostname,omitempty"`
 	Path         string   `json:"path,omitempty"`
-	Port         string   `json:"port,omitempty"`
+	Port         int      `json:"port,omitempty"`
 	QueryString  string   `json:"query_string,omitempty"`
 	ResourceType string   `json:"resource_type,omitempty"`
 	Scheme       string   `json:"scheme,omitempty"`

@@ -41,6 +41,7 @@ func (EmailActivityValidator) Validate(ctx context.Context, event *ocsf.Event) e
 	// Manual validation may be needed for complex nested structures
 
 	// Validate enumerated fields
+	// TODO: Validate enum field 'direction_id' (valid values: 0, 1, 2, 3, 99)
 	if event.ActivityID != 0 {
 		switch event.ActivityID {
 		case 1:
@@ -53,6 +54,5 @@ func (EmailActivityValidator) Validate(ctx context.Context, event *ocsf.Event) e
 			return fmt.Errorf("invalid activity_id: %d (valid values: 1, 2, 3, 4, 5)", event.ActivityID)
 		}
 	}
-	// TODO: Validate enum field 'direction_id' (valid values: 0, 1, 2, 3, 99)
 	return nil
 }

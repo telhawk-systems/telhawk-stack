@@ -19,11 +19,11 @@ type Scan struct {
 
 // Validate checks that all required fields are properly set
 func (o *Scan) Validate() error {
-	if o.Uid == "" {
-		return fmt.Errorf("required field uid is empty")
-	}
 	if o.Name == "" {
 		return fmt.Errorf("required field name is empty")
+	}
+	if o.Uid == "" {
+		return fmt.Errorf("required field uid is empty")
 	}
 	return nil
 }

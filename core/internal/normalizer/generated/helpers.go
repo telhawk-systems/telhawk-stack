@@ -5,6 +5,7 @@
 package generated
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
@@ -90,4 +91,40 @@ func ExtractSeverity(payload map[string]interface{}) (int, string) {
 	default:
 		return ocsf.SeverityUnknown, "Unknown"
 	}
+}
+
+// ExtractNetworkEndpoint extracts network endpoint information
+func ExtractNetworkEndpoint(ep map[string]interface{}) *objects.NetworkEndpoint {
+	endpoint := &objects.NetworkEndpoint{}
+
+	// IP address (field is "Ip" in OCSF NetworkEndpoint)
+	if ip, ok := ep["ip"].(string); ok {
+		endpoint.Ip = ip
+	}
+
+	// Port - now an int in OCSF (port_t resolves to integer_t)
+	// Handle both integer and string types from input
+	if port, ok := ep["port"].(int); ok {
+		endpoint.Port = port
+	} else if port, ok := ep["port"].(float64); ok {
+		endpoint.Port = int(port)
+	} else if portStr, ok := ep["port"].(string); ok {
+		// Parse string port numbers
+		var portNum int
+		if _, err := fmt.Sscanf(portStr, "%d", &portNum); err == nil {
+			endpoint.Port = portNum
+		}
+	}
+
+	// Hostname/name
+	if name, ok := ep["name"].(string); ok {
+		endpoint.Name = name
+	}
+
+	// UID
+	if uid, ok := ep["uid"].(string); ok {
+		endpoint.Uid = uid
+	}
+
+	return endpoint
 }

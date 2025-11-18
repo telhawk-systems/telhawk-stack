@@ -37,6 +37,12 @@ func (RemediationActivityValidator) Validate(ctx context.Context, event *ocsf.Ev
 	// Manual validation may be needed for complex nested structures
 
 	// Validate enumerated fields
+	if event.StatusID != 0 {
+		// Status validation - OCSF defines standard status codes
+		if event.StatusID < 0 || event.StatusID > 99 {
+			return fmt.Errorf("invalid status_id: %d", event.StatusID)
+		}
+	}
 	if event.ActivityID != 0 {
 		switch event.ActivityID {
 		case 1:
@@ -47,12 +53,6 @@ func (RemediationActivityValidator) Validate(ctx context.Context, event *ocsf.Ev
 			// Valid
 		default:
 			return fmt.Errorf("invalid activity_id: %d (valid values: 1, 2, 3, 4, 5)", event.ActivityID)
-		}
-	}
-	if event.StatusID != 0 {
-		// Status validation - OCSF defines standard status codes
-		if event.StatusID < 0 || event.StatusID > 99 {
-			return fmt.Errorf("invalid status_id: %d", event.StatusID)
 		}
 	}
 	return nil

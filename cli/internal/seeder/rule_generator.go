@@ -375,8 +375,8 @@ func (g *RuleBasedGenerator) generateValueForField(field string) interface{} {
 	}
 	// Ports
 	if containsIgnoreCase(field, ".port") || containsIgnoreCase(field, "_port") {
-		// OCSF defines port as string (can be numeric like "443" or named like "https")
-		return fmt.Sprintf("%d", rand.Intn(65535-1024)+1024)
+		// Return as integer for OpenSearch compatibility (correlation engine expects numeric type)
+		return rand.Intn(65535-1024) + 1024
 	}
 	// Hostnames
 	if containsIgnoreCase(field, "hostname") || containsIgnoreCase(field, ".host") {
@@ -396,8 +396,8 @@ func (g *RuleBasedGenerator) generateUniqueValueForField(field string, index int
 	// Common field patterns
 	if containsIgnoreCase(field, "port") {
 		// Generate sequential ports starting from 1024
-		// OCSF defines port as string (can be numeric like "443" or named like "https")
-		return fmt.Sprintf("%d", 1024+index)
+		// Return as integer for OpenSearch compatibility (correlation engine expects numeric type)
+		return 1024 + index
 	}
 	if containsIgnoreCase(field, "ip") || containsIgnoreCase(field, "addr") {
 		// Generate IPs in a range

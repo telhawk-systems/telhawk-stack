@@ -33,11 +33,11 @@ type Package struct {
 
 // Validate checks that all required fields are properly set
 func (o *Package) Validate() error {
-	if o.Version == "" {
-		return fmt.Errorf("required field version is empty")
-	}
 	if o.Name == "" {
 		return fmt.Errorf("required field name is empty")
+	}
+	if o.Version == "" {
+		return fmt.Errorf("required field version is empty")
 	}
 	return nil
 }

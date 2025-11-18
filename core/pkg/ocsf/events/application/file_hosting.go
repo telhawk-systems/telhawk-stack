@@ -9,7 +9,6 @@
 package application
 
 import (
-	"fmt"
 	"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf"
 	"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf/objects"
 	"time"
