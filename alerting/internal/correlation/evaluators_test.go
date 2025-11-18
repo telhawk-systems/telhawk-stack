@@ -70,15 +70,6 @@ func TestEventCountEvaluator_Evaluate(t *testing.T) {
 					"threshold":   10,
 					"operator":    "gt",
 					"group_by":    []interface{}{".actor.user.name"},
-				},
-			},
-			View: map[string]interface{}{
-				"title":       "Brute Force Detection",
-				"severity":    "high",
-				"description": "User {{actor.user.name}} had {{event_count}} failed logins",
-			},
-			Controller: map[string]interface{}{
-				"detection": map[string]interface{}{
 					"query": map[string]interface{}{
 						"filter": map[string]interface{}{
 							"type": "and",
@@ -96,6 +87,15 @@ func TestEventCountEvaluator_Evaluate(t *testing.T) {
 							},
 						},
 					},
+				},
+			},
+			View: map[string]interface{}{
+				"title":       "Brute Force Detection",
+				"severity":    "high",
+				"description": "User {{actor.user.name}} had {{event_count}} failed logins",
+			},
+			Controller: map[string]interface{}{
+				"detection": map[string]interface{}{
 					"threshold": float64(10),
 					"operator":  "gt",
 				},
@@ -125,6 +125,13 @@ func TestEventCountEvaluator_Evaluate(t *testing.T) {
 					"threshold":   100,
 					"operator":    "gt",
 					"group_by":    []interface{}{".actor.user.name"},
+					"query": map[string]interface{}{
+						"filter": map[string]interface{}{
+							"field":    ".class_uid",
+							"operator": "eq",
+							"value":    float64(3002),
+						},
+					},
 				},
 			},
 			View: map[string]interface{}{
@@ -134,13 +141,6 @@ func TestEventCountEvaluator_Evaluate(t *testing.T) {
 			},
 			Controller: map[string]interface{}{
 				"detection": map[string]interface{}{
-					"query": map[string]interface{}{
-						"filter": map[string]interface{}{
-							"field":    ".class_uid",
-							"operator": "eq",
-							"value":    float64(3002),
-						},
-					},
 					"threshold": float64(100), // Higher than any count
 					"operator":  "gt",
 				},
@@ -178,6 +178,13 @@ func TestEventCountEvaluator_Evaluate(t *testing.T) {
 							"threshold":   int(tt.threshold),
 							"operator":    tt.operator,
 							"group_by":    []interface{}{".actor.user.name"},
+							"query": map[string]interface{}{
+								"filter": map[string]interface{}{
+									"field":    ".class_uid",
+									"operator": "eq",
+									"value":    float64(3002),
+								},
+							},
 						},
 					},
 					View: map[string]interface{}{
@@ -187,13 +194,6 @@ func TestEventCountEvaluator_Evaluate(t *testing.T) {
 					},
 					Controller: map[string]interface{}{
 						"detection": map[string]interface{}{
-							"query": map[string]interface{}{
-								"filter": map[string]interface{}{
-									"field":    ".class_uid",
-									"operator": "eq",
-									"value":    float64(3002),
-								},
-							},
 							"threshold": tt.threshold,
 							"operator":  tt.operator,
 						},
@@ -316,6 +316,13 @@ func TestValueCountEvaluator_Evaluate(t *testing.T) {
 					"threshold":   100,
 					"operator":    "gt",
 					"group_by":    []interface{}{".src_endpoint.ip"},
+					"query": map[string]interface{}{
+						"filter": map[string]interface{}{
+							"field":    ".class_uid",
+							"operator": "eq",
+							"value":    float64(4001),
+						},
+					},
 				},
 			},
 			View: map[string]interface{}{
@@ -325,13 +332,6 @@ func TestValueCountEvaluator_Evaluate(t *testing.T) {
 			},
 			Controller: map[string]interface{}{
 				"detection": map[string]interface{}{
-					"query": map[string]interface{}{
-						"filter": map[string]interface{}{
-							"field":    ".class_uid",
-							"operator": "eq",
-							"value":    float64(4001),
-						},
-					},
 					"threshold": float64(100),
 					"operator":  "gt",
 				},
@@ -347,8 +347,6 @@ func TestValueCountEvaluator_Evaluate(t *testing.T) {
 }
 
 func TestEventCountEvaluator_ThresholdLogic(t *testing.T) {
-	evaluator := &EventCountEvaluator{}
-
 	tests := []struct {
 		name      string
 		count     int64
@@ -375,7 +373,7 @@ func TestEventCountEvaluator_ThresholdLogic(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := evaluator.meetsThreshold(tt.count, tt.threshold, tt.operator)
+			result := meetsThreshold(tt.count, tt.threshold, tt.operator)
 			assert.Equal(t, tt.expected, result)
 		})
 	}

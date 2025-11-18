@@ -76,15 +76,6 @@ func TestEventCountIntegration(t *testing.T) {
 				"threshold":   10,
 				"operator":    "gt",
 				"group_by":    []interface{}{".actor.user.name"},
-			},
-		},
-		View: map[string]interface{}{
-			"title":       "Brute Force Attack Detected",
-			"severity":    "high",
-			"description": "User {{actor.user.name}} had {{event_count}} failed login attempts in {{time_window}}",
-		},
-		Controller: map[string]interface{}{
-			"detection": map[string]interface{}{
 				"query": map[string]interface{}{
 					"filter": map[string]interface{}{
 						"type": "and",
@@ -102,6 +93,15 @@ func TestEventCountIntegration(t *testing.T) {
 						},
 					},
 				},
+			},
+		},
+		View: map[string]interface{}{
+			"title":       "Brute Force Attack Detected",
+			"severity":    "high",
+			"description": "User {{actor.user.name}} had {{event_count}} failed login attempts in {{time_window}}",
+		},
+		Controller: map[string]interface{}{
+			"detection": map[string]interface{}{
 				"threshold": float64(10),
 				"operator":  "gt",
 			},
@@ -241,6 +241,13 @@ func TestValueCountIntegration(t *testing.T) {
 				"threshold":   100,
 				"operator":    "gt",
 				"group_by":    []interface{}{".src_endpoint.ip"},
+				"query": map[string]interface{}{
+					"filter": map[string]interface{}{
+						"field":    ".class_uid",
+						"operator": "eq",
+						"value":    float64(4001),
+					},
+				},
 			},
 		},
 		View: map[string]interface{}{
@@ -250,13 +257,6 @@ func TestValueCountIntegration(t *testing.T) {
 		},
 		Controller: map[string]interface{}{
 			"detection": map[string]interface{}{
-				"query": map[string]interface{}{
-					"filter": map[string]interface{}{
-						"field":    ".class_uid",
-						"operator": "eq",
-						"value":    float64(4001),
-					},
-				},
 				"threshold": float64(100),
 				"operator":  "gt",
 			},
@@ -360,6 +360,13 @@ func TestMultipleCorrelationTypes(t *testing.T) {
 					"threshold":   10,
 					"operator":    "gt",
 					"group_by":    []interface{}{".actor.user.name"},
+					"query": map[string]interface{}{
+						"filter": map[string]interface{}{
+							"field":    ".class_uid",
+							"operator": "eq",
+							"value":    float64(3002),
+						},
+					},
 				},
 			},
 			View: map[string]interface{}{
@@ -369,13 +376,6 @@ func TestMultipleCorrelationTypes(t *testing.T) {
 			},
 			Controller: map[string]interface{}{
 				"detection": map[string]interface{}{
-					"query": map[string]interface{}{
-						"filter": map[string]interface{}{
-							"field":    ".class_uid",
-							"operator": "eq",
-							"value":    float64(3002),
-						},
-					},
 					"threshold": float64(10),
 					"operator":  "gt",
 				},
@@ -393,6 +393,13 @@ func TestMultipleCorrelationTypes(t *testing.T) {
 					"threshold":   50,
 					"operator":    "gt",
 					"group_by":    []interface{}{".src_endpoint.ip"},
+					"query": map[string]interface{}{
+						"filter": map[string]interface{}{
+							"field":    ".class_uid",
+							"operator": "eq",
+							"value":    float64(4001),
+						},
+					},
 				},
 			},
 			View: map[string]interface{}{
@@ -402,13 +409,6 @@ func TestMultipleCorrelationTypes(t *testing.T) {
 			},
 			Controller: map[string]interface{}{
 				"detection": map[string]interface{}{
-					"query": map[string]interface{}{
-						"filter": map[string]interface{}{
-							"field":    ".class_uid",
-							"operator": "eq",
-							"value":    float64(4001),
-						},
-					},
 					"threshold": float64(50),
 					"operator":  "gt",
 				},
