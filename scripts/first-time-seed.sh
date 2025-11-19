@@ -65,7 +65,12 @@ fi
 # Step 3: Login to auth service
 echo -e "\n${YELLOW}[3/6]${NC} Authenticating with auth service..."
 
-docker-compose run --rm thawk auth login -u admin -p admin123 --auth-url "$AUTH_URL" > /dev/null 2>&1
+./scripts/thawk auth login -u admin -p admin123 --auth-url "$AUTH_URL" > /dev/null 2>&1
+if [ $? -ne 0 ]; then
+    echo -e "${RED}✗${NC} Failed to authenticate"
+    echo -e "${YELLOW}→${NC} Run manually: ./scripts/thawk auth login -u admin -p admin123"
+    exit 1
+fi
 echo -e "${GREEN}✓${NC} Authenticated as admin"
 
 # Step 4: Check for existing HEC token or create new one
