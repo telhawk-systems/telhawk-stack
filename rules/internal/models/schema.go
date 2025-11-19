@@ -25,6 +25,7 @@ func (s *DetectionSchema) IsActive() bool {
 
 // CreateSchemaRequest is the API request for creating a new detection schema
 type CreateSchemaRequest struct {
+	ID         string                 `json:"id,omitempty"` // Optional: for builtin rules with deterministic IDs
 	Model      map[string]interface{} `json:"model"`
 	View       map[string]interface{} `json:"view"`
 	Controller map[string]interface{} `json:"controller"`

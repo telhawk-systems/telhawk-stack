@@ -25,6 +25,14 @@ type RuleFile struct {
 	Controller  map[string]interface{} `json:"controller"`
 }
 
+// CreateRuleRequest matches the rules service API
+type CreateRuleRequest struct {
+	ID         string                 `json:"id,omitempty"`
+	Model      map[string]interface{} `json:"model"`
+	View       map[string]interface{} `json:"view"`
+	Controller map[string]interface{} `json:"controller"`
+}
+
 // Importer handles importing detection rules from JSON files
 type Importer struct {
 	rulesDir   string
@@ -133,12 +141,14 @@ func (imp *Importer) importRuleFile(ctx context.Context, filePath string) error 
 			log.Printf("  Rule '%s' already exists with same content, skipping", rule.Name)
 			return nil
 		}
-		log.Printf("  Rule '%s' exists but content changed, updating", rule.Name)
-		return imp.updateRule(ctx, ruleID, rule, contentHash)
+		// Builtin rules exist but content changed - skip update to avoid conflicts
+		// TODO: Implement proper versioning for builtin rule updates
+		log.Printf("  WARN: Rule '%s' exists with different content, but updates are skipped (builtin protection)", rule.Name)
+		return nil
 	}
 
 	log.Printf("  Creating new rule '%s'", rule.Name)
-	return imp.createRule(ctx, rule, contentHash)
+	return imp.createRule(ctx, ruleID, rule, contentHash)
 }
 
 // checkRuleExists checks if a rule already exists and returns its content hash
@@ -185,8 +195,8 @@ func (imp *Importer) checkRuleExists(ctx context.Context, ruleID string) (bool, 
 	return true, "", nil
 }
 
-// createRule creates a new rule
-func (imp *Importer) createRule(ctx context.Context, rule RuleFile, contentHash string) error {
+// createRule creates a new rule with deterministic ID
+func (imp *Importer) createRule(ctx context.Context, ruleID string, rule RuleFile, contentHash string) error {
 	// Add metadata to controller
 	if rule.Controller == nil {
 		rule.Controller = make(map[string]interface{})
@@ -199,8 +209,15 @@ func (imp *Importer) createRule(ctx context.Context, rule RuleFile, contentHash 
 	}
 	rule.Controller["metadata"] = metadata
 
-	// Create request body
-	body, err := json.Marshal(rule)
+	// Create request with deterministic ID
+	reqBody := CreateRuleRequest{
+		ID:         ruleID,
+		Model:      rule.Model,
+		View:       rule.View,
+		Controller: rule.Controller,
+	}
+
+	body, err := json.Marshal(reqBody)
 	if err != nil {
 		return fmt.Errorf("failed to marshal rule: %w", err)
 	}
@@ -225,7 +242,7 @@ func (imp *Importer) createRule(ctx context.Context, rule RuleFile, contentHash 
 		return fmt.Errorf("create failed with status %d: %s", resp.StatusCode, string(body))
 	}
 
-	log.Printf("  Successfully created rule '%s'", rule.Name)
+	log.Printf("  Successfully created rule '%s' with ID %s", rule.Name, ruleID)
 	return nil
 }
 

@@ -25,11 +25,19 @@ func NewService(repo repository.Repository) *Service {
 
 // CreateSchema creates a new detection schema (generates new id and version_id)
 func (s *Service) CreateSchema(ctx context.Context, req *models.CreateSchemaRequest, userID string) (*models.DetectionSchema, error) {
-	idUUID, _ := uuid.NewV7()
+	// Use provided ID (for builtin rules) or generate new UUID v7
+	var ruleID string
+	if req.ID != "" {
+		ruleID = req.ID
+	} else {
+		idUUID, _ := uuid.NewV7()
+		ruleID = idUUID.String()
+	}
+
 	versionUUID, _ := uuid.NewV7()
 	schema := &models.DetectionSchema{
-		ID:         idUUID.String(),      // Server-generated stable ID
-		VersionID:  versionUUID.String(), // Server-generated version ID
+		ID:         ruleID,               // Use provided ID or server-generated
+		VersionID:  versionUUID.String(), // Always server-generated version ID
 		Model:      req.Model,
 		View:       req.View,
 		Controller: req.Controller,
