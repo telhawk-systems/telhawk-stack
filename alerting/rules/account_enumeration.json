@@ -1,0 +1,53 @@
+{
+  "name": "account_enumeration",
+  "description": "Detects multiple failed login attempts against different usernames from the same source, indicating account enumeration or password spraying",
+  "model": {
+    "correlation_type": "value_count",
+    "parameters": {
+      "time_window": "5m",
+      "query": {
+        "filter": {
+          "type": "and",
+          "conditions": [
+            {
+              "field": ".class_uid",
+              "operator": "eq",
+              "value": 3002
+            },
+            {
+              "field": ".status_id",
+              "operator": "eq",
+              "value": 2
+            }
+          ]
+        }
+      },
+      "threshold": {
+        "value": 15,
+        "operator": "gt"
+      },
+      "count_field": ".actor.user.name",
+      "group_by": [".src_endpoint.ip"]
+    }
+  },
+  "view": {
+    "title": "Account Enumeration/Password Spraying Detected",
+    "severity": "medium",
+    "description": "Source IP {{src_endpoint.ip}} attempted to authenticate as {{unique_count}} different usernames with failed logins in the last 5 minutes",
+    "category": "Authentication",
+    "tags": ["account-enumeration", "password-spraying", "reconnaissance", "credential-access"],
+    "mitre_attack": {
+      "tactics": ["Discovery", "Credential Access"],
+      "techniques": ["T1087 - Account Discovery", "T1110.003 - Brute Force: Password Spraying"]
+    }
+  },
+  "controller": {
+    "detection": {
+      "suppression_window": "15m"
+    },
+    "response": {
+      "actions": [],
+      "severity_threshold": "medium"
+    }
+  }
+}

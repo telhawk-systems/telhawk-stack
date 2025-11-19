@@ -1,0 +1,47 @@
+{
+  "name": "data_exfiltration_volume",
+  "description": "Detects unusually high connection count from a single source, potentially indicating data exfiltration or C2 activity",
+  "model": {
+    "correlation_type": "event_count",
+    "parameters": {
+      "time_window": "5m",
+      "query": {
+        "filter": {
+          "type": "and",
+          "conditions": [
+            {
+              "field": ".class_uid",
+              "operator": "eq",
+              "value": 4001
+            }
+          ]
+        }
+      },
+      "threshold": {
+        "value": 100,
+        "operator": "gte"
+      },
+      "group_by": [".src_endpoint.ip"]
+    }
+  },
+  "view": {
+    "title": "Potential Data Exfiltration Detected",
+    "severity": "high",
+    "description": "Source IP {{src_endpoint.ip}} made {{event_count}} network connections in the last 5 minutes, indicating potential data exfiltration or C2 beaconing",
+    "category": "Network Activity",
+    "tags": ["exfiltration", "data-loss", "c2-communication", "high-volume"],
+    "mitre_attack": {
+      "tactics": ["Exfiltration", "Command and Control"],
+      "techniques": ["T1041 - Exfiltration Over C2 Channel", "T1030 - Data Transfer Size Limits"]
+    }
+  },
+  "controller": {
+    "detection": {
+      "suppression_window": "30m"
+    },
+    "response": {
+      "actions": [],
+      "severity_threshold": "high"
+    }
+  }
+}

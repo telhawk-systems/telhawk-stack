@@ -1,0 +1,52 @@
+{
+  "name": "privilege_escalation_account_mod",
+  "description": "Detects rapid account privilege modifications, indicating potential privilege escalation or account manipulation",
+  "model": {
+    "correlation_type": "event_count",
+    "parameters": {
+      "time_window": "5m",
+      "query": {
+        "filter": {
+          "type": "and",
+          "conditions": [
+            {
+              "field": ".class_uid",
+              "operator": "eq",
+              "value": 3001
+            },
+            {
+              "field": ".activity_id",
+              "operator": "eq",
+              "value": 2
+            }
+          ]
+        }
+      },
+      "threshold": {
+        "value": 3,
+        "operator": "gte"
+      },
+      "group_by": [".actor.user.name"]
+    }
+  },
+  "view": {
+    "title": "Privilege Escalation via Account Modification Detected",
+    "severity": "high",
+    "description": "User {{actor.user.name}} modified account privileges {{event_count}} times in the last 5 minutes, indicating potential privilege escalation",
+    "category": "Account Management",
+    "tags": ["privilege-escalation", "account-modification", "persistence"],
+    "mitre_attack": {
+      "tactics": ["Privilege Escalation", "Persistence"],
+      "techniques": ["T1098 - Account Manipulation", "T1484 - Domain Policy Modification"]
+    }
+  },
+  "controller": {
+    "detection": {
+      "suppression_window": "15m"
+    },
+    "response": {
+      "actions": [],
+      "severity_threshold": "high"
+    }
+  }
+}

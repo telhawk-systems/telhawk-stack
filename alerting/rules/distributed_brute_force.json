@@ -1,0 +1,53 @@
+{
+  "name": "distributed_brute_force",
+  "description": "Detects failed logins for the same user account from multiple different source IPs, indicating a distributed or botnet-based credential attack",
+  "model": {
+    "correlation_type": "value_count",
+    "parameters": {
+      "time_window": "10m",
+      "query": {
+        "filter": {
+          "type": "and",
+          "conditions": [
+            {
+              "field": ".class_uid",
+              "operator": "eq",
+              "value": 3002
+            },
+            {
+              "field": ".status_id",
+              "operator": "eq",
+              "value": 2
+            }
+          ]
+        }
+      },
+      "threshold": {
+        "value": 5,
+        "operator": "gt"
+      },
+      "count_field": ".src_endpoint.ip",
+      "group_by": [".actor.user.name"]
+    }
+  },
+  "view": {
+    "title": "Distributed Brute Force Attack Detected",
+    "severity": "medium",
+    "description": "User {{actor.user.name}} had failed login attempts from {{unique_count}} different source IPs in the last 10 minutes, indicating distributed attack or botnet activity",
+    "category": "Authentication",
+    "tags": ["distributed-attack", "brute-force", "botnet", "credential-access"],
+    "mitre_attack": {
+      "tactics": ["Credential Access"],
+      "techniques": ["T1110 - Brute Force", "T1589 - Gather Victim Identity Information"]
+    }
+  },
+  "controller": {
+    "detection": {
+      "suppression_window": "20m"
+    },
+    "response": {
+      "actions": [],
+      "severity_threshold": "medium"
+    }
+  }
+}

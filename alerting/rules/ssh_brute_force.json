@@ -1,0 +1,52 @@
+{
+  "name": "ssh_brute_force",
+  "description": "Detects rapid SSH authentication failures from the same source IP indicating brute force attack",
+  "model": {
+    "correlation_type": "event_count",
+    "parameters": {
+      "time_window": "3m",
+      "query": {
+        "filter": {
+          "type": "and",
+          "conditions": [
+            {
+              "field": ".class_uid",
+              "operator": "eq",
+              "value": 3002
+            },
+            {
+              "field": ".status_id",
+              "operator": "eq",
+              "value": 2
+            }
+          ]
+        }
+      },
+      "threshold": {
+        "value": 10,
+        "operator": "gte"
+      },
+      "group_by": [".src_endpoint.ip"]
+    }
+  },
+  "view": {
+    "title": "SSH Brute Force Attack Detected",
+    "severity": "high",
+    "description": "Source IP {{src_endpoint.ip}} had {{event_count}} failed SSH authentication attempts in the last 3 minutes",
+    "category": "Authentication",
+    "tags": ["ssh", "brute-force", "authentication", "credential-access"],
+    "mitre_attack": {
+      "tactics": ["Credential Access", "Initial Access"],
+      "techniques": ["T1110.001 - Brute Force: Password Guessing", "T1021.004 - Remote Services: SSH"]
+    }
+  },
+  "controller": {
+    "detection": {
+      "suppression_window": "15m"
+    },
+    "response": {
+      "actions": [],
+      "severity_threshold": "high"
+    }
+  }
+}

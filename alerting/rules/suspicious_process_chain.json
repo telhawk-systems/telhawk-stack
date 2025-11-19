@@ -1,0 +1,52 @@
+{
+  "name": "suspicious_process_chain",
+  "description": "Detects multiple process launches by the same user in a short timeframe, indicating script execution, automation, or malware activity",
+  "model": {
+    "correlation_type": "event_count",
+    "parameters": {
+      "time_window": "2m",
+      "query": {
+        "filter": {
+          "type": "and",
+          "conditions": [
+            {
+              "field": ".class_uid",
+              "operator": "eq",
+              "value": 1007
+            },
+            {
+              "field": ".activity_id",
+              "operator": "eq",
+              "value": 1
+            }
+          ]
+        }
+      },
+      "threshold": {
+        "value": 10,
+        "operator": "gte"
+      },
+      "group_by": [".actor.user.name", ".device.hostname"]
+    }
+  },
+  "view": {
+    "title": "Suspicious Process Chain Detected",
+    "severity": "medium",
+    "description": "User {{actor.user.name}} on host {{device.hostname}} launched {{event_count}} processes in the last 2 minutes, indicating potential automation or malware activity",
+    "category": "Process Activity",
+    "tags": ["process-chain", "automation", "malware", "rapid-execution"],
+    "mitre_attack": {
+      "tactics": ["Execution"],
+      "techniques": ["T1059 - Command and Scripting Interpreter", "T1106 - Native API"]
+    }
+  },
+  "controller": {
+    "detection": {
+      "suppression_window": "10m"
+    },
+    "response": {
+      "actions": [],
+      "severity_threshold": "medium"
+    }
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "name": "lateral_movement_network_sweep",
+  "description": "Detects a single source connecting to many different destination IPs, indicating potential lateral movement or network reconnaissance",
+  "model": {
+    "correlation_type": "value_count",
+    "parameters": {
+      "time_window": "15m",
+      "query": {
+        "filter": {
+          "type": "and",
+          "conditions": [
+            {
+              "field": ".class_uid",
+              "operator": "eq",
+              "value": 4001
+            }
+          ]
+        }
+      },
+      "threshold": {
+        "value": 50,
+        "operator": "gt"
+      },
+      "count_field": ".dst_endpoint.ip",
+      "group_by": [".src_endpoint.ip"]
+    }
+  },
+  "view": {
+    "title": "Lateral Movement Network Sweep Detected",
+    "severity": "critical",
+    "description": "Source IP {{src_endpoint.ip}} connected to {{unique_count}} unique destination IPs in the last 15 minutes, indicating potential lateral movement or worm activity",
+    "category": "Network Activity",
+    "tags": ["lateral-movement", "network-sweep", "reconnaissance", "post-compromise"],
+    "mitre_attack": {
+      "tactics": ["Lateral Movement", "Discovery"],
+      "techniques": ["T1021 - Remote Services", "T1018 - Remote System Discovery"]
+    }
+  },
+  "controller": {
+    "detection": {
+      "suppression_window": "30m"
+    },
+    "response": {
+      "actions": [],
+      "severity_threshold": "critical"
+    }
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "name": "network_service_enumeration",
+  "description": "Detects a source IP connecting to many different ports on a single destination, indicating service discovery or enumeration",
+  "model": {
+    "correlation_type": "value_count",
+    "parameters": {
+      "time_window": "5m",
+      "query": {
+        "filter": {
+          "type": "and",
+          "conditions": [
+            {
+              "field": ".class_uid",
+              "operator": "eq",
+              "value": 4001
+            }
+          ]
+        }
+      },
+      "threshold": {
+        "value": 10,
+        "operator": "gt"
+      },
+      "count_field": ".dst_endpoint.port",
+      "group_by": [".src_endpoint.ip", ".dst_endpoint.ip"]
+    }
+  },
+  "view": {
+    "title": "Network Service Enumeration Detected",
+    "severity": "medium",
+    "description": "Source IP {{src_endpoint.ip}} connected to {{unique_count}} different ports on destination {{dst_endpoint.ip}} in the last 5 minutes",
+    "category": "Network Activity",
+    "tags": ["service-enumeration", "reconnaissance", "port-scanning", "discovery"],
+    "mitre_attack": {
+      "tactics": ["Discovery"],
+      "techniques": ["T1046 - Network Service Discovery"]
+    }
+  },
+  "controller": {
+    "detection": {
+      "suppression_window": "15m"
+    },
+    "response": {
+      "actions": [],
+      "severity_threshold": "medium"
+    }
+  }
+}
