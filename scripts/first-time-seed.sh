@@ -141,8 +141,14 @@ if [ "$TOKEN_VALID" = false ]; then
     rm -f /tmp/seed-cookies.txt
 fi
 
-# Step 5: Run seeder for all detection rules
-echo -e "\n${YELLOW}[5/6]${NC} Generating events from detection rules..."
+# Step 5: Load detection rules with stable IDs
+echo -e "\n${YELLOW}[5/6]${NC} Loading detection rules..."
+
+# Use the stable ID loader script
+docker exec telhawk-devtools bash /workspace/tmp/load_rules_with_stable_ids.sh
+
+# Step 6: Run seeder for all detection rules
+echo -e "\n${YELLOW}[6/7]${NC} Generating events from detection rules..."
 echo -e "${YELLOW}→${NC} This will generate events matching all supported detection rules\n"
 
 cd cli
@@ -153,8 +159,8 @@ cd cli
 
 cd ..
 
-# Step 6: Verify events in OpenSearch
-echo -e "\n${YELLOW}[6/6]${NC} Verifying events in OpenSearch..."
+# Step 7: Verify events in OpenSearch
+echo -e "\n${YELLOW}[7/7]${NC} Verifying events in OpenSearch..."
 
 sleep 2  # Give OpenSearch a moment to index
 

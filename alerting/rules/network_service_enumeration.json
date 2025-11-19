@@ -21,7 +21,7 @@
         "value": 10,
         "operator": "gt"
       },
-      "count_field": ".dst_endpoint.port",
+      "field": ".dst_endpoint.port",
       "group_by": [".src_endpoint.ip", ".dst_endpoint.ip"]
     }
   },

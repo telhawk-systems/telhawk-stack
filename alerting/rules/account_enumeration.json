@@ -26,7 +26,7 @@
         "value": 15,
         "operator": "gt"
       },
-      "count_field": ".actor.user.name",
+      "field": ".actor.user.name",
       "group_by": [".src_endpoint.ip"]
     }
   },
