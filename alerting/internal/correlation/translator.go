@@ -297,7 +297,7 @@ func (t *SimpleTranslator) translateAggregationFieldPath(path string) string {
 	return field
 }
 
-// isNumericOrDateField checks if a field is numeric or date type (doesn't need .keyword)
+// isNumericOrDateField checks if a field is numeric, date, or IP type (doesn't need .keyword)
 func isNumericOrDateField(field string) bool {
 	// Common OCSF numeric/date fields that don't need .keyword
 	numericDateFields := []string{
@@ -305,6 +305,7 @@ func isNumericOrDateField(field string) bool {
 		"class_uid", "category_uid", "type_uid", "activity_id", "status_id",
 		"severity_id", "confidence_id", "impact_id",
 		"count", "port", "pid", "uid",
+		"ip", // IP address fields (e.g., src_endpoint.ip, dst_endpoint.ip)
 	}
 
 	// Check if field ends with any of these
