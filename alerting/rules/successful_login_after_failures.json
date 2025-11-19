@@ -1,0 +1,52 @@
+{
+  "name": "successful_login_after_failures",
+  "description": "Detects successful authentication following multiple failed attempts - potential compromise indicator",
+  "model": {
+    "correlation_type": "event_count",
+    "parameters": {
+      "time_window": "10m",
+      "query": {
+        "filter": {
+          "type": "and",
+          "conditions": [
+            {
+              "field": ".class_uid",
+              "operator": "eq",
+              "value": 3002
+            },
+            {
+              "field": ".status_id",
+              "operator": "eq",
+              "value": 1
+            }
+          ]
+        }
+      },
+      "threshold": {
+        "value": 1,
+        "operator": "gte"
+      },
+      "group_by": [".actor.user.name", ".src_endpoint.ip"]
+    }
+  },
+  "view": {
+    "title": "Successful Login After Multiple Failures",
+    "severity": "high",
+    "description": "User {{actor.user.name}} from {{src_endpoint.ip}} successfully authenticated after previous failed attempts - potential credential compromise",
+    "category": "Authentication",
+    "tags": ["authentication", "compromise-indicator", "credential-access", "successful-login"],
+    "mitre_attack": {
+      "tactics": ["Credential Access", "Initial Access"],
+      "techniques": ["T1110 - Brute Force", "T1078 - Valid Accounts"]
+    }
+  },
+  "controller": {
+    "detection": {
+      "suppression_window": "30m"
+    },
+    "response": {
+      "actions": [],
+      "severity_threshold": "high"
+    }
+  }
+}

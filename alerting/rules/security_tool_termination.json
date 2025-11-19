@@ -1,0 +1,55 @@
+{
+  "name": "security_tool_termination",
+  "description": "Detects attempts to terminate security tools (antivirus, EDR, SIEM agents) which is common defense evasion technique",
+  "model": {
+    "correlation_type": "event_count",
+    "parameters": {
+      "time_window": "10m",
+      "query": {
+        "filter": {
+          "type": "and",
+          "conditions": [
+            {
+              "field": ".class_uid",
+              "operator": "eq",
+              "value": 1007
+            },
+            {
+              "field": ".process.name",
+              "operator": "in",
+              "value": ["taskkill", "pkill", "kill", "Stop-Process", "net stop"]
+            }
+          ]
+        }
+      },
+      "threshold": {
+        "value": 3,
+        "operator": "gte"
+      },
+      "group_by": [".device.hostname", ".actor.user.name"]
+    }
+  },
+  "view": {
+    "title": "Security Tool Termination Attempt",
+    "severity": "critical",
+    "description": "User {{actor.user.name}} on host {{device.hostname}} attempted to terminate {{event_count}} processes - potential security tool disabling",
+    "category": "Defense Evasion",
+    "tags": ["defense-evasion", "security-tools", "antivirus", "edr", "termination"],
+    "mitre_attack": {
+      "tactics": ["Defense Evasion"],
+      "techniques": [
+        "T1562.001 - Impair Defenses: Disable or Modify Tools",
+        "T1489 - Service Stop"
+      ]
+    }
+  },
+  "controller": {
+    "detection": {
+      "suppression_window": "30m"
+    },
+    "response": {
+      "actions": [],
+      "severity_threshold": "critical"
+    }
+  }
+}

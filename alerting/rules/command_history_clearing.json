@@ -1,0 +1,55 @@
+{
+  "name": "command_history_clearing",
+  "description": "Detects attempts to clear command history files (bash_history, PowerShell history) to hide attacker activity",
+  "model": {
+    "correlation_type": "event_count",
+    "parameters": {
+      "time_window": "15m",
+      "query": {
+        "filter": {
+          "type": "and",
+          "conditions": [
+            {
+              "field": ".class_uid",
+              "operator": "eq",
+              "value": 1007
+            },
+            {
+              "field": ".process.cmd_line",
+              "operator": "contains",
+              "value": "history"
+            }
+          ]
+        }
+      },
+      "threshold": {
+        "value": 2,
+        "operator": "gte"
+      },
+      "group_by": [".device.hostname", ".actor.user.name"]
+    }
+  },
+  "view": {
+    "title": "Command History Clearing Detected",
+    "severity": "high",
+    "description": "User {{actor.user.name}} on host {{device.hostname}} executed {{event_count}} history-related commands - potential anti-forensics activity",
+    "category": "Defense Evasion",
+    "tags": ["defense-evasion", "anti-forensics", "history-clearing", "indicator-removal"],
+    "mitre_attack": {
+      "tactics": ["Defense Evasion"],
+      "techniques": [
+        "T1070 - Indicator Removal",
+        "T1070.003 - Indicator Removal: Clear Command History"
+      ]
+    }
+  },
+  "controller": {
+    "detection": {
+      "suppression_window": "1h"
+    },
+    "response": {
+      "actions": [],
+      "severity_threshold": "high"
+    }
+  }
+}

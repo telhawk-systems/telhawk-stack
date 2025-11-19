@@ -1,0 +1,53 @@
+{
+  "name": "impossible_travel",
+  "description": "Detects logins from multiple source IPs that are geographically impossible within the timeframe - indicates credential sharing or compromise",
+  "model": {
+    "correlation_type": "value_count",
+    "parameters": {
+      "time_window": "1h",
+      "query": {
+        "filter": {
+          "type": "and",
+          "conditions": [
+            {
+              "field": ".class_uid",
+              "operator": "eq",
+              "value": 3002
+            },
+            {
+              "field": ".status_id",
+              "operator": "eq",
+              "value": 1
+            }
+          ]
+        }
+      },
+      "count_field": ".src_endpoint.ip",
+      "threshold": {
+        "value": 5,
+        "operator": "gte"
+      },
+      "group_by": [".actor.user.name"]
+    }
+  },
+  "view": {
+    "title": "Impossible Travel - Multiple Geographic Locations",
+    "severity": "critical",
+    "description": "User {{actor.user.name}} authenticated from {{unique_count}} different source IPs within 1 hour - potential credential compromise or sharing",
+    "category": "Authentication",
+    "tags": ["authentication", "impossible-travel", "credential-compromise", "anomaly"],
+    "mitre_attack": {
+      "tactics": ["Initial Access", "Credential Access"],
+      "techniques": ["T1078 - Valid Accounts", "T1110 - Brute Force"]
+    }
+  },
+  "controller": {
+    "detection": {
+      "suppression_window": "2h"
+    },
+    "response": {
+      "actions": [],
+      "severity_threshold": "critical"
+    }
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "name": "dns_exfiltration",
+  "description": "Detects potential DNS-based data exfiltration through unusual DNS query patterns targeting multiple domains",
+  "model": {
+    "correlation_type": "value_count",
+    "parameters": {
+      "time_window": "15m",
+      "query": {
+        "filter": {
+          "type": "and",
+          "conditions": [
+            {
+              "field": ".class_uid",
+              "operator": "eq",
+              "value": 4003
+            }
+          ]
+        }
+      },
+      "count_field": ".query.hostname",
+      "threshold": {
+        "value": 30,
+        "operator": "gte"
+      },
+      "group_by": [".src_endpoint.ip", ".device.hostname"]
+    }
+  },
+  "view": {
+    "title": "DNS Exfiltration Detected",
+    "severity": "high",
+    "description": "Host {{device.hostname}} ({{src_endpoint.ip}}) performed DNS queries to {{unique_count}} unique domains - potential data exfiltration",
+    "category": "Exfiltration",
+    "tags": ["dns", "exfiltration", "data-theft", "covert-channel"],
+    "mitre_attack": {
+      "tactics": ["Exfiltration"],
+      "techniques": [
+        "T1048.003 - Exfiltration Over Alternative Protocol: Exfiltration Over Unencrypted Non-C2 Protocol",
+        "T1071.004 - Application Layer Protocol: DNS"
+      ]
+    }
+  },
+  "controller": {
+    "detection": {
+      "suppression_window": "30m"
+    },
+    "response": {
+      "actions": [],
+      "severity_threshold": "high"
+    }
+  }
+}

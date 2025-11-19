@@ -1,0 +1,56 @@
+{
+  "name": "mass_file_deletion",
+  "description": "Detects mass file deletion activity which may indicate data destruction, anti-forensics, or ransomware activity",
+  "model": {
+    "correlation_type": "event_count",
+    "parameters": {
+      "time_window": "5m",
+      "query": {
+        "filter": {
+          "type": "and",
+          "conditions": [
+            {
+              "field": ".class_uid",
+              "operator": "eq",
+              "value": 4006
+            },
+            {
+              "field": ".activity_id",
+              "operator": "eq",
+              "value": 4
+            }
+          ]
+        }
+      },
+      "threshold": {
+        "value": 50,
+        "operator": "gte"
+      },
+      "group_by": [".actor.user.name", ".device.hostname"]
+    }
+  },
+  "view": {
+    "title": "Mass File Deletion Detected",
+    "severity": "critical",
+    "description": "User {{actor.user.name}} on host {{device.hostname}} deleted {{event_count}} files in 5 minutes - potential data destruction or anti-forensics",
+    "category": "Impact",
+    "tags": ["file-deletion", "data-destruction", "anti-forensics", "impact", "sabotage"],
+    "mitre_attack": {
+      "tactics": ["Impact", "Defense Evasion"],
+      "techniques": [
+        "T1485 - Data Destruction",
+        "T1070.004 - Indicator Removal: File Deletion",
+        "T1490 - Inhibit System Recovery"
+      ]
+    }
+  },
+  "controller": {
+    "detection": {
+      "suppression_window": "30m"
+    },
+    "response": {
+      "actions": [],
+      "severity_threshold": "critical"
+    }
+  }
+}

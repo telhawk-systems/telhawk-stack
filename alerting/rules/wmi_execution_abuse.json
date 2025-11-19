@@ -1,0 +1,60 @@
+{
+  "name": "wmi_execution_abuse",
+  "description": "Detects suspicious WMI command execution which may indicate lateral movement, persistence, or malicious activity",
+  "model": {
+    "correlation_type": "event_count",
+    "parameters": {
+      "time_window": "10m",
+      "query": {
+        "filter": {
+          "type": "and",
+          "conditions": [
+            {
+              "field": ".class_uid",
+              "operator": "eq",
+              "value": 1007
+            },
+            {
+              "field": ".activity_id",
+              "operator": "eq",
+              "value": 1
+            },
+            {
+              "field": ".process.name",
+              "operator": "in",
+              "value": ["wmic.exe", "wmic", "wmiprvse.exe", "wmiprvse"]
+            }
+          ]
+        }
+      },
+      "threshold": {
+        "value": 5,
+        "operator": "gte"
+      },
+      "group_by": [".device.hostname", ".actor.user.name"]
+    }
+  },
+  "view": {
+    "title": "WMI Command Execution Abuse Detected",
+    "severity": "high",
+    "description": "User {{actor.user.name}} on host {{device.hostname}} executed {{event_count}} WMI commands - potential lateral movement or persistence",
+    "category": "Execution",
+    "tags": ["wmi", "execution", "lateral-movement", "persistence"],
+    "mitre_attack": {
+      "tactics": ["Execution", "Lateral Movement", "Persistence"],
+      "techniques": [
+        "T1047 - Windows Management Instrumentation",
+        "T1546.003 - Event Triggered Execution: Windows Management Instrumentation Event Subscription"
+      ]
+    }
+  },
+  "controller": {
+    "detection": {
+      "suppression_window": "20m"
+    },
+    "response": {
+      "actions": [],
+      "severity_threshold": "high"
+    }
+  }
+}

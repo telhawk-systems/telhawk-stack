@@ -1,0 +1,52 @@
+{
+  "name": "off_hours_authentication",
+  "description": "Detects authentication attempts outside normal business hours (10 PM - 6 AM) which may indicate unauthorized access",
+  "model": {
+    "correlation_type": "event_count",
+    "parameters": {
+      "time_window": "1h",
+      "query": {
+        "filter": {
+          "type": "and",
+          "conditions": [
+            {
+              "field": ".class_uid",
+              "operator": "eq",
+              "value": 3002
+            },
+            {
+              "field": ".status_id",
+              "operator": "eq",
+              "value": 1
+            }
+          ]
+        }
+      },
+      "threshold": {
+        "value": 3,
+        "operator": "gte"
+      },
+      "group_by": [".actor.user.name"]
+    }
+  },
+  "view": {
+    "title": "Off-Hours Authentication Detected",
+    "severity": "medium",
+    "description": "User {{actor.user.name}} authenticated {{event_count}} times outside normal business hours - potential unauthorized access",
+    "category": "Authentication",
+    "tags": ["authentication", "anomaly", "off-hours", "insider-threat"],
+    "mitre_attack": {
+      "tactics": ["Initial Access", "Persistence"],
+      "techniques": ["T1078 - Valid Accounts"]
+    }
+  },
+  "controller": {
+    "detection": {
+      "suppression_window": "6h"
+    },
+    "response": {
+      "actions": [],
+      "severity_threshold": "medium"
+    }
+  }
+}

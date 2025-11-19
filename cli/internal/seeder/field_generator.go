@@ -135,6 +135,41 @@ func (fg *fieldGenerator) generateValueForField(field string) interface{} {
 		domains := []string{"CORP", "WORKGROUP", "example.com", "internal.local"}
 		return domains[rand.Intn(len(domains))]
 	}
+	// DNS query hostname
+	if containsIgnoreCase(field, "query.hostname") {
+		domains := []string{
+			"example.com", "api.github.com", "malicious-site.ru",
+			"cdn.cloudflare.net", "login.microsoft.com", "updates.ubuntu.com",
+			"suspicious-long-subdomain-name-12345.attacker.com",
+		}
+		return domains[rand.Intn(len(domains))]
+	}
+	// HTTP URL path
+	if containsIgnoreCase(field, "url.path") || containsIgnoreCase(field, "http_request.url.path") {
+		paths := []string{
+			"/api/v1/users", "/api/v1/auth/login", "/api/v1/events",
+			"/admin/dashboard", "/admin/config.php", "/shell.php",
+			"/uploads/backdoor.aspx", "/api/data/export",
+		}
+		return paths[rand.Intn(len(paths))]
+	}
+	// HTTP URL hostname
+	if containsIgnoreCase(field, "url.hostname") || containsIgnoreCase(field, "http_request.url.hostname") {
+		return gofakeit.DomainName()
+	}
+	// HTTP User Agent
+	if containsIgnoreCase(field, "user_agent") || containsIgnoreCase(field, "http_request.user_agent") {
+		agents := []string{
+			gofakeit.UserAgent(),
+			"sqlmap/1.0", "Nmap Scripting Engine", "nikto/2.1.6",
+			"python-requests/2.28.0", "curl/7.68.0",
+		}
+		return agents[rand.Intn(len(agents))]
+	}
+	// Session UID
+	if containsIgnoreCase(field, "session.uid") {
+		return fmt.Sprintf("sess-%s", gofakeit.UUID()[:8])
+	}
 
 	// Default: random string
 	return gofakeit.Word()

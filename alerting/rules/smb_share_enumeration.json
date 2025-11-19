@@ -1,0 +1,57 @@
+{
+  "name": "smb_share_enumeration",
+  "description": "Detects SMB share enumeration activity where a source attempts to connect to multiple destinations - potential reconnaissance or lateral movement",
+  "model": {
+    "correlation_type": "value_count",
+    "parameters": {
+      "time_window": "10m",
+      "query": {
+        "filter": {
+          "type": "and",
+          "conditions": [
+            {
+              "field": ".class_uid",
+              "operator": "eq",
+              "value": 4001
+            },
+            {
+              "field": ".dst_endpoint.port",
+              "operator": "in",
+              "value": [445, 139]
+            }
+          ]
+        }
+      },
+      "count_field": ".dst_endpoint.ip",
+      "threshold": {
+        "value": 10,
+        "operator": "gte"
+      },
+      "group_by": [".src_endpoint.ip"]
+    }
+  },
+  "view": {
+    "title": "SMB Share Enumeration Detected",
+    "severity": "high",
+    "description": "Source IP {{src_endpoint.ip}} attempted SMB connections to {{unique_count}} unique destinations - potential share enumeration or lateral movement",
+    "category": "Discovery",
+    "tags": ["smb", "enumeration", "lateral-movement", "discovery", "shares"],
+    "mitre_attack": {
+      "tactics": ["Discovery", "Lateral Movement"],
+      "techniques": [
+        "T1083 - File and Directory Discovery",
+        "T1135 - Network Share Discovery",
+        "T1021.002 - Remote Services: SMB/Windows Admin Shares"
+      ]
+    }
+  },
+  "controller": {
+    "detection": {
+      "suppression_window": "20m"
+    },
+    "response": {
+      "actions": [],
+      "severity_threshold": "high"
+    }
+  }
+}

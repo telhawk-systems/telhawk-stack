@@ -1,0 +1,55 @@
+{
+  "name": "sql_injection_attempts",
+  "description": "Detects potential SQL injection attempts in HTTP requests based on request patterns and error responses",
+  "model": {
+    "correlation_type": "event_count",
+    "parameters": {
+      "time_window": "10m",
+      "query": {
+        "filter": {
+          "type": "and",
+          "conditions": [
+            {
+              "field": ".class_uid",
+              "operator": "eq",
+              "value": 4002
+            },
+            {
+              "field": ".http_response.code",
+              "operator": "in",
+              "value": [500, 400]
+            }
+          ]
+        }
+      },
+      "threshold": {
+        "value": 10,
+        "operator": "gte"
+      },
+      "group_by": [".src_endpoint.ip", ".http_request.url.path"]
+    }
+  },
+  "view": {
+    "title": "SQL Injection Attempts Detected",
+    "severity": "high",
+    "description": "Source IP {{src_endpoint.ip}} generated {{event_count}} suspicious HTTP requests to {{http_request.url.path}} - potential SQL injection attack",
+    "category": "Initial Access",
+    "tags": ["sql-injection", "sqli", "web-attack", "exploitation", "injection"],
+    "mitre_attack": {
+      "tactics": ["Initial Access"],
+      "techniques": [
+        "T1190 - Exploit Public-Facing Application",
+        "T1059.007 - Command and Scripting Interpreter: JavaScript"
+      ]
+    }
+  },
+  "controller": {
+    "detection": {
+      "suppression_window": "20m"
+    },
+    "response": {
+      "actions": [],
+      "severity_threshold": "high"
+    }
+  }
+}

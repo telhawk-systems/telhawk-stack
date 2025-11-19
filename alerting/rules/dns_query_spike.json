@@ -1,0 +1,50 @@
+{
+  "name": "dns_query_spike",
+  "description": "Detects abnormal DNS query volume per host which may indicate compromised system, malware, or reconnaissance activity",
+  "model": {
+    "correlation_type": "event_count",
+    "parameters": {
+      "time_window": "10m",
+      "query": {
+        "filter": {
+          "type": "and",
+          "conditions": [
+            {
+              "field": ".class_uid",
+              "operator": "eq",
+              "value": 4003
+            }
+          ]
+        }
+      },
+      "threshold": {
+        "value": 200,
+        "operator": "gte"
+      },
+      "group_by": [".device.hostname"]
+    }
+  },
+  "view": {
+    "title": "Abnormal DNS Query Volume",
+    "severity": "medium",
+    "description": "Host {{device.hostname}} generated {{event_count}} DNS queries in 10 minutes - potential compromise or malware activity",
+    "category": "Discovery",
+    "tags": ["dns", "anomaly", "volume", "reconnaissance"],
+    "mitre_attack": {
+      "tactics": ["Discovery", "Command and Control"],
+      "techniques": [
+        "T1071.004 - Application Layer Protocol: DNS",
+        "T1018 - Remote System Discovery"
+      ]
+    }
+  },
+  "controller": {
+    "detection": {
+      "suppression_window": "20m"
+    },
+    "response": {
+      "actions": [],
+      "severity_threshold": "medium"
+    }
+  }
+}

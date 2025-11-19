@@ -1,0 +1,66 @@
+{
+  "name": "obfuscated_powershell",
+  "description": "Detects PowerShell execution with obfuscation indicators: Base64 encoding, compressed commands, encoded payloads",
+  "model": {
+    "correlation_type": "event_count",
+    "parameters": {
+      "time_window": "15m",
+      "query": {
+        "filter": {
+          "type": "and",
+          "conditions": [
+            {
+              "field": ".class_uid",
+              "operator": "eq",
+              "value": 1007
+            },
+            {
+              "field": ".activity_id",
+              "operator": "eq",
+              "value": 1
+            },
+            {
+              "field": ".process.name",
+              "operator": "in",
+              "value": ["powershell.exe", "powershell", "pwsh.exe", "pwsh"]
+            },
+            {
+              "field": ".process.cmd_line",
+              "operator": "contains",
+              "value": "encodedcommand"
+            }
+          ]
+        }
+      },
+      "threshold": {
+        "value": 2,
+        "operator": "gte"
+      },
+      "group_by": [".device.hostname", ".actor.user.name"]
+    }
+  },
+  "view": {
+    "title": "Obfuscated PowerShell Execution Detected",
+    "severity": "critical",
+    "description": "User {{actor.user.name}} on host {{device.hostname}} executed {{event_count}} obfuscated PowerShell commands - potential malware or attack",
+    "category": "Execution",
+    "tags": ["powershell", "obfuscation", "execution", "defense-evasion", "base64"],
+    "mitre_attack": {
+      "tactics": ["Execution", "Defense Evasion"],
+      "techniques": [
+        "T1059.001 - Command and Scripting Interpreter: PowerShell",
+        "T1027 - Obfuscated Files or Information",
+        "T1140 - Deobfuscate/Decode Files or Information"
+      ]
+    }
+  },
+  "controller": {
+    "detection": {
+      "suppression_window": "30m"
+    },
+    "response": {
+      "actions": [],
+      "severity_threshold": "critical"
+    }
+  }
+}

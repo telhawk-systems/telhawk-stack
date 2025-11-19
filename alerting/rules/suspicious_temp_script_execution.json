@@ -1,0 +1,61 @@
+{
+  "name": "suspicious_temp_script_execution",
+  "description": "Detects execution of scripts from temporary directories which may indicate malware, droppers, or malicious activity",
+  "model": {
+    "correlation_type": "event_count",
+    "parameters": {
+      "time_window": "10m",
+      "query": {
+        "filter": {
+          "type": "and",
+          "conditions": [
+            {
+              "field": ".class_uid",
+              "operator": "eq",
+              "value": 1007
+            },
+            {
+              "field": ".activity_id",
+              "operator": "eq",
+              "value": 1
+            },
+            {
+              "field": ".process.file.path",
+              "operator": "contains",
+              "value": "/tmp/"
+            }
+          ]
+        }
+      },
+      "threshold": {
+        "value": 5,
+        "operator": "gte"
+      },
+      "group_by": [".device.hostname"]
+    }
+  },
+  "view": {
+    "title": "Suspicious Script Execution from Temp Directory",
+    "severity": "high",
+    "description": "Host {{device.hostname}} executed {{event_count}} scripts from temporary directory - potential malware or unauthorized activity",
+    "category": "Execution",
+    "tags": ["execution", "temp-directory", "suspicious-script", "malware", "defense-evasion"],
+    "mitre_attack": {
+      "tactics": ["Execution", "Defense Evasion"],
+      "techniques": [
+        "T1204.002 - User Execution: Malicious File",
+        "T1059 - Command and Scripting Interpreter",
+        "T1027 - Obfuscated Files or Information"
+      ]
+    }
+  },
+  "controller": {
+    "detection": {
+      "suppression_window": "20m"
+    },
+    "response": {
+      "actions": [],
+      "severity_threshold": "high"
+    }
+  }
+}

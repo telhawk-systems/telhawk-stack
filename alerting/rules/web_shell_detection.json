@@ -1,0 +1,60 @@
+{
+  "name": "web_shell_detection",
+  "description": "Detects potential web shell activity by identifying POST requests to suspicious file paths (php, aspx, jsp)",
+  "model": {
+    "correlation_type": "event_count",
+    "parameters": {
+      "time_window": "10m",
+      "query": {
+        "filter": {
+          "type": "and",
+          "conditions": [
+            {
+              "field": ".class_uid",
+              "operator": "eq",
+              "value": 4002
+            },
+            {
+              "field": ".http_request.method",
+              "operator": "eq",
+              "value": "POST"
+            },
+            {
+              "field": ".http_request.url.path",
+              "operator": "contains",
+              "value": ".php"
+            }
+          ]
+        }
+      },
+      "threshold": {
+        "value": 5,
+        "operator": "gte"
+      },
+      "group_by": [".src_endpoint.ip", ".http_request.url.path"]
+    }
+  },
+  "view": {
+    "title": "Web Shell Activity Detected",
+    "severity": "critical",
+    "description": "Source IP {{src_endpoint.ip}} made {{event_count}} POST requests to {{http_request.url.path}} - potential web shell execution",
+    "category": "Persistence",
+    "tags": ["web-shell", "persistence", "backdoor", "http", "post-exploitation"],
+    "mitre_attack": {
+      "tactics": ["Persistence", "Command and Control"],
+      "techniques": [
+        "T1505.003 - Server Software Component: Web Shell",
+        "T1071.001 - Application Layer Protocol: Web Protocols"
+      ]
+    }
+  },
+  "controller": {
+    "detection": {
+      "suppression_window": "30m"
+    },
+    "response": {
+      "actions": [],
+      "severity_threshold": "critical"
+    }
+  }
+}

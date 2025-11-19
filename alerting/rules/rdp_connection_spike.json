@@ -1,0 +1,55 @@
+{
+  "name": "rdp_connection_spike",
+  "description": "Detects spike in RDP connection attempts which may indicate brute force attack or unauthorized access attempts",
+  "model": {
+    "correlation_type": "event_count",
+    "parameters": {
+      "time_window": "5m",
+      "query": {
+        "filter": {
+          "type": "and",
+          "conditions": [
+            {
+              "field": ".class_uid",
+              "operator": "eq",
+              "value": 4001
+            },
+            {
+              "field": ".dst_endpoint.port",
+              "operator": "eq",
+              "value": 3389
+            }
+          ]
+        }
+      },
+      "threshold": {
+        "value": 15,
+        "operator": "gte"
+      },
+      "group_by": [".src_endpoint.ip", ".dst_endpoint.ip"]
+    }
+  },
+  "view": {
+    "title": "RDP Connection Spike Detected",
+    "severity": "high",
+    "description": "Source IP {{src_endpoint.ip}} made {{event_count}} RDP connection attempts to {{dst_endpoint.ip}} - potential brute force or unauthorized access",
+    "category": "Initial Access",
+    "tags": ["rdp", "brute-force", "remote-desktop", "credential-access", "initial-access"],
+    "mitre_attack": {
+      "tactics": ["Initial Access", "Lateral Movement", "Credential Access"],
+      "techniques": [
+        "T1021.001 - Remote Services: Remote Desktop Protocol",
+        "T1110 - Brute Force"
+      ]
+    }
+  },
+  "controller": {
+    "detection": {
+      "suppression_window": "15m"
+    },
+    "response": {
+      "actions": [],
+      "severity_threshold": "high"
+    }
+  }
+}

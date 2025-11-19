@@ -1,0 +1,55 @@
+{
+  "name": "http_c2_beaconing",
+  "description": "Detects HTTP command and control beaconing based on regular interval HTTP requests from a single source",
+  "model": {
+    "correlation_type": "event_count",
+    "parameters": {
+      "time_window": "15m",
+      "query": {
+        "filter": {
+          "type": "and",
+          "conditions": [
+            {
+              "field": ".class_uid",
+              "operator": "eq",
+              "value": 4002
+            },
+            {
+              "field": ".http_request.method",
+              "operator": "in",
+              "value": ["GET", "POST"]
+            }
+          ]
+        }
+      },
+      "threshold": {
+        "value": 50,
+        "operator": "gte"
+      },
+      "group_by": [".src_endpoint.ip", ".http_request.url.hostname"]
+    }
+  },
+  "view": {
+    "title": "HTTP C2 Beaconing Detected",
+    "severity": "critical",
+    "description": "Source IP {{src_endpoint.ip}} made {{event_count}} HTTP requests to {{http_request.url.hostname}} - potential C2 beaconing activity",
+    "category": "Command and Control",
+    "tags": ["c2", "beaconing", "http", "command-control", "malware"],
+    "mitre_attack": {
+      "tactics": ["Command and Control"],
+      "techniques": [
+        "T1071.001 - Application Layer Protocol: Web Protocols",
+        "T1095 - Non-Application Layer Protocol"
+      ]
+    }
+  },
+  "controller": {
+    "detection": {
+      "suppression_window": "30m"
+    },
+    "response": {
+      "actions": [],
+      "severity_threshold": "critical"
+    }
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "name": "dga_detection",
+  "description": "Detects Domain Generation Algorithm (DGA) activity by identifying excessive unique domain queries from a single source - common malware C2 technique",
+  "model": {
+    "correlation_type": "value_count",
+    "parameters": {
+      "time_window": "10m",
+      "query": {
+        "filter": {
+          "type": "and",
+          "conditions": [
+            {
+              "field": ".class_uid",
+              "operator": "eq",
+              "value": 4003
+            },
+            {
+              "field": ".activity_id",
+              "operator": "eq",
+              "value": 1
+            }
+          ]
+        }
+      },
+      "count_field": ".query.hostname",
+      "threshold": {
+        "value": 50,
+        "operator": "gte"
+      },
+      "group_by": [".src_endpoint.ip"]
+    }
+  },
+  "view": {
+    "title": "Domain Generation Algorithm (DGA) Detected",
+    "severity": "critical",
+    "description": "Source IP {{src_endpoint.ip}} queried {{unique_count}} unique domains in 10 minutes - potential DGA malware C2 activity",
+    "category": "Command and Control",
+    "tags": ["dns", "dga", "malware", "c2", "domain-generation"],
+    "mitre_attack": {
+      "tactics": ["Command and Control"],
+      "techniques": [
+        "T1568.002 - Dynamic Resolution: Domain Generation Algorithms",
+        "T1071.004 - Application Layer Protocol: DNS"
+      ]
+    }
+  },
+  "controller": {
+    "detection": {
+      "suppression_window": "30m"
+    },
+    "response": {
+      "actions": [],
+      "severity_threshold": "critical"
+    }
+  }
+}

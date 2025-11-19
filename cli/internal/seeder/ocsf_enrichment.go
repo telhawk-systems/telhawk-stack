@@ -228,6 +228,82 @@ func (oe *ocsfEnricher) addRequiredOCSFFields(event map[string]interface{}) {
 				},
 			}
 		}
+	case 4003: // DNS Activity
+		event["category_uid"] = 4
+		event["category_name"] = "Network Activity"
+		event["class_name"] = "DNS Activity"
+		if _, exists := event["activity_id"]; !exists {
+			event["activity_id"] = 1 // Query
+		}
+		if _, exists := event["activity_name"]; !exists {
+			event["activity_name"] = "Query"
+		}
+		if _, exists := event["severity_id"]; !exists {
+			event["severity_id"] = 1 // Informational
+		}
+		// Ensure query object exists with hostname
+		if _, exists := event["query"]; !exists {
+			event["query"] = map[string]interface{}{
+				"hostname": oe.fieldGen.generateValueForField("query.hostname"),
+				"type":     "A",
+				"class":    "IN",
+			}
+		}
+	case 4002: // HTTP Activity
+		event["category_uid"] = 4
+		event["category_name"] = "Network Activity"
+		event["class_name"] = "HTTP Activity"
+		if _, exists := event["activity_id"]; !exists {
+			event["activity_id"] = 1 // HTTP Request
+		}
+		if _, exists := event["activity_name"]; !exists {
+			event["activity_name"] = "HTTP Request"
+		}
+		if _, exists := event["severity_id"]; !exists {
+			event["severity_id"] = 1 // Informational
+		}
+		// Ensure http_request object exists
+		if _, exists := event["http_request"]; !exists {
+			event["http_request"] = map[string]interface{}{
+				"method": "GET",
+				"url": map[string]interface{}{
+					"path":     oe.fieldGen.generateValueForField("http_request.url.path"),
+					"scheme":   "https",
+					"hostname": oe.fieldGen.generateValueForField("http_request.url.hostname"),
+				},
+				"user_agent": oe.fieldGen.generateValueForField("http_request.user_agent"),
+			}
+		}
+	case 4006: // File Activity
+		event["category_uid"] = 4
+		event["category_name"] = "Network Activity"
+		event["class_name"] = "File Activity"
+		if _, exists := event["activity_id"]; !exists {
+			event["activity_id"] = 1 // Create
+		}
+		if _, exists := event["activity_name"]; !exists {
+			event["activity_name"] = "Create"
+		}
+		if _, exists := event["severity_id"]; !exists {
+			event["severity_id"] = 1 // Informational
+		}
+		// Ensure file object exists
+		if _, exists := event["file"]; !exists {
+			event["file"] = map[string]interface{}{
+				"path": oe.fieldGen.generateValueForField("file.path"),
+				"name": oe.fieldGen.generateValueForField("file.name"),
+				"size": oe.fieldGen.generateValueForField("file.size"),
+			}
+		}
+		// Add actor if not present (file activities have actors)
+		if _, exists := event["actor"]; !exists {
+			event["actor"] = map[string]interface{}{
+				"user": map[string]interface{}{
+					"name": oe.fieldGen.generateValueForField("actor.user.name"),
+					"uid":  oe.fieldGen.generateValueForField("actor.user.uid"),
+				},
+			}
+		}
 	default:
 		// Generic defaults
 		event["category_uid"] = 0

@@ -1,0 +1,62 @@
+{
+  "name": "sensitive_file_access",
+  "description": "Detects access to sensitive system files containing credentials: SAM, NTDS, shadow, id_rsa, authorized_keys",
+  "model": {
+    "correlation_type": "event_count",
+    "parameters": {
+      "time_window": "10m",
+      "query": {
+        "filter": {
+          "type": "and",
+          "conditions": [
+            {
+              "field": ".class_uid",
+              "operator": "eq",
+              "value": 4006
+            },
+            {
+              "field": ".activity_id",
+              "operator": "eq",
+              "value": 2
+            },
+            {
+              "field": ".file.path",
+              "operator": "contains",
+              "value": "shadow"
+            }
+          ]
+        }
+      },
+      "threshold": {
+        "value": 1,
+        "operator": "gte"
+      },
+      "group_by": [".actor.user.name", ".device.hostname"]
+    }
+  },
+  "view": {
+    "title": "Sensitive File Access Detected",
+    "severity": "critical",
+    "description": "User {{actor.user.name}} on host {{device.hostname}} accessed sensitive credential file - potential credential theft",
+    "category": "Credential Access",
+    "tags": ["credential-access", "sensitive-file", "sam", "ntds", "shadow", "ssh-keys"],
+    "mitre_attack": {
+      "tactics": ["Credential Access"],
+      "techniques": [
+        "T1003.002 - OS Credential Dumping: Security Account Manager",
+        "T1003.003 - OS Credential Dumping: NTDS",
+        "T1552.001 - Unsecured Credentials: Credentials In Files",
+        "T1552.004 - Unsecured Credentials: Private Keys"
+      ]
+    }
+  },
+  "controller": {
+    "detection": {
+      "suppression_window": "1h"
+    },
+    "response": {
+      "actions": [],
+      "severity_threshold": "critical"
+    }
+  }
+}

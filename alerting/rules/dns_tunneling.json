@@ -1,0 +1,55 @@
+{
+  "name": "dns_tunneling",
+  "description": "Detects potential DNS tunneling based on excessive DNS query volume from a single source - may indicate data exfiltration or C2 communication",
+  "model": {
+    "correlation_type": "event_count",
+    "parameters": {
+      "time_window": "5m",
+      "query": {
+        "filter": {
+          "type": "and",
+          "conditions": [
+            {
+              "field": ".class_uid",
+              "operator": "eq",
+              "value": 4003
+            },
+            {
+              "field": ".activity_id",
+              "operator": "eq",
+              "value": 1
+            }
+          ]
+        }
+      },
+      "threshold": {
+        "value": 100,
+        "operator": "gte"
+      },
+      "group_by": [".src_endpoint.ip"]
+    }
+  },
+  "view": {
+    "title": "DNS Tunneling Detected",
+    "severity": "high",
+    "description": "Source IP {{src_endpoint.ip}} generated {{event_count}} DNS queries in 5 minutes - potential DNS tunneling for data exfiltration or C2",
+    "category": "Command and Control",
+    "tags": ["dns", "tunneling", "exfiltration", "c2", "command-control"],
+    "mitre_attack": {
+      "tactics": ["Command and Control", "Exfiltration"],
+      "techniques": [
+        "T1071.004 - Application Layer Protocol: DNS",
+        "T1048.003 - Exfiltration Over Alternative Protocol"
+      ]
+    }
+  },
+  "controller": {
+    "detection": {
+      "suppression_window": "15m"
+    },
+    "response": {
+      "actions": [],
+      "severity_threshold": "high"
+    }
+  }
+}

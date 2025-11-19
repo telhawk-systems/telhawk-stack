@@ -1,0 +1,55 @@
+{
+  "name": "suspicious_user_agents",
+  "description": "Detects HTTP requests with suspicious user agent strings commonly used by security tools, scanners, or attackers",
+  "model": {
+    "correlation_type": "event_count",
+    "parameters": {
+      "time_window": "15m",
+      "query": {
+        "filter": {
+          "type": "and",
+          "conditions": [
+            {
+              "field": ".class_uid",
+              "operator": "eq",
+              "value": 4002
+            },
+            {
+              "field": ".http_request.user_agent",
+              "operator": "contains",
+              "value": "sqlmap"
+            }
+          ]
+        }
+      },
+      "threshold": {
+        "value": 3,
+        "operator": "gte"
+      },
+      "group_by": [".src_endpoint.ip"]
+    }
+  },
+  "view": {
+    "title": "Suspicious User Agent Detected",
+    "severity": "high",
+    "description": "Source IP {{src_endpoint.ip}} made {{event_count}} HTTP requests with suspicious user agent - potential scanning or attack tool usage",
+    "category": "Reconnaissance",
+    "tags": ["user-agent", "scanning", "reconnaissance", "security-tool", "http"],
+    "mitre_attack": {
+      "tactics": ["Reconnaissance", "Initial Access"],
+      "techniques": [
+        "T1595 - Active Scanning",
+        "T1190 - Exploit Public-Facing Application"
+      ]
+    }
+  },
+  "controller": {
+    "detection": {
+      "suppression_window": "30m"
+    },
+    "response": {
+      "actions": [],
+      "severity_threshold": "high"
+    }
+  }
+}
