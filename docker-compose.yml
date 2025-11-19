@@ -489,10 +489,15 @@ services:
     build:
       context: .
       dockerfile: scripts/Dockerfile.devtools
+      args:
+        - USER_ID=${USER_ID:-1000}
+        - GROUP_ID=${GROUP_ID:-1000}
+        - USERNAME=${USERNAME:-devuser}
     container_name: telhawk-devtools
+    user: "${USER_ID:-1000}:${GROUP_ID:-1000}"
     volumes:
-      - ./tmp:/tmp:rw
-      - ./scripts:/scripts:ro
+      - .:/workspace:rw
+    working_dir: /workspace
     networks:
       - telhawk
     profiles:

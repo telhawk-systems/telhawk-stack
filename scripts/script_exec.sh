@@ -40,16 +40,8 @@ if ! docker ps --format '{{.Names}}' | grep -q '^telhawk-devtools$'; then
 fi
 
 # Determine the path inside the container
-# If script is in ./tmp, it's at /tmp in container
-# If script is in ./scripts, it's at /scripts in container
-if [[ "$SCRIPT_PATH" == tmp/* ]]; then
-    CONTAINER_PATH="/${SCRIPT_PATH}"
-elif [[ "$SCRIPT_PATH" == scripts/* ]]; then
-    CONTAINER_PATH="/${SCRIPT_PATH}"
-else
-    # For absolute paths or other locations, try to map them
-    CONTAINER_PATH="/$SCRIPT_PATH"
-fi
+# With the new setup, everything is at /workspace
+CONTAINER_PATH="/workspace/${SCRIPT_PATH}"
 
 # Execute the script in the devtools container
 docker exec -i telhawk-devtools bash "$CONTAINER_PATH"
