@@ -19,13 +19,19 @@ type Config struct {
 type Profile struct {
 	AuthURL      string `yaml:"auth_url" mapstructure:"auth_url"`
 	IngestURL    string `yaml:"ingest_url" mapstructure:"ingest_url"`
+	QueryURL     string `yaml:"query_url" mapstructure:"query_url"`
+	RulesURL     string `yaml:"rules_url" mapstructure:"rules_url"`
+	AlertingURL  string `yaml:"alerting_url" mapstructure:"alerting_url"`
 	AccessToken  string `yaml:"access_token" mapstructure:"access_token"`
 	RefreshToken string `yaml:"refresh_token" mapstructure:"refresh_token"`
 }
 
 type Defaults struct {
-	AuthURL   string `yaml:"auth_url" mapstructure:"auth_url"`
-	IngestURL string `yaml:"ingest_url" mapstructure:"ingest_url"`
+	AuthURL     string `yaml:"auth_url" mapstructure:"auth_url"`
+	IngestURL   string `yaml:"ingest_url" mapstructure:"ingest_url"`
+	QueryURL    string `yaml:"query_url" mapstructure:"query_url"`
+	RulesURL    string `yaml:"rules_url" mapstructure:"rules_url"`
+	AlertingURL string `yaml:"alerting_url" mapstructure:"alerting_url"`
 }
 
 func Default() *Config {
@@ -33,8 +39,11 @@ func Default() *Config {
 		CurrentProfile: "default",
 		Profiles:       make(map[string]*Profile),
 		Defaults: &Defaults{
-			AuthURL:   "http://localhost:8080",
-			IngestURL: "http://localhost:8088",
+			AuthURL:     "http://localhost:8080",
+			IngestURL:   "http://localhost:8088",
+			QueryURL:    "http://localhost:8082",
+			RulesURL:    "http://localhost:8084",
+			AlertingURL: "http://localhost:8085",
 		},
 	}
 }
@@ -46,6 +55,9 @@ func Load(cfgFile string) (*Config, error) {
 	v.SetDefault("current_profile", "default")
 	v.SetDefault("defaults.auth_url", "http://localhost:8080")
 	v.SetDefault("defaults.ingest_url", "http://localhost:8088")
+	v.SetDefault("defaults.query_url", "http://localhost:8082")
+	v.SetDefault("defaults.rules_url", "http://localhost:8084")
+	v.SetDefault("defaults.alerting_url", "http://localhost:8085")
 
 	// Determine config file path
 	if cfgFile == "" {
@@ -63,6 +75,9 @@ func Load(cfgFile string) (*Config, error) {
 	// Bind specific env vars
 	v.BindEnv("defaults.auth_url", "THAWK_AUTH_URL")
 	v.BindEnv("defaults.ingest_url", "THAWK_INGEST_URL")
+	v.BindEnv("defaults.query_url", "THAWK_QUERY_URL")
+	v.BindEnv("defaults.rules_url", "THAWK_RULES_URL")
+	v.BindEnv("defaults.alerting_url", "THAWK_ALERTING_URL")
 
 	cfg := Default()
 	cfg.path = cfgFile
@@ -166,4 +181,34 @@ func (c *Config) GetIngestURL(profile string) string {
 		}
 	}
 	return c.Defaults.IngestURL
+}
+
+// GetQueryURL returns the query URL from profile or defaults
+func (c *Config) GetQueryURL(profile string) string {
+	if profile != "" {
+		if p, err := c.GetProfile(profile); err == nil && p.QueryURL != "" {
+			return p.QueryURL
+		}
+	}
+	return c.Defaults.QueryURL
+}
+
+// GetRulesURL returns the rules URL from profile or defaults
+func (c *Config) GetRulesURL(profile string) string {
+	if profile != "" {
+		if p, err := c.GetProfile(profile); err == nil && p.RulesURL != "" {
+			return p.RulesURL
+		}
+	}
+	return c.Defaults.RulesURL
+}
+
+// GetAlertingURL returns the alerting URL from profile or defaults
+func (c *Config) GetAlertingURL(profile string) string {
+	if profile != "" {
+		if p, err := c.GetProfile(profile); err == nil && p.AlertingURL != "" {
+			return p.AlertingURL
+		}
+	}
+	return c.Defaults.AlertingURL
 }

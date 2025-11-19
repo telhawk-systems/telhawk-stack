@@ -32,7 +32,17 @@ docker-compose run --rm thawk auth whoami
 
 ### Internal Access & Scripts
 
-Use the helpers documented in `docs/HELPER_SCRIPTS.md`.
+Use the `./scripts/curl.sh` wrapper to access internal services from your host machine.
+
+**Quick Start:**
+```bash
+# Access internal services that aren't exposed to the host
+./scripts/curl.sh http://alerting:8085/api/v1/alerts?page=1&limit=5
+./scripts/curl.sh http://rules:8084/api/v1/schemas
+./scripts/curl.sh -s http://query:8082/health | jq '.'
+```
+
+**How it works:** The script runs curl inside a Docker container connected to the TelHawk network, allowing access to internal services (auth, rules, query, alerting, etc.) that are not exposed on localhost.
 
 **Example script** (`tmp/create_detection_rules.sh`):
 ```bash
@@ -83,11 +93,57 @@ migrate -database "postgres://telhawk:password@localhost:5432/telhawk_auth?sslmo
 The event seeder generates realistic OCSF events for development and testing. It now supports **rule-based event generation** that automatically creates events matching detection rules to validate they fire correctly.
 
 **Key features:**
-- **Rule-based generation**: Reads detection rules and generates events that match them (NEW)
-- **Automatic validation**: Ensures generated events will trigger the rules (NEW)
+- **Rule-based generation**: Reads detection rules and generates events that match them
+- **Automatic validation**: Ensures generated events will trigger the rules
 - **Jittered distribution**: Events are evenly distributed across time with ±40% random jitter
 - **Guaranteed coverage**: Requires minimum 1 event/day to prevent gaps
 - **Homogeneous baseline**: Ideal for layering suspicious activity patterns on top
+
+#### Quick Start (Recommended)
+
+Use the automated setup script for first-time seeding:
+
+```bash
+# Run the first-time seeding script (handles everything automatically)
+./scripts/first-time-seed.sh
+```
+
+**What this script does:**
+1. ✓ Starts required Docker services (if not running)
+2. ✓ Builds the CLI tool (if needed)
+3. ✓ Authenticates with the auth service
+4. ✓ Creates or validates HEC token (saved to `.hec-token` - git-ignored)
+5. ✓ Runs seeder for all detection rules
+6. ✓ Verifies events in OpenSearch
+
+**Output example:**
+```
+[1/6] Checking Docker services...
+✓ Services are already running
+
+[2/6] Checking CLI build...
+✓ CLI already built
+
+[3/6] Authenticating with auth service...
+✓ Authenticated as admin
+
+[4/6] Managing HEC token...
+✓ Existing token is valid
+
+[5/6] Generating events from detection rules...
+  Events sent: 241
+
+[6/6] Verifying events in OpenSearch...
+✓ Total events in OpenSearch: 385
+
+✓ Seeding Complete!
+HEC Token: 019a999c-0214-73b9-9d7c-fed42a796feb
+Token saved to: .hec-token (git-ignored)
+```
+
+#### Manual Seeding (Advanced)
+
+If you need fine-grained control:
 
 ```bash
 # 1. Create a HEC token (via web UI at http://localhost:3000/tokens or via API):
@@ -106,7 +162,7 @@ curl -b /tmp/cookies.txt -X POST http://localhost:3000/api/auth/api/v1/hec/token
 cd cli
 go build -o ../bin/thawk .
 
-# 3. Rule-based event generation (NEW - recommended approach):
+# 3. Rule-based event generation:
 
 # Generate events from detection rules directory (validates rules fire):
 ./bin/thawk seeder run --token YOUR_TOKEN --from-rules ./alerting/rules/
