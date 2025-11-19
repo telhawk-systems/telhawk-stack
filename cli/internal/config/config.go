@@ -72,12 +72,19 @@ func Load(cfgFile string) (*Config, error) {
 	v.SetEnvPrefix("THAWK")
 	v.AutomaticEnv()
 
-	// Bind specific env vars
-	v.BindEnv("defaults.auth_url", "THAWK_AUTH_URL")
-	v.BindEnv("defaults.ingest_url", "THAWK_INGEST_URL")
-	v.BindEnv("defaults.query_url", "THAWK_QUERY_URL")
-	v.BindEnv("defaults.rules_url", "THAWK_RULES_URL")
-	v.BindEnv("defaults.alerting_url", "THAWK_ALERTING_URL")
+	// Bind specific env vars (viper needs explicit bindings for nested keys)
+	_ = v.BindEnv("defaults.auth_url", "THAWK_AUTH_URL")
+	_ = v.BindEnv("defaults.ingest_url", "THAWK_INGEST_URL")
+	_ = v.BindEnv("defaults.query_url", "THAWK_QUERY_URL")
+	_ = v.BindEnv("defaults.rules_url", "THAWK_RULES_URL")
+	_ = v.BindEnv("defaults.alerting_url", "THAWK_ALERTING_URL")
+
+	// Also try alternate format (dots replaced with underscores)
+	_ = v.BindEnv("defaults.auth_url", "THAWK_DEFAULTS_AUTH_URL")
+	_ = v.BindEnv("defaults.ingest_url", "THAWK_DEFAULTS_INGEST_URL")
+	_ = v.BindEnv("defaults.query_url", "THAWK_DEFAULTS_QUERY_URL")
+	_ = v.BindEnv("defaults.rules_url", "THAWK_DEFAULTS_RULES_URL")
+	_ = v.BindEnv("defaults.alerting_url", "THAWK_DEFAULTS_ALERTING_URL")
 
 	cfg := Default()
 	cfg.path = cfgFile

@@ -60,18 +60,24 @@ var alertsListCmd = &cobra.Command{
 		table := output.NewTable([]string{"ID", "Detection", "Severity", "Event Count", "Triggered At"})
 		for _, alert := range alertsResp.Alerts {
 			count := ""
-			if alert.EventCount > 0 {
-				count = fmt.Sprintf("%d", alert.EventCount)
-			} else if alert.DistinctCount > 0 {
-				count = fmt.Sprintf("%d distinct", alert.DistinctCount)
+			if alert.EventCount() > 0 {
+				count = fmt.Sprintf("%d", alert.EventCount())
+			} else if alert.DistinctCount() > 0 {
+				count = fmt.Sprintf("%d distinct", alert.DistinctCount())
+			}
+
+			// Truncate ID safely
+			idDisplay := alert.ID
+			if len(alert.ID) > 16 {
+				idDisplay = alert.ID[:16] + "..."
 			}
 
 			table.AddRow([]string{
-				alert.ID[:16] + "...",
-				alert.DetectionName,
+				idDisplay,
+				alert.DetectionName(),
 				alert.Severity,
 				count,
-				alert.TriggeredAt.Format("2006-01-02 15:04"),
+				alert.TriggeredAt().Format("2006-01-02 15:04"),
 			})
 		}
 		table.Render()
@@ -113,27 +119,27 @@ var alertsGetCmd = &cobra.Command{
 		}
 
 		output.Info("Alert ID: %s", alert.ID)
-		output.Info("Detection: %s", alert.DetectionName)
+		output.Info("Detection: %s", alert.DetectionName())
 		output.Info("Severity: %s", alert.Severity)
-		output.Info("Triggered: %s", alert.TriggeredAt.Format("2006-01-02 15:04:05"))
+		output.Info("Triggered: %s", alert.TriggeredAt().Format("2006-01-02 15:04:05"))
 
-		if alert.EventCount > 0 {
-			output.Info("Event Count: %d", alert.EventCount)
+		if alert.EventCount() > 0 {
+			output.Info("Event Count: %d", alert.EventCount())
 		}
-		if alert.DistinctCount > 0 {
-			output.Info("Distinct Count: %d", alert.DistinctCount)
+		if alert.DistinctCount() > 0 {
+			output.Info("Distinct Count: %d", alert.DistinctCount())
 		}
 
-		if len(alert.GroupByValues) > 0 {
-			output.Info("\nGrouping:")
-			for key, val := range alert.GroupByValues {
-				output.Info("  %s: %v", key, val)
-			}
+		if alert.RawData.GroupKey != "" {
+			output.Info("\nGroup Key: %s", alert.RawData.GroupKey)
+		}
+		if len(alert.RawData.GroupBy) > 0 {
+			output.Info("Grouped By: %v", alert.RawData.GroupBy)
 		}
 
 		output.Info("\nDetection Rule:")
-		output.Info("  ID: %s", alert.DetectionSchema.ID)
-		output.Info("  Version ID: %s", alert.DetectionSchema.VersionID)
+		output.Info("  ID: %s", alert.DetectionSchemaID)
+		output.Info("  Version ID: %s", alert.DetectionSchemaVersionID)
 
 		return nil
 	},
@@ -181,8 +187,14 @@ var casesListCmd = &cobra.Command{
 
 		table := output.NewTable([]string{"ID", "Title", "Status", "Severity", "Alerts", "Created"})
 		for _, c := range casesResp.Cases {
+			// Truncate ID safely
+			idDisplay := c.ID
+			if len(c.ID) > 8 {
+				idDisplay = c.ID[:8] + "..."
+			}
+
 			table.AddRow([]string{
-				c.ID[:8] + "...",
+				idDisplay,
 				c.Title,
 				c.Status,
 				c.Severity,

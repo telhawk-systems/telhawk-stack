@@ -14,19 +14,52 @@ type AlertingClient struct {
 	client  *http.Client
 }
 
-// Alert represents a security alert from OpenSearch
+// Alert represents a security alert from OpenSearch (OCSF Detection Finding format)
 type Alert struct {
-	ID              string                 `json:"id"`
-	DetectionName   string                 `json:"detection_name"`
-	Severity        string                 `json:"severity"`
-	TriggeredAt     time.Time              `json:"triggered_at"`
-	EventCount      int                    `json:"event_count,omitempty"`
-	DistinctCount   int                    `json:"distinct_count,omitempty"`
-	GroupByValues   map[string]interface{} `json:"group_by_values,omitempty"`
-	DetectionSchema struct {
-		ID        string `json:"id"`
-		VersionID string `json:"version_id"`
-	} `json:"detection_schema"`
+	ID          string `json:"_id"`
+	Index       string `json:"_index"`
+	Severity    string `json:"severity"`
+	SeverityID  int    `json:"severity_id"`
+	Time        int64  `json:"time"` // Unix timestamp in milliseconds
+	FindingInfo struct {
+		Title       string   `json:"title"`
+		Description string   `json:"desc"`
+		UID         string   `json:"uid"`
+		CreatedTime int64    `json:"created_time"`
+		Types       []string `json:"types"`
+	} `json:"finding_info"`
+	DetectionSchemaID        string `json:"detection_schema_id"`
+	DetectionSchemaVersionID string `json:"detection_schema_version_id"`
+	RawData                  struct {
+		EventCount    int      `json:"event_count,omitempty"`
+		DistinctCount int      `json:"distinct_count,omitempty"`
+		GroupKey      string   `json:"group_key,omitempty"`
+		GroupBy       []string `json:"group_by,omitempty"`
+		Threshold     int      `json:"threshold,omitempty"`
+		TimeWindow    string   `json:"time_window,omitempty"`
+	} `json:"raw_data"`
+	Resources []struct {
+		Name string `json:"name"`
+		Type string `json:"type"`
+		UID  string `json:"uid"`
+	} `json:"resources"`
+}
+
+// Helper methods for backward compatibility
+func (a *Alert) DetectionName() string {
+	return a.FindingInfo.Title
+}
+
+func (a *Alert) TriggeredAt() time.Time {
+	return time.UnixMilli(a.Time)
+}
+
+func (a *Alert) EventCount() int {
+	return a.RawData.EventCount
+}
+
+func (a *Alert) DistinctCount() int {
+	return a.RawData.DistinctCount
 }
 
 // Case represents an investigation case

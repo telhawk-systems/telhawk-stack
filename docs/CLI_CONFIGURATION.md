@@ -27,24 +27,27 @@ thawk auth login -u admin -p password
 thawk ingest send -m "test event" -t <token>
 ```
 
-## Docker Compose Usage
+## Using thawk Wrapper Script
 
-The docker-compose.yml sets environment variables automatically:
-
-```yaml
-thawk:
-  environment:
-    - THAWK_AUTH_URL=http://auth:8080
-    - THAWK_INGEST_URL=http://ingest:8088
-```
-
-Usage:
+The `./scripts/thawk` wrapper automatically handles building and execution:
 
 ```bash
-# CLI automatically uses http://auth:8080 and http://ingest:8088
-docker-compose run --rm thawk auth login -u admin -p password
-docker-compose run --rm thawk ingest send -m "test" -t <token>
+# The wrapper sets environment variables for internal services
+./scripts/thawk auth login -u admin -p password
+./scripts/thawk rules list
+./scripts/thawk alerts list
+
+# Optional: Create an alias for convenience
+alias thawk='./scripts/thawk'
+thawk auth whoami
 ```
+
+**How it works:** The wrapper runs thawk via the devtools container with these environment variables:
+- `THAWK_AUTH_URL=http://auth:8080`
+- `THAWK_INGEST_URL=http://ingest:8088`
+- `THAWK_QUERY_URL=http://query:8082`
+- `THAWK_RULES_URL=http://rules:8084`
+- `THAWK_ALERTING_URL=http://alerting:8085`
 
 ## Config File (Optional)
 
@@ -105,7 +108,7 @@ thawk ingest send -m "dev event" -t <token>
 
 ```bash
 # Environment variables set automatically
-docker-compose run --rm thawk auth login -u admin -p password
+./scripts/thawk auth login -u admin -p password
 ```
 
 ### Production

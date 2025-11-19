@@ -22,13 +22,36 @@ cd <service> && go build -o ../bin/<service> ./cmd/<service>
 go test ./...
 ```
 
-### Docker / Devtools
+### TelHawk CLI (thawk)
 
-See `docs/LOCAL_DEVELOPMENT.md` and `docs/HELPER_SCRIPTS.md` for usage. Quick example:
+The `thawk` CLI provides command-line access to all TelHawk services. Use the smart wrapper script:
 
 ```bash
-docker-compose run --rm thawk auth whoami
+# Authentication
+./scripts/thawk auth login -u admin -p admin123
+./scripts/thawk auth whoami
+
+# Detection rules
+./scripts/thawk rules list
+./scripts/thawk rules get <rule-id>
+./scripts/thawk rules create rules/failed_logins.json
+
+# Alerts and cases
+./scripts/thawk alerts list
+./scripts/thawk alerts cases list
+
+# Event seeding
+./scripts/thawk seeder run --from-rules ./alerting/rules/
+
+# All commands
+./scripts/thawk --help
 ```
+
+**How it works:** The wrapper automatically builds thawk (if Go is available) or rebuilds the devtools image, then executes commands via the devtools container with proper network access and environment variables.
+
+### Docker / Devtools
+
+See `docs/LOCAL_DEVELOPMENT.md` and `docs/HELPER_SCRIPTS.md` for detailed usage.
 
 ### Internal Access & Scripts
 

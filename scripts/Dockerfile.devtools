@@ -1,3 +1,20 @@
+# Build thawk CLI
+FROM golang:1.25-alpine AS thawk-builder
+
+WORKDIR /build
+
+# Copy go mod files
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy entire project
+COPY . .
+
+# Build thawk
+WORKDIR /build/cli
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o thawk .
+
+# Final devtools image
 FROM alpine:3.19
 
 # Install essential tools for development and testing
@@ -9,6 +26,10 @@ RUN apk add --no-cache \
     wget
 
 WORKDIR /scripts
+
+# Copy thawk binary
+COPY --from=thawk-builder /build/cli/thawk /usr/local/bin/thawk
+RUN chmod +x /usr/local/bin/thawk
 
 # Keep container running
 CMD ["tail", "-f", "/dev/null"]

@@ -78,7 +78,7 @@ func (c *RulesClient) doRequest(method, path, token string, body interface{}) (*
 }
 
 func (c *RulesClient) ListSchemas(token string, page, limit int) ([]DetectionSchema, map[string]interface{}, error) {
-	path := fmt.Sprintf("/api/v1/schemas?page[number]=%d&page[size]=%d", page, limit)
+	path := fmt.Sprintf("/schemas?page[number]=%d&page[size]=%d", page, limit)
 
 	resp, err := c.doRequest("GET", path, token, nil)
 	if err != nil {
@@ -108,7 +108,7 @@ func (c *RulesClient) ListSchemas(token string, page, limit int) ([]DetectionSch
 }
 
 func (c *RulesClient) GetSchema(token, id string) (*DetectionSchema, error) {
-	path := fmt.Sprintf("/api/v1/schemas/%s", id)
+	path := fmt.Sprintf("/schemas/%s", id)
 
 	resp, err := c.doRequest("GET", path, token, nil)
 	if err != nil {
@@ -147,7 +147,7 @@ func (c *RulesClient) CreateSchema(token string, model, view, controller map[str
 		},
 	}
 
-	resp, err := c.doRequest("POST", "/api/v1/schemas", token, payload)
+	resp, err := c.doRequest("POST", "/schemas", token, payload)
 	if err != nil {
 		return nil, err
 	}
@@ -173,7 +173,7 @@ func (c *RulesClient) CreateSchema(token string, model, view, controller map[str
 }
 
 func (c *RulesClient) DisableSchema(token, id string) error {
-	path := fmt.Sprintf("/api/v1/schemas/%s/disable", id)
+	path := fmt.Sprintf("/schemas/%s/disable", id)
 
 	resp, err := c.doRequest("POST", path, token, nil)
 	if err != nil {
@@ -194,7 +194,7 @@ func (c *RulesClient) DisableSchema(token, id string) error {
 }
 
 func (c *RulesClient) EnableSchema(token, id string) error {
-	path := fmt.Sprintf("/api/v1/schemas/%s/enable", id)
+	path := fmt.Sprintf("/schemas/%s/enable", id)
 
 	resp, err := c.doRequest("POST", path, token, nil)
 	if err != nil {
@@ -215,7 +215,7 @@ func (c *RulesClient) EnableSchema(token, id string) error {
 }
 
 func (c *RulesClient) GetVersionHistory(token, id string) ([]DetectionSchema, error) {
-	path := fmt.Sprintf("/api/v1/schemas/%s/versions", id)
+	path := fmt.Sprintf("/schemas/%s/versions", id)
 
 	resp, err := c.doRequest("GET", path, token, nil)
 	if err != nil {

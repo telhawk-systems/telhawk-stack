@@ -483,28 +483,12 @@ services:
       start_period: 10s
     restart: unless-stopped
 
-  thawk:
-    build:
-      context: ./cli
-      dockerfile: Dockerfile
-    container_name: telhawk-cli
-    environment:
-      - THAWK_AUTH_URL=http://auth:8080
-      - THAWK_INGEST_URL=http://ingest:8088
-    volumes:
-      - thawk-config:/app/.thawk
-    networks:
-      - telhawk
-    profiles:
-      - tools
-    entrypoint: ["/app/thawk"]
-
-  # Development tools container with bash, curl, jq for running scripts
+  # Development tools container with bash, curl, jq, and thawk CLI for running scripts
   # Access internal services from the host using scripts/script_exec.sh
   devtools:
     build:
-      context: ./scripts
-      dockerfile: Dockerfile.devtools
+      context: .
+      dockerfile: scripts/Dockerfile.devtools
     container_name: telhawk-devtools
     volumes:
       - ./tmp:/tmp:rw
@@ -526,7 +510,6 @@ volumes:
   opensearch-data:
   opensearch-certs:
   telhawk-certs:
-  thawk-config:
   auth-db-data:
     driver: local
   rules-db-data:

@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -218,9 +219,14 @@ func runSeeder(cmd *cobra.Command, args []string) error {
 		config.Defaults.EventTypes = strings.Split(seederEventTypes, ",")
 	}
 
+	// Fall back to HEC_TOKEN environment variable if token not set
+	if config.Defaults.Token == "" {
+		config.Defaults.Token = os.Getenv("HEC_TOKEN")
+	}
+
 	// Validate token is provided
 	if config.Defaults.Token == "" {
-		return fmt.Errorf("HEC token is required (use --token flag or set in config)")
+		return fmt.Errorf("HEC token is required (use --token flag, set HEC_TOKEN env var, or set in config)")
 	}
 
 	// Parse attack selection

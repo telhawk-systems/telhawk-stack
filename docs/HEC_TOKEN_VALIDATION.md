@@ -63,8 +63,8 @@ Save the `access_token` from the response.
 
 Using the CLI tool:
 ```bash
-docker-compose run --rm thawk auth login -u testuser -p TestPassword123!
-docker-compose run --rm thawk token create --name test-ingest-token
+./scripts/thawk auth login -u testuser -p TestPassword123!
+./scripts/thawk token create --name test-ingest-token
 ```
 
 Or using curl with access token:

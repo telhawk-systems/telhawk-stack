@@ -19,20 +19,26 @@ docker-compose logs -f ingest
 ## Using the CLI Tool
 
 ```bash
-# Create alias for convenience
-alias thawk='docker-compose run --rm thawk'
-
-# Login
-thawk auth login -u admin -p YourPassword123
+# Use the wrapper script (recommended)
+./scripts/thawk auth login -u admin -p admin123
 
 # Create HEC token
-thawk token create --name my-token
+./scripts/thawk token create --name my-token
 
 # Send event
-thawk ingest send --message "test event" --token <your-token>
+./scripts/thawk ingest send --message "test event" --token <your-token>
+
+# List detection rules
+./scripts/thawk rules list
+
+# List alerts
+./scripts/thawk alerts list
 
 # Get help
-thawk --help
+./scripts/thawk --help
+
+# Optional: Create alias for convenience
+alias thawk='./scripts/thawk'
 ```
 
 ## Service Endpoints

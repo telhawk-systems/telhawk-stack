@@ -7,10 +7,11 @@ WORKDIR /build
 COPY go.mod go.sum ./
 RUN go mod download
 
-# Copy source code
+# Copy entire project
 COPY . .
 
-# Build binary
+# Build CLI binary
+WORKDIR /build/cli
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o thawk .
 
 # Create .thawk directory with proper ownership for nonroot user (UID 65532)
@@ -22,7 +23,7 @@ FROM gcr.io/distroless/static-debian12:nonroot
 WORKDIR /app
 
 # Copy binary from builder
-COPY --from=builder /build/thawk .
+COPY --from=builder /build/cli/thawk .
 
 # Copy the pre-created .thawk directory with proper ownership
 COPY --from=builder --chown=nonroot:nonroot /tmp/.thawk /app/.thawk

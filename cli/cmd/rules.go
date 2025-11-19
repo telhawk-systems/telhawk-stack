@@ -63,8 +63,14 @@ var rulesListCmd = &cobra.Command{
 				status = "hidden"
 			}
 
+			// Truncate ID safely
+			idDisplay := schema.ID
+			if len(schema.ID) > 8 {
+				idDisplay = schema.ID[:8] + "..."
+			}
+
 			table.AddRow([]string{
-				schema.ID[:8] + "...",
+				idDisplay,
 				name,
 				correlationType,
 				severity,

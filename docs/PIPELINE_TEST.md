@@ -35,10 +35,10 @@ All services should show "healthy" status.
 
 ```bash
 # Login first
-docker-compose run --rm thawk auth login -u admin -p SecurePassword123
+./scripts/thawk auth login -u admin -p SecurePassword123
 
 # Create token
-docker-compose run --rm thawk token create --name test-token
+./scripts/thawk token create --name test-token
 
 # Save the token output for next step
 ```

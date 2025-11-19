@@ -11,8 +11,8 @@ Common tasks
 - Status: `docker-compose ps`
 
 CLI (`thawk`)
-- Run once: `docker-compose run --rm thawk auth login -u admin -p <password>`
-- Alias (optional): `alias thawk='docker-compose run --rm thawk'`
+- Run once: `./scripts/thawk auth login -u admin -p <password>`
+- Alias (optional): `alias thawk='./scripts/thawk'`
 
 Notes
 - Health/ready endpoints and service specifics live in service docs.
