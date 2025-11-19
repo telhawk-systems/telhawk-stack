@@ -70,13 +70,19 @@ func (s *IngestService) SetAckManager(manager *ack.Manager) {
 }
 
 func (s *IngestService) IngestEvent(event *models.HECEvent, sourceIP, hecTokenID string) (string, error) {
+	// Determine source_type with fallback to default
+	sourceType := event.SourceType
+	if sourceType == "" {
+		sourceType = s.determineSourceType(event.Event)
+	}
+
 	// Convert HEC event to internal event
 	internalEvent := &models.Event{
 		ID:         uuid.New().String(),
 		Timestamp:  s.parseTime(event.Time),
 		Host:       event.Host,
 		Source:     event.Source,
-		SourceType: event.SourceType,
+		SourceType: sourceType,
 		SourceIP:   sourceIP,
 		Index:      s.getIndex(event.Index),
 		Event:      event.Event,
@@ -348,6 +354,51 @@ func (s *IngestService) QueryAcks(ackIDs []string) map[string]bool {
 		return make(map[string]bool)
 	}
 	return s.ackManager.Query(ackIDs)
+}
+
+// determineSourceType determines OCSF source type based on event content
+// This provides a fallback when source_type is not explicitly provided in the HEC event
+func (s *IngestService) determineSourceType(event interface{}) string {
+	// Try to extract class_uid if event is a map
+	eventMap, ok := event.(map[string]interface{})
+	if !ok {
+		return "ocsf:generic"
+	}
+
+	classUID, ok := eventMap["class_uid"]
+	if !ok {
+		return "ocsf:generic"
+	}
+
+	// Convert to int (handle both float64 from JSON and int)
+	var uid int
+	switch v := classUID.(type) {
+	case float64:
+		uid = int(v)
+	case int:
+		uid = v
+	default:
+		return "ocsf:generic"
+	}
+
+	// Map OCSF class_uid to appropriate source_type
+	// Based on OCSF 1.1.0 class definitions
+	switch uid {
+	case 3001, 3002, 3003, 3004, 3005, 3006:
+		return "ocsf:iam" // Identity & Access Management (3000s)
+	case 4001, 4002, 4003, 4004, 4005, 4006, 4007, 4008, 4009, 4010, 4011, 4012:
+		return "ocsf:network" // Network Activity (4000s)
+	case 1001, 1002, 1003, 1004, 1005, 1006, 1007:
+		return "ocsf:system" // System Activity (1000s)
+	case 2001, 2002, 2003, 2004:
+		return "ocsf:findings" // Findings (2000s)
+	case 5001, 5002, 5003:
+		return "ocsf:discovery" // Discovery (5000s)
+	case 6001, 6002, 6003, 6004:
+		return "ocsf:application" // Application Activity (6000s)
+	default:
+		return "ocsf:generic"
+	}
 }
 
 func (s *IngestService) Stop() {
