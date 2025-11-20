@@ -1,0 +1,112 @@
+{
+  "name": "ransomware_file_encryption",
+  "description": "Detects potential ransomware activity through rapid file encryption/renaming patterns with known ransomware extensions",
+  "model": {
+    "correlation_type": "event_count",
+    "parameters": {
+      "time_window": "2m",
+      "query": {
+        "filter": {
+          "type": "and",
+          "conditions": [
+            {
+              "field": ".class_uid",
+              "operator": "eq",
+              "value": 4005
+            },
+            {
+              "field": ".activity_id",
+              "operator": "in",
+              "value": [2, 5]
+            },
+            {
+              "type": "or",
+              "conditions": [
+                {
+                  "field": ".file.path",
+                  "operator": "contains",
+                  "value": ".encrypted"
+                },
+                {
+                  "field": ".file.path",
+                  "operator": "contains",
+                  "value": ".locked"
+                },
+                {
+                  "field": ".file.path",
+                  "operator": "contains",
+                  "value": ".crypt"
+                },
+                {
+                  "field": ".file.path",
+                  "operator": "contains",
+                  "value": ".locky"
+                },
+                {
+                  "field": ".file.path",
+                  "operator": "contains",
+                  "value": ".wcry"
+                },
+                {
+                  "field": ".file.path",
+                  "operator": "contains",
+                  "value": "README"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "threshold": {
+        "value": 50,
+        "operator": "gte"
+      },
+      "group_by": [
+        ".device.hostname",
+        ".actor.user.name"
+      ]
+    }
+  },
+  "view": {
+    "title": "Potential Ransomware File Encryption Detected",
+    "severity": "critical",
+    "description": "Device {{device.hostname}} user {{actor.user.name}} encrypted/renamed {{event_count}} files in 2 minutes - possible ransomware activity",
+    "category": "Impact",
+    "tags": [
+      "ransomware",
+      "encryption",
+      "impact",
+      "critical"
+    ],
+    "mitre_attack": {
+      "tactics": [
+        "Impact"
+      ],
+      "techniques": [
+        "T1486 - Data Encrypted for Impact",
+        "T1490 - Inhibit System Recovery"
+      ]
+    },
+    "fields_order": [
+      "device.hostname",
+      "actor.user.name",
+      "event_count",
+      "file.path",
+      "process.name"
+    ]
+  },
+  "controller": {
+    "detection": {
+      "suppression_window": "30m",
+      "metadata": {
+        "source": "builtin",
+        "version": "1.0",
+        "author": "TelHawk Security"
+      }
+    },
+    "response": {
+      "actions": [],
+      "severity_threshold": "critical"
+    }
+  }
+}

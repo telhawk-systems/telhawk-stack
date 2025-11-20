@@ -1,0 +1,125 @@
+{
+  "name": "pass_the_hash_attack",
+  "description": "Detects pass-the-hash attacks through NTLM authentication from unusual processes or lateral movement patterns",
+  "model": {
+    "correlation_type": "event_count",
+    "parameters": {
+      "time_window": "10m",
+      "query": {
+        "filter": {
+          "type": "and",
+          "conditions": [
+            {
+              "field": ".class_uid",
+              "operator": "eq",
+              "value": 3002
+            },
+            {
+              "field": ".status_id",
+              "operator": "eq",
+              "value": 1
+            },
+            {
+              "type": "or",
+              "conditions": [
+                {
+                  "type": "and",
+                  "conditions": [
+                    {
+                      "field": ".process.name",
+                      "operator": "in",
+                      "value": ["powershell.exe", "pwsh.exe", "cmd.exe", "psexec.exe", "wmic.exe", "mmc.exe"]
+                    },
+                    {
+                      "field": ".dst_endpoint.port",
+                      "operator": "in",
+                      "value": [445, 135, 139]
+                    }
+                  ]
+                },
+                {
+                  "field": ".process.cmd_line",
+                  "operator": "contains",
+                  "value": "Invoke-Mimikatz"
+                },
+                {
+                  "field": ".process.cmd_line",
+                  "operator": "contains",
+                  "value": "pth-"
+                },
+                {
+                  "type": "and",
+                  "conditions": [
+                    {
+                      "field": ".actor.session.uid",
+                      "operator": "contains",
+                      "value": "NTLM"
+                    },
+                    {
+                      "field": ".src_endpoint.ip",
+                      "operator": "ne",
+                      "value": "127.0.0.1"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "threshold": {
+        "value": 3,
+        "operator": "gte"
+      },
+      "group_by": [
+        ".actor.user.name",
+        ".src_endpoint.ip"
+      ]
+    }
+  },
+  "view": {
+    "title": "Pass-the-Hash Attack Detected",
+    "severity": "critical",
+    "description": "User {{actor.user.name}} from {{src_endpoint.ip}} performed {{event_count}} suspicious NTLM authentications - likely pass-the-hash attack for lateral movement",
+    "category": "Lateral Movement",
+    "tags": [
+      "pass-the-hash",
+      "lateral-movement",
+      "credential-theft",
+      "ntlm",
+      "post-exploitation"
+    ],
+    "mitre_attack": {
+      "tactics": [
+        "Lateral Movement",
+        "Credential Access"
+      ],
+      "techniques": [
+        "T1550.002 - Use Alternate Authentication Material: Pass the Hash",
+        "T1021.002 - Remote Services: SMB/Windows Admin Shares",
+        "T1003.001 - OS Credential Dumping: LSASS Memory"
+      ]
+    },
+    "fields_order": [
+      "actor.user.name",
+      "src_endpoint.ip",
+      "dst_endpoint.ip",
+      "process.name",
+      "event_count"
+    ]
+  },
+  "controller": {
+    "detection": {
+      "suppression_window": "20m",
+      "metadata": {
+        "source": "builtin",
+        "version": "1.0",
+        "author": "TelHawk Security"
+      }
+    },
+    "response": {
+      "actions": [],
+      "severity_threshold": "critical"
+    }
+  }
+}

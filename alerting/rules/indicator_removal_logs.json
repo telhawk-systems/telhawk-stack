@@ -1,0 +1,148 @@
+{
+  "name": "indicator_removal_logs",
+  "description": "Detects attempts to clear or disable security logs and event traces to hide malicious activity",
+  "model": {
+    "correlation_type": "event_count",
+    "parameters": {
+      "time_window": "10m",
+      "query": {
+        "filter": {
+          "type": "and",
+          "conditions": [
+            {
+              "field": ".class_uid",
+              "operator": "eq",
+              "value": 1007
+            },
+            {
+              "type": "or",
+              "conditions": [
+                {
+                  "field": ".process.cmd_line",
+                  "operator": "contains",
+                  "value": "wevtutil"
+                },
+                {
+                  "field": ".process.cmd_line",
+                  "operator": "contains",
+                  "value": "Clear-EventLog"
+                },
+                {
+                  "field": ".process.cmd_line",
+                  "operator": "contains",
+                  "value": "Remove-EventLog"
+                },
+                {
+                  "field": ".process.cmd_line",
+                  "operator": "contains",
+                  "value": "Limit-EventLog"
+                },
+                {
+                  "type": "and",
+                  "conditions": [
+                    {
+                      "field": ".process.name",
+                      "operator": "eq",
+                      "value": "auditpol.exe"
+                    },
+                    {
+                      "field": ".process.cmd_line",
+                      "operator": "contains",
+                      "value": "/remove"
+                    }
+                  ]
+                },
+                {
+                  "type": "and",
+                  "conditions": [
+                    {
+                      "field": ".process.cmd_line",
+                      "operator": "contains",
+                      "value": "/var/log"
+                    },
+                    {
+                      "field": ".process.cmd_line",
+                      "operator": "contains",
+                      "value": "rm -rf"
+                    }
+                  ]
+                },
+                {
+                  "field": ".process.cmd_line",
+                  "operator": "contains",
+                  "value": "Disable-WindowsOptionalFeature"
+                },
+                {
+                  "type": "and",
+                  "conditions": [
+                    {
+                      "field": ".file.path",
+                      "operator": "contains",
+                      "value": ".evtx"
+                    },
+                    {
+                      "field": ".activity_id",
+                      "operator": "eq",
+                      "value": 3
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "threshold": {
+        "value": 3,
+        "operator": "gte"
+      },
+      "group_by": [
+        ".device.hostname",
+        ".actor.user.name"
+      ]
+    }
+  },
+  "view": {
+    "title": "Indicator Removal - Log Clearing Detected",
+    "severity": "high",
+    "description": "User {{actor.user.name}} on {{device.hostname}} executed {{event_count}} log clearing/audit disabling commands - possible evidence destruction",
+    "category": "Defense Evasion",
+    "tags": [
+      "log-clearing",
+      "anti-forensics",
+      "defense-evasion",
+      "indicator-removal"
+    ],
+    "mitre_attack": {
+      "tactics": [
+        "Defense Evasion"
+      ],
+      "techniques": [
+        "T1070.001 - Indicator Removal: Clear Windows Event Logs",
+        "T1070.002 - Indicator Removal: Clear Linux or Mac System Logs",
+        "T1562.002 - Impair Defenses: Disable Windows Event Logging"
+      ]
+    },
+    "fields_order": [
+      "device.hostname",
+      "actor.user.name",
+      "process.name",
+      "process.cmd_line",
+      "event_count"
+    ]
+  },
+  "controller": {
+    "detection": {
+      "suppression_window": "20m",
+      "metadata": {
+        "source": "builtin",
+        "version": "1.0",
+        "author": "TelHawk Security"
+      }
+    },
+    "response": {
+      "actions": [],
+      "severity_threshold": "high"
+    }
+  }
+}

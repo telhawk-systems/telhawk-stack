@@ -1,0 +1,151 @@
+{
+  "name": "scheduled_task_abuse",
+  "description": "Detects creation or modification of scheduled tasks for persistence and privilege escalation",
+  "model": {
+    "correlation_type": "event_count",
+    "parameters": {
+      "time_window": "15m",
+      "query": {
+        "filter": {
+          "type": "and",
+          "conditions": [
+            {
+              "field": ".class_uid",
+              "operator": "eq",
+              "value": 1007
+            },
+            {
+              "type": "or",
+              "conditions": [
+                {
+                  "type": "and",
+                  "conditions": [
+                    {
+                      "field": ".process.name",
+                      "operator": "in",
+                      "value": ["schtasks.exe", "at.exe"]
+                    },
+                    {
+                      "field": ".process.cmd_line",
+                      "operator": "in",
+                      "value": ["/create", "/change", "/run"]
+                    }
+                  ]
+                },
+                {
+                  "field": ".process.cmd_line",
+                  "operator": "contains",
+                  "value": "Register-ScheduledTask"
+                },
+                {
+                  "field": ".process.cmd_line",
+                  "operator": "contains",
+                  "value": "New-ScheduledTask"
+                },
+                {
+                  "type": "and",
+                  "conditions": [
+                    {
+                      "field": ".process.name",
+                      "operator": "eq",
+                      "value": "crontab"
+                    },
+                    {
+                      "field": ".process.cmd_line",
+                      "operator": "contains",
+                      "value": "-e"
+                    }
+                  ]
+                },
+                {
+                  "type": "and",
+                  "conditions": [
+                    {
+                      "field": ".file.path",
+                      "operator": "contains",
+                      "value": "/etc/cron"
+                    },
+                    {
+                      "field": ".activity_id",
+                      "operator": "in",
+                      "value": [1, 2]
+                    }
+                  ]
+                },
+                {
+                  "type": "and",
+                  "conditions": [
+                    {
+                      "field": ".process.cmd_line",
+                      "operator": "contains",
+                      "value": "sc.exe"
+                    },
+                    {
+                      "field": ".process.cmd_line",
+                      "operator": "contains",
+                      "value": "create"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "threshold": {
+        "value": 3,
+        "operator": "gte"
+      },
+      "group_by": [
+        ".device.hostname",
+        ".actor.user.name"
+      ]
+    }
+  },
+  "view": {
+    "title": "Scheduled Task Abuse for Persistence Detected",
+    "severity": "high",
+    "description": "User {{actor.user.name}} on {{device.hostname}} created/modified {{event_count}} scheduled tasks - possible persistence mechanism",
+    "category": "Persistence",
+    "tags": [
+      "scheduled-task",
+      "persistence",
+      "privilege-escalation",
+      "cron",
+      "schtasks"
+    ],
+    "mitre_attack": {
+      "tactics": [
+        "Persistence",
+        "Privilege Escalation",
+        "Execution"
+      ],
+      "techniques": [
+        "T1053.005 - Scheduled Task/Job: Scheduled Task",
+        "T1053.003 - Scheduled Task/Job: Cron",
+        "T1543.003 - Create or Modify System Process: Windows Service"
+      ]
+    },
+    "fields_order": [
+      "device.hostname",
+      "actor.user.name",
+      "process.name",
+      "process.cmd_line",
+      "event_count"
+    ]
+  },
+  "controller": {
+    "detection": {
+      "suppression_window": "30m",
+      "metadata": {
+        "source": "builtin",
+        "version": "1.0",
+        "author": "TelHawk Security"
+      }
+    },
+    "response": {
+      "actions": [],
+      "severity_threshold": "high"
+    }
+  }
+}

@@ -126,6 +126,11 @@ func (imp *Importer) importRuleFile(ctx context.Context, filePath string) error 
 	// Generate deterministic UUID based on rule name
 	ruleID := generateDeterministicUUID(rule.Name)
 
+	// Validate that the .id file matches the generated ID (CRITICAL for consistency across environments)
+	if err := validateRuleID(filePath, rule.Name, ruleID); err != nil {
+		return fmt.Errorf("CRITICAL: Rule ID validation failed for '%s': %w", rule.Name, err)
+	}
+
 	// Check if rule already exists
 	exists, currentVersion, err := imp.checkRuleExists(ctx, ruleID)
 	if err != nil {
@@ -297,6 +302,43 @@ func generateDeterministicUUID(ruleName string) string {
 	// Use a namespace UUID for TelHawk system rules
 	namespace := uuid.MustParse("6ba7b810-9dad-11d1-80b4-00c04fd430c8") // DNS namespace
 	return uuid.NewSHA1(namespace, []byte("telhawk:builtin:"+ruleName)).String()
+}
+
+// validateRuleID validates that the .id file exists and contains the expected deterministic UUID
+// This ensures consistency across all environments and prevents ID drift
+func validateRuleID(jsonFilePath, ruleName, expectedID string) error {
+	// Construct the .id file path (e.g., /path/to/rule.json -> /path/to/rule.json.id)
+	idFilePath := jsonFilePath + ".id"
+
+	// Read the .id file
+	idData, err := os.ReadFile(idFilePath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf(".id file not found at %s - all rules MUST have committed .id files for deterministic UUIDs across environments", idFilePath)
+		}
+		return fmt.Errorf("failed to read .id file: %w", err)
+	}
+
+	// Parse the ID from the file (trim whitespace/newlines)
+	fileID := string(bytes.TrimSpace(idData))
+
+	// Validate UUID format
+	if _, err := uuid.Parse(fileID); err != nil {
+		return fmt.Errorf(".id file contains invalid UUID '%s': %w", fileID, err)
+	}
+
+	// CRITICAL: Ensure the .id file matches the deterministic UUID
+	if fileID != expectedID {
+		return fmt.Errorf(
+			"ID MISMATCH: .id file contains '%s' but rule name '%s' generates '%s'. "+
+				"This indicates the .id file is out of sync. "+
+				"Run tools/generate_rule_ids.go to regenerate .id files, then commit to git.",
+			fileID, ruleName, expectedID,
+		)
+	}
+
+	log.Printf("  Validated rule ID: %s matches %s", ruleName, fileID)
+	return nil
 }
 
 // calculateContentHash calculates a hash of the rule content

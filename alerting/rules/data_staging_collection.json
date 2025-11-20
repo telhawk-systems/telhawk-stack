@@ -1,0 +1,161 @@
+{
+  "name": "data_staging_collection",
+  "description": "Detects data staging activities where large amounts of sensitive data are collected and archived before exfiltration",
+  "model": {
+    "correlation_type": "event_count",
+    "parameters": {
+      "time_window": "15m",
+      "query": {
+        "filter": {
+          "type": "and",
+          "conditions": [
+            {
+              "field": ".class_uid",
+              "operator": "in",
+              "value": [1007, 4005]
+            },
+            {
+              "type": "or",
+              "conditions": [
+                {
+                  "type": "and",
+                  "conditions": [
+                    {
+                      "field": ".process.name",
+                      "operator": "in",
+                      "value": ["7z.exe", "winrar.exe", "tar", "zip", "gzip", "rar.exe"]
+                    },
+                    {
+                      "field": ".process.cmd_line",
+                      "operator": "contains",
+                      "value": "-p"
+                    }
+                  ]
+                },
+                {
+                  "type": "and",
+                  "conditions": [
+                    {
+                      "field": ".process.cmd_line",
+                      "operator": "contains",
+                      "value": "Compress-Archive"
+                    },
+                    {
+                      "type": "or",
+                      "conditions": [
+                        {
+                          "field": ".process.cmd_line",
+                          "operator": "contains",
+                          "value": "Documents"
+                        },
+                        {
+                          "field": ".process.cmd_line",
+                          "operator": "contains",
+                          "value": "Desktop"
+                        },
+                        {
+                          "field": ".process.cmd_line",
+                          "operator": "contains",
+                          "value": "Downloads"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "and",
+                  "conditions": [
+                    {
+                      "field": ".file.path",
+                      "operator": "contains",
+                      "value": "temp"
+                    },
+                    {
+                      "field": ".file.path",
+                      "operator": "in",
+                      "value": [".zip", ".rar", ".7z", ".tar.gz", ".tgz"]
+                    },
+                    {
+                      "field": ".activity_id",
+                      "operator": "eq",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "type": "and",
+                  "conditions": [
+                    {
+                      "field": ".process.cmd_line",
+                      "operator": "contains",
+                      "value": "xcopy"
+                    },
+                    {
+                      "field": ".process.cmd_line",
+                      "operator": "contains",
+                      "value": "/s"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "threshold": {
+        "value": 5,
+        "operator": "gte"
+      },
+      "group_by": [
+        ".device.hostname",
+        ".actor.user.name"
+      ]
+    }
+  },
+  "view": {
+    "title": "Data Staging - Collection Before Exfiltration Detected",
+    "severity": "high",
+    "description": "User {{actor.user.name}} on {{device.hostname}} performed {{event_count}} data archiving/collection operations - possible pre-exfiltration staging",
+    "category": "Collection",
+    "tags": [
+      "data-staging",
+      "collection",
+      "pre-exfiltration",
+      "archive",
+      "compression"
+    ],
+    "mitre_attack": {
+      "tactics": [
+        "Collection",
+        "Exfiltration"
+      ],
+      "techniques": [
+        "T1074.001 - Data Staged: Local Data Staging",
+        "T1560.001 - Archive Collected Data: Archive via Utility",
+        "T1005 - Data from Local System"
+      ]
+    },
+    "fields_order": [
+      "device.hostname",
+      "actor.user.name",
+      "process.name",
+      "process.cmd_line",
+      "file.path",
+      "event_count"
+    ]
+  },
+  "controller": {
+    "detection": {
+      "suppression_window": "30m",
+      "metadata": {
+        "source": "builtin",
+        "version": "1.0",
+        "author": "TelHawk Security"
+      }
+    },
+    "response": {
+      "actions": [],
+      "severity_threshold": "high"
+    }
+  }
+}

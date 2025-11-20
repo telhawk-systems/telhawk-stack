@@ -1,0 +1,165 @@
+{
+  "name": "masquerading",
+  "description": "Detects processes masquerading as legitimate system processes by using similar names or running from unusual directories",
+  "model": {
+    "correlation_type": "event_count",
+    "parameters": {
+      "time_window": "15m",
+      "query": {
+        "filter": {
+          "type": "and",
+          "conditions": [
+            {
+              "field": ".class_uid",
+              "operator": "eq",
+              "value": 1007
+            },
+            {
+              "type": "or",
+              "conditions": [
+                {
+                  "type": "and",
+                  "conditions": [
+                    {
+                      "field": ".process.name",
+                      "operator": "in",
+                      "value": ["svchost.exe", "lsass.exe", "csrss.exe", "winlogon.exe", "smss.exe", "services.exe", "explorer.exe"]
+                    },
+                    {
+                      "type": "not",
+                      "conditions": [
+                        {
+                          "field": ".process.file.path",
+                          "operator": "contains",
+                          "value": "System32"
+                        },
+                        {
+                          "field": ".process.file.path",
+                          "operator": "contains",
+                          "value": "SysWOW64"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "and",
+                  "conditions": [
+                    {
+                      "field": ".process.name",
+                      "operator": "in",
+                      "value": ["svch0st.exe", "1sass.exe", "cssrs.exe", "svhost.exe", "Isass.exe", "crss.exe"]
+                    }
+                  ]
+                },
+                {
+                  "type": "and",
+                  "conditions": [
+                    {
+                      "field": ".process.file.path",
+                      "operator": "contains",
+                      "value": "Temp"
+                    },
+                    {
+                      "field": ".process.name",
+                      "operator": "in",
+                      "value": ["cmd.exe", "powershell.exe", "bash", "sh", "python.exe", "wscript.exe"]
+                    }
+                  ]
+                },
+                {
+                  "type": "and",
+                  "conditions": [
+                    {
+                      "field": ".process.name",
+                      "operator": "contains",
+                      "value": ".scr"
+                    },
+                    {
+                      "type": "not",
+                      "conditions": [
+                        {
+                          "field": ".process.file.path",
+                          "operator": "contains",
+                          "value": "System32"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "and",
+                  "conditions": [
+                    {
+                      "field": ".process.file.path",
+                      "operator": "contains",
+                      "value": "Public"
+                    },
+                    {
+                      "field": ".process.name",
+                      "operator": "contains",
+                      "value": ".exe"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "threshold": {
+        "value": 2,
+        "operator": "gte"
+      },
+      "group_by": [
+        ".device.hostname",
+        ".process.name"
+      ]
+    }
+  },
+  "view": {
+    "title": "Process Masquerading Detected",
+    "severity": "high",
+    "description": "Suspicious process {{process.name}} running from {{process.file.path}} on {{device.hostname}} - likely malware masquerading as legitimate process",
+    "category": "Defense Evasion",
+    "tags": [
+      "masquerading",
+      "defense-evasion",
+      "malware",
+      "impersonation",
+      "suspicious-process"
+    ],
+    "mitre_attack": {
+      "tactics": [
+        "Defense Evasion"
+      ],
+      "techniques": [
+        "T1036.001 - Masquerading: Invalid Code Signature",
+        "T1036.003 - Masquerading: Rename System Utilities",
+        "T1036.004 - Masquerading: Masquerade Task or Service",
+        "T1036.005 - Masquerading: Match Legitimate Name or Location"
+      ]
+    },
+    "fields_order": [
+      "device.hostname",
+      "process.name",
+      "process.file.path",
+      "actor.user.name",
+      "event_count"
+    ]
+  },
+  "controller": {
+    "detection": {
+      "suppression_window": "20m",
+      "metadata": {
+        "source": "builtin",
+        "version": "1.0",
+        "author": "TelHawk Security"
+      }
+    },
+    "response": {
+      "actions": [],
+      "severity_threshold": "high"
+    }
+  }
+}

@@ -1,0 +1,163 @@
+{
+  "name": "process_injection",
+  "description": "Detects process injection techniques including DLL injection, process hollowing, and reflective DLL injection used for defense evasion",
+  "model": {
+    "correlation_type": "event_count",
+    "parameters": {
+      "time_window": "10m",
+      "query": {
+        "filter": {
+          "type": "and",
+          "conditions": [
+            {
+              "field": ".class_uid",
+              "operator": "eq",
+              "value": 1007
+            },
+            {
+              "type": "or",
+              "conditions": [
+                {
+                  "field": ".process.cmd_line",
+                  "operator": "contains",
+                  "value": "VirtualAllocEx"
+                },
+                {
+                  "field": ".process.cmd_line",
+                  "operator": "contains",
+                  "value": "WriteProcessMemory"
+                },
+                {
+                  "field": ".process.cmd_line",
+                  "operator": "contains",
+                  "value": "CreateRemoteThread"
+                },
+                {
+                  "field": ".process.cmd_line",
+                  "operator": "contains",
+                  "value": "NtMapViewOfSection"
+                },
+                {
+                  "field": ".process.cmd_line",
+                  "operator": "contains",
+                  "value": "QueueUserAPC"
+                },
+                {
+                  "field": ".process.cmd_line",
+                  "operator": "contains",
+                  "value": "SetWindowsHookEx"
+                },
+                {
+                  "field": ".process.cmd_line",
+                  "operator": "contains",
+                  "value": "Invoke-ReflectivePEInjection"
+                },
+                {
+                  "field": ".process.cmd_line",
+                  "operator": "contains",
+                  "value": "Invoke-DllInjection"
+                },
+                {
+                  "type": "and",
+                  "conditions": [
+                    {
+                      "field": ".process.name",
+                      "operator": "in",
+                      "value": ["mavinject.exe", "injector.exe", "injectdll.exe"]
+                    }
+                  ]
+                },
+                {
+                  "type": "and",
+                  "conditions": [
+                    {
+                      "field": ".process.name",
+                      "operator": "eq",
+                      "value": "powershell.exe"
+                    },
+                    {
+                      "field": ".process.cmd_line",
+                      "operator": "contains",
+                      "value": "System.Reflection.Assembly"
+                    }
+                  ]
+                },
+                {
+                  "type": "and",
+                  "conditions": [
+                    {
+                      "field": ".process.cmd_line",
+                      "operator": "contains",
+                      "value": "/proc/"
+                    },
+                    {
+                      "field": ".process.cmd_line",
+                      "operator": "contains",
+                      "value": "/mem"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "threshold": {
+        "value": 2,
+        "operator": "gte"
+      },
+      "group_by": [
+        ".device.hostname",
+        ".process.name"
+      ]
+    }
+  },
+  "view": {
+    "title": "Process Injection Technique Detected",
+    "severity": "critical",
+    "description": "Process {{process.name}} on {{device.hostname}} performed {{event_count}} injection operations - likely malware or post-exploitation activity",
+    "category": "Defense Evasion",
+    "tags": [
+      "process-injection",
+      "dll-injection",
+      "process-hollowing",
+      "defense-evasion",
+      "evasion",
+      "malware"
+    ],
+    "mitre_attack": {
+      "tactics": [
+        "Defense Evasion",
+        "Privilege Escalation"
+      ],
+      "techniques": [
+        "T1055.001 - Process Injection: Dynamic-link Library Injection",
+        "T1055.002 - Process Injection: Portable Executable Injection",
+        "T1055.003 - Process Injection: Thread Execution Hijacking",
+        "T1055.004 - Process Injection: Asynchronous Procedure Call",
+        "T1055.012 - Process Injection: Process Hollowing"
+      ]
+    },
+    "fields_order": [
+      "device.hostname",
+      "process.name",
+      "process.cmd_line",
+      "actor.user.name",
+      "event_count"
+    ]
+  },
+  "controller": {
+    "detection": {
+      "suppression_window": "15m",
+      "metadata": {
+        "source": "builtin",
+        "version": "1.0",
+        "author": "TelHawk Security"
+      }
+    },
+    "response": {
+      "actions": [],
+      "severity_threshold": "critical"
+    }
+  }
+}
