@@ -49,7 +49,16 @@ func (eg *eventGenerator) applyFilterToEvent(event map[string]interface{}, filte
 		}
 	} else {
 		// Simple filter - set the field value
-		setFieldValue(event, filter.Field, filter.Value)
+		value := filter.Value
+
+		// If operator is "in", pick a random element from the array
+		if filter.Operator == "in" {
+			if arr, ok := value.([]interface{}); ok && len(arr) > 0 {
+				value = arr[rand.Intn(len(arr))]
+			}
+		}
+
+		setFieldValue(event, filter.Field, value)
 	}
 }
 

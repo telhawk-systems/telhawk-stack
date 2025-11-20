@@ -279,12 +279,16 @@ func (r *DetectionRule) GetValueCountField() (string, error) {
 		return "", fmt.Errorf("rule is not a value_count type")
 	}
 
-	field, ok := r.Model.Parameters["field"].(string)
-	if !ok {
-		return "", fmt.Errorf("field not found for value_count rule")
+	// Try "count_field" first (newer standard), fall back to "field" (older convention)
+	if field, ok := r.Model.Parameters["count_field"].(string); ok {
+		return field, nil
 	}
 
-	return field, nil
+	if field, ok := r.Model.Parameters["field"].(string); ok {
+		return field, nil
+	}
+
+	return "", fmt.Errorf("neither count_field nor field found for value_count rule")
 }
 
 // MatchesFilter checks if an event matches the given filter
