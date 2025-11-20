@@ -39,7 +39,6 @@ func (SecurityFindingValidator) Validate(ctx context.Context, event *ocsf.Event)
 	// Manual validation may be needed for complex nested structures
 
 	// Validate enumerated fields
-	// TODO: Validate enum field 'state_id' (valid values: 1, 2, 3, 4)
 	if event.ActivityID != 0 {
 		switch event.ActivityID {
 		case 1:
@@ -50,5 +49,6 @@ func (SecurityFindingValidator) Validate(ctx context.Context, event *ocsf.Event)
 			return fmt.Errorf("invalid activity_id: %d (valid values: 1, 2, 3)", event.ActivityID)
 		}
 	}
+	// TODO: Validate enum field 'state_id' (valid values: 1, 2, 3, 4)
 	return nil
 }

@@ -39,7 +39,6 @@ func (DatastoreActivityValidator) Validate(ctx context.Context, event *ocsf.Even
 	// Manual validation may be needed for complex nested structures
 
 	// Validate enumerated fields
-	// TODO: Validate enum field 'type_id' (valid values: 0, 1, 2, 3, 99)
 	if event.ActivityID != 0 {
 		switch event.ActivityID {
 		case 1:
@@ -57,5 +56,6 @@ func (DatastoreActivityValidator) Validate(ctx context.Context, event *ocsf.Even
 			return fmt.Errorf("invalid activity_id: %d (valid values: 1, 10, 2, 3, 4, 5, 6, 7, 8, 9)", event.ActivityID)
 		}
 	}
+	// TODO: Validate enum field 'type_id' (valid values: 0, 1, 2, 3, 99)
 	return nil
 }

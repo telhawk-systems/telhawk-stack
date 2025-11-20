@@ -13,7 +13,7 @@ func generateHelpersFile(outputDir string) error {
 	buf.WriteString(generateHeader())
 	buf.WriteString("package generated\n\n")
 	buf.WriteString("import (\n")
-	buf.WriteString("\t\"fmt\"\n")
+	buf.WriteString("\t\"strconv\"\n")
 	buf.WriteString("\t\"strings\"\n")
 	buf.WriteString("\t\"time\"\n\n")
 	buf.WriteString("\t\"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf\"\n")
@@ -109,14 +109,17 @@ func ExtractNetworkEndpoint(ep map[string]interface{}) *objects.NetworkEndpoint 
 		endpoint.Ip = ip
 	}
 
-	// Port - OCSF uses string for port (can be numeric like "443" or named like "https")
+	// Port - OCSF uses int for port
 	// Handle both integer and string types from input
 	if port, ok := ep["port"].(int); ok {
-		endpoint.Port = fmt.Sprintf("%d", port)
+		endpoint.Port = port
 	} else if port, ok := ep["port"].(float64); ok {
-		endpoint.Port = fmt.Sprintf("%d", int(port))
+		endpoint.Port = int(port)
 	} else if portStr, ok := ep["port"].(string); ok {
-		endpoint.Port = portStr
+		// Parse string to int
+		if portInt, err := strconv.Atoi(portStr); err == nil {
+			endpoint.Port = portInt
+		}
 	}
 
 	// Hostname/name

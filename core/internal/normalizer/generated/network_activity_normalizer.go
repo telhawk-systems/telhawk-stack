@@ -60,14 +60,6 @@ func (n *NetworkActivityNormalizer) Normalize(ctx context.Context, envelope *mod
 	event.StatusID, event.Status = ExtractStatus(payload)
 	event.SeverityID, event.Severity = ExtractSeverity(payload)
 
-	// Extract network endpoints
-	if srcEp, ok := payload["src_endpoint"].(map[string]interface{}); ok {
-		event.SrcEndpoint = ExtractNetworkEndpoint(srcEp)
-	}
-	if dstEp, ok := payload["dst_endpoint"].(map[string]interface{}); ok {
-		event.DstEndpoint = ExtractNetworkEndpoint(dstEp)
-	}
-
 	event.Metadata.LogProvider = envelope.Source
 	event.Raw = ocsf.RawDescriptor{Format: envelope.Format, Data: payload}
 
