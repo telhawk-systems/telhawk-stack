@@ -44,7 +44,7 @@ func (h *HECHandler) HandleEvent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get client IP for rate limiting
-	sourceIP := getClientIP(r)
+	sourceIP := httputil.GetClientIP(r)
 
 	// Apply IP-based rate limiting BEFORE expensive operations
 	if h.rateLimiter != nil {
@@ -159,7 +159,7 @@ func (h *HECHandler) HandleRaw(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get client IP for rate limiting
-	sourceIP := getClientIP(r)
+	sourceIP := httputil.GetClientIP(r)
 
 	// Apply IP-based rate limiting BEFORE expensive operations
 	if h.rateLimiter != nil {
@@ -313,15 +313,4 @@ func (h *HECHandler) sendError(w http.ResponseWriter, hecErr *hec.HECError, http
 		Text: hecErr.Text,
 		Code: hecErr.Code,
 	})
-}
-
-func getClientIP(r *http.Request) string {
-	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-		parts := strings.Split(xff, ",")
-		return strings.TrimSpace(parts[0])
-	}
-	if xri := r.Header.Get("X-Real-IP"); xri != "" {
-		return xri
-	}
-	return r.RemoteAddr
 }

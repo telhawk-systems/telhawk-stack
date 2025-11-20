@@ -5,6 +5,7 @@
 ## Guides
 - Configuration — `docs/CONFIGURATION.md` (enterprise config and quick config)
 - Logging — `docs/LOGGING.md` (structured logging with slog, request IDs, best practices)
+- Handler Conventions — `docs/HANDLER_CONVENTIONS.md` (HTTP handler patterns, httputil usage, JSON:API responses)
 - Production — `docs/PRODUCTION.md` (deployment considerations, security, scaling)
 - Local Development — `docs/LOCAL_DEVELOPMENT.md`
 - Services — `docs/SERVICES.md` (microservice descriptions and endpoints)
@@ -23,6 +24,11 @@
 - Alerting — `docs/ALERTING_ARCHITECTURE.md`, `docs/ALERTING_API.md`, `docs/ALERT_SCHEDULING.md`
 - Ingest features — `docs/INGEST_FEATURES_IMPLEMENTATION.md`, `docs/HEC_TOKEN_VALIDATION.md`
 - UX — `docs/UX_DESIGN_PHILOSOPHY.md`
+
+## Code Quality
+- Handler Conventions — `docs/HANDLER_CONVENTIONS.md` (standard HTTP handler patterns)
+- Code Duplication Analysis — `docs/CODE_DUPLICATION_ANALYSIS.md` (technical debt tracking)
+- Cleanliness TODO — `docs/CLEANLINESS_TODO.md` (Go best practices checklist)
 
 ## Planning
 - TODOs — `docs/todo/README.md` (links to domain TODOs)

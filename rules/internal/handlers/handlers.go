@@ -383,8 +383,8 @@ func (h *Handler) ListSchemas(w http.ResponseWriter, r *http.Request) {
 
 	// Parse query parameters
 	req := &models.ListSchemasRequest{
-		Page:            parseInt(r.URL.Query().Get("page"), 1),
-		Limit:           parseInt(r.URL.Query().Get("limit"), 50),
+		Page:            httputil.ParseIntParam(r.URL.Query().Get("page"), 1),
+		Limit:           httputil.ParseIntParam(r.URL.Query().Get("limit"), 50),
 		Severity:        r.URL.Query().Get("severity"),
 		Title:           r.URL.Query().Get("title"),
 		ID:              r.URL.Query().Get("id"),
@@ -584,15 +584,6 @@ func (h *Handler) SetActiveParameterSet(w http.ResponseWriter, r *http.Request) 
 }
 
 // Helper function to parse integer query parameters
-func parseInt(s string, defaultVal int) int {
-	if s == "" {
-		return defaultVal
-	}
-	if v, err := strconv.Atoi(s); err == nil {
-		return v
-	}
-	return defaultVal
-}
 
 // JSON:API response helpers
 func toJSONAPIResource(schema *models.DetectionSchema) map[string]interface{} {

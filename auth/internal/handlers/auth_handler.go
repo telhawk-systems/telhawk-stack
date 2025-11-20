@@ -44,7 +44,7 @@ func (h *AuthHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ipAddress := getClientIP(r)
+	ipAddress := httputil.GetClientIP(r)
 	userAgent := r.Header.Get("User-Agent")
 
 	user, err := h.service.CreateUser(r.Context(), &req, actorID, ipAddress, userAgent)
@@ -85,7 +85,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ipAddress := getClientIP(r)
+	ipAddress := httputil.GetClientIP(r)
 	userAgent := r.Header.Get("User-Agent")
 
 	resp, err := h.service.Login(r.Context(), &req, ipAddress, userAgent)
@@ -96,16 +96,6 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(resp)
-}
-
-func getClientIP(r *http.Request) string {
-	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-		return xff
-	}
-	if xri := r.Header.Get("X-Real-IP"); xri != "" {
-		return xri
-	}
-	return r.RemoteAddr
 }
 
 func (h *AuthHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
@@ -184,7 +174,7 @@ func (h *AuthHandler) ValidateHECToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ipAddress := getClientIP(r)
+	ipAddress := httputil.GetClientIP(r)
 	userAgent := r.Header.Get("User-Agent")
 
 	hecToken, err := h.service.ValidateHECToken(r.Context(), req.Token, ipAddress, userAgent)
@@ -304,7 +294,7 @@ func (h *AuthHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	actorID := r.Header.Get("X-User-ID")
-	ipAddress := getClientIP(r)
+	ipAddress := httputil.GetClientIP(r)
 	userAgent := r.Header.Get("User-Agent")
 
 	user, err := h.service.UpdateUserDetails(r.Context(), userID, &req, actorID, ipAddress, userAgent)
@@ -346,7 +336,7 @@ func (h *AuthHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	actorID := r.Header.Get("X-User-ID")
-	ipAddress := getClientIP(r)
+	ipAddress := httputil.GetClientIP(r)
 	userAgent := r.Header.Get("User-Agent")
 
 	if err := h.service.DeleteUser(r.Context(), userID, actorID, ipAddress, userAgent); err != nil {
@@ -376,7 +366,7 @@ func (h *AuthHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 	}
 
 	actorID := r.Header.Get("X-User-ID")
-	ipAddress := getClientIP(r)
+	ipAddress := httputil.GetClientIP(r)
 	userAgent := r.Header.Get("User-Agent")
 
 	if err := h.service.ResetPassword(r.Context(), userID, req.NewPassword, actorID, ipAddress, userAgent); err != nil {
@@ -405,7 +395,7 @@ func (h *AuthHandler) CreateHECToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ipAddress := getClientIP(r)
+	ipAddress := httputil.GetClientIP(r)
 	userAgent := r.Header.Get("User-Agent")
 
 	token, err := h.service.CreateHECToken(r.Context(), userID, req.Name, req.ExpiresIn, ipAddress, userAgent)
@@ -530,7 +520,7 @@ func (h *AuthHandler) RevokeHECTokenHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	ipAddress := getClientIP(r)
+	ipAddress := httputil.GetClientIP(r)
 	userAgent := r.Header.Get("User-Agent")
 
 	if err := h.service.RevokeHECTokenByUser(r.Context(), req.Token, userID, ipAddress, userAgent); err != nil {
@@ -566,7 +556,7 @@ func (h *AuthHandler) RevokeHECTokenByIDHandler(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	ipAddress := getClientIP(r)
+	ipAddress := httputil.GetClientIP(r)
 	userAgent := r.Header.Get("User-Agent")
 
 	if err := h.service.RevokeHECTokenByID(r.Context(), tokenID, userID, ipAddress, userAgent); err != nil {

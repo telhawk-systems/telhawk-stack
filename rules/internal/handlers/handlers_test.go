@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/telhawk-systems/telhawk-stack/common/httputil"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -651,7 +652,7 @@ func TestParseInt(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := parseInt(tt.input, tt.defaultVal)
+			result := httputil.ParseIntParam(tt.input, tt.defaultVal)
 			assert.Equal(t, tt.expected, result)
 		})
 	}
@@ -795,7 +796,7 @@ func TestListSchemas_InvalidPage(t *testing.T) {
 	handler.ListSchemas(w, req)
 
 	// Should still work, defaults to page 1
-	// The parseInt helper returns 0 for invalid, which is then adjusted to 1
+	// The httputil.ParseIntParam helper returns 0 for invalid, which is then adjusted to 1
 	assert.Equal(t, http.StatusOK, w.Code)
 	mockRepo.AssertExpectations(t)
 }

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"strconv"
 
 	"github.com/telhawk-systems/telhawk-stack/common/httputil"
 
@@ -97,8 +96,8 @@ func (h *Handler) ListCases(w http.ResponseWriter, r *http.Request) {
 
 	// Parse query parameters
 	req := &models.ListCasesRequest{
-		Page:     parseInt(r.URL.Query().Get("page"), 1),
-		Limit:    parseInt(r.URL.Query().Get("limit"), 50),
+		Page:     httputil.ParseIntParam(r.URL.Query().Get("page"), 1),
+		Limit:    httputil.ParseIntParam(r.URL.Query().Get("limit"), 50),
 		Status:   r.URL.Query().Get("status"),
 		Severity: r.URL.Query().Get("severity"),
 		Assignee: r.URL.Query().Get("assignee"),
@@ -272,8 +271,8 @@ func (h *Handler) ListAlerts(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Parse query parameters
-	page := parseInt(r.URL.Query().Get("page"), 1)
-	limit := parseInt(r.URL.Query().Get("limit"), 20)
+	page := httputil.ParseIntParam(r.URL.Query().Get("page"), 1)
+	limit := httputil.ParseIntParam(r.URL.Query().Get("limit"), 20)
 	severity := r.URL.Query().Get("severity")
 	detectionSchemaID := r.URL.Query().Get("detection_schema_id")
 	// Note: status, case_id, and priority filtering can be added in the future
@@ -433,12 +432,3 @@ func (h *Handler) GetAlert(w http.ResponseWriter, r *http.Request) {
 }
 
 // Helper function to parse integer query parameters
-func parseInt(s string, defaultVal int) int {
-	if s == "" {
-		return defaultVal
-	}
-	if v, err := strconv.Atoi(s); err == nil {
-		return v
-	}
-	return defaultVal
-}

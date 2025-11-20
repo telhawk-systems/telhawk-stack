@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/telhawk-systems/telhawk-stack/common/httputil"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -739,7 +740,7 @@ func TestRevokeHECTokenByIDHandler2(t *testing.T) {
 }
 
 // ============================================================================
-// getClientIP Helper Tests
+// httputil.GetClientIP Helper Tests
 // ============================================================================
 
 func TestGetClientIP(t *testing.T) {
@@ -786,7 +787,7 @@ func TestGetClientIP(t *testing.T) {
 				req.Header.Set(k, v)
 			}
 
-			ip := getClientIP(req)
+			ip := httputil.GetClientIP(req)
 			if ip != tt.expected {
 				t.Errorf("Expected %s, got %s", tt.expected, ip)
 			}

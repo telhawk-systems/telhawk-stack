@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/telhawk-systems/telhawk-stack/common/httputil"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -569,9 +570,9 @@ func TestGetClientIP_XForwardedFor(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.Header.Set("X-Forwarded-For", "1.2.3.4, 5.6.7.8")
 
-	ip := getClientIP(req)
+	ip := httputil.GetClientIP(req)
 	if ip != "1.2.3.4" {
-		t.Errorf("getClientIP() = %q, want %q", ip, "1.2.3.4")
+		t.Errorf("httputil.GetClientIP() = %q, want %q", ip, "1.2.3.4")
 	}
 }
 
@@ -579,9 +580,9 @@ func TestGetClientIP_XRealIP(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.Header.Set("X-Real-IP", "9.10.11.12")
 
-	ip := getClientIP(req)
+	ip := httputil.GetClientIP(req)
 	if ip != "9.10.11.12" {
-		t.Errorf("getClientIP() = %q, want %q", ip, "9.10.11.12")
+		t.Errorf("httputil.GetClientIP() = %q, want %q", ip, "9.10.11.12")
 	}
 }
 
@@ -589,9 +590,9 @@ func TestGetClientIP_RemoteAddr(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.RemoteAddr = "13.14.15.16:12345"
 
-	ip := getClientIP(req)
+	ip := httputil.GetClientIP(req)
 	if ip != "13.14.15.16:12345" {
-		t.Errorf("getClientIP() = %q, want %q", ip, "13.14.15.16:12345")
+		t.Errorf("httputil.GetClientIP() = %q, want %q", ip, "13.14.15.16:12345")
 	}
 }
 
@@ -601,9 +602,9 @@ func TestGetClientIP_Precedence(t *testing.T) {
 	req.Header.Set("X-Real-IP", "5.6.7.8")
 	req.RemoteAddr = "9.10.11.12:12345"
 
-	ip := getClientIP(req)
+	ip := httputil.GetClientIP(req)
 	if ip != "1.2.3.4" {
-		t.Errorf("getClientIP() = %q, want %q", ip, "1.2.3.4")
+		t.Errorf("httputil.GetClientIP() = %q, want %q", ip, "1.2.3.4")
 	}
 }
 
