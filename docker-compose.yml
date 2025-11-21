@@ -389,8 +389,10 @@ services:
       - INGEST_INGESTION_RATE_LIMIT_WINDOW=${INGEST_RATE_LIMIT_WINDOW:-1m}
       - INGEST_ACK_ENABLED=${INGEST_ACK_ENABLED:-true}
       - INGEST_ACK_TTL=${INGEST_ACK_TTL:-10m}
+      - INGEST_DLQ_ENABLED=false
     volumes:
       - telhawk-certs:/certs:ro
+      - ingest-dlq:/var/lib/telhawk
     networks:
       - telhawk
     depends_on:
@@ -477,6 +479,7 @@ volumes:
   opensearch-data:
   opensearch-certs:
   telhawk-certs:
+  ingest-dlq:
   auth-db-data:
     driver: local
   rules-db-data:

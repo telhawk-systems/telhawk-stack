@@ -29,10 +29,6 @@ func TestLoad_WithDefaults(t *testing.T) {
 		t.Errorf("Auth.URL = %q, want %q", cfg.Auth.URL, "http://localhost:8080")
 	}
 
-	if cfg.Core.URL != "http://localhost:8090" {
-		t.Errorf("Core.URL = %q, want %q", cfg.Core.URL, "http://localhost:8090")
-	}
-
 	if cfg.Storage.URL != "http://localhost:8083" {
 		t.Errorf("Storage.URL = %q, want %q", cfg.Storage.URL, "http://localhost:8083")
 	}

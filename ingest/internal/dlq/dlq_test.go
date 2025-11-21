@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/dlq"
-	"github.com/telhawk-systems/telhawk-stack/ingest/internal/model"
+	"github.com/telhawk-systems/telhawk-stack/ingest/internal/models"
 )
 
 func TestNewQueue(t *testing.T) {

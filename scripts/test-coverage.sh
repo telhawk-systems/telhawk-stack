@@ -26,7 +26,6 @@ NC='\033[0m' # No Color
 services=(
     "auth"
     "ingest"
-    "core"
     "storage"
     "query"
     "alerting"

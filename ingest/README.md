@@ -1,12 +1,15 @@
 # Ingest Service
 
-Splunk HTTP Event Collector (HEC) compatible ingestion service for TelHawk Stack.
+Splunk HTTP Event Collector (HEC) compatible ingestion service with built-in OCSF normalization for TelHawk Stack.
 
 ## Features
 
 - **Splunk HEC compatibility** - Drop-in replacement for Splunk HEC
+- **OCSF normalization** - 77 auto-generated normalizers transform raw events to OCSF format
 - **Multiple formats** - JSON events, raw data, NDJSON batches
 - **Token authentication** - HEC token validation via auth service
+- **Validation chain** - Ensures OCSF compliance before storage
+- **Dead Letter Queue** - Failed events stored at `/var/lib/telhawk/dlq`
 - **High throughput** - Buffered queue with backpressure
 - **Nonrepudiation** - Event signatures for tamper detection
 - **Standards compliant** - Follows Splunk HEC API specification
@@ -146,8 +149,8 @@ Environment variables:
 - `INGEST_PORT` - Server port (default: 8088)
 - `INGEST_QUEUE_SIZE` - Event queue size (default: 10000)
 - `AUTH_SERVICE_URL` - Auth service URL for token validation
-- `CORE_SERVICE_URL` - Core service URL for OCSF normalization
 - `STORAGE_SERVICE_URL` - Storage service URL for indexing
+- `INGEST_DLQ_PATH` - Dead letter queue path (default: /var/lib/telhawk/dlq)
 
 ## Building
 
@@ -229,16 +232,49 @@ See [Nonrepudiation Strategy](../docs/nonrepudiation.md) for details.
 
 1. **Ingestion** → Events received via HEC
 2. **Auth** → Token validation
-3. **Core** → OCSF normalization
-4. **Storage** → OpenSearch indexing
-5. **Query** → SPL searching
+3. **Normalization** → Transform raw events to OCSF format (77 normalizers)
+4. **Validation** → Ensure OCSF compliance
+5. **Storage** → Forward normalized events to storage service
+6. **OpenSearch** → Storage service indexes to OpenSearch
+7. **Query** → SPL searching via query service
 
-## Next Steps
+## OCSF Normalization
 
-- [ ] Implement auth service token validation
-- [ ] Add core service integration for OCSF
-- [ ] Add storage service integration
-- [ ] Implement ack mechanism
-- [ ] Add Prometheus metrics
-- [ ] Add rate limiting
-- [ ] Add compression support (gzip)
+The ingest service includes built-in OCSF normalization:
+
+- **77 auto-generated normalizers** - One per OCSF event class
+- **Registry pattern** - Matches raw events to normalizers based on source_type
+- **Field mapping** - Common field variants → OCSF standard fields
+- **Event classification** - Automatic category_uid, class_uid, activity_id assignment
+- **Validation chain** - Ensures events meet OCSF schema requirements
+- **Dead Letter Queue** - Failed normalizations captured for analysis
+
+### Normalizer Generation
+
+Normalizers are generated from the OCSF schema:
+
+```bash
+# Regenerate normalizers when OCSF schema updates
+cd tools/normalizer-generator
+go run main.go
+# Output: ingest/internal/normalizer/generated/*.go
+```
+
+See `docs/NORMALIZER_GENERATION.md` for details.
+
+## Key Files
+
+- `ingest/internal/pipeline/pipeline.go` - Orchestrates normalization and validation
+- `ingest/internal/normalizer/normalizer.go` - Normalizer interface and registry
+- `ingest/internal/normalizer/generated/` - Auto-generated OCSF normalizers (77 files)
+- `ingest/internal/dlq/dlq.go` - Dead Letter Queue implementation
+- `ingest/internal/handlers/hec.go` - HEC endpoint implementation
+- `common/ocsf/` - Shared OCSF event structures and types
+
+## Related Documentation
+
+- `docs/SERVICES.md` - Service architecture overview
+- `docs/NORMALIZER_GENERATION.md` - Normalizer generation strategy
+- `docs/NORMALIZATION_INTEGRATION.md` - Integration guide with examples
+- `docs/OCSF_COVERAGE.md` - OCSF schema coverage details
+- `docs/SPLUNK_COMPATIBILITY.md` - HEC compatibility details

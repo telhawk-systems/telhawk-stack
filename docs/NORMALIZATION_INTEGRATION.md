@@ -12,25 +12,30 @@ Raw Logs → Pipeline → Normalizer Registry → Generated Normalizers → OCSF
 
 ### Components
 
-1. **Pipeline** (`core/internal/pipeline/`)
+1. **Pipeline** (`ingest/internal/pipeline/`)
    - Orchestrates normalization and validation
    - Routes events to appropriate normalizers
    - Validates OCSF compliance
 
-2. **Normalizer Registry** (`core/internal/normalizer/`)
+2. **Normalizer Registry** (`ingest/internal/normalizer/`)
    - Maintains ordered list of normalizers
    - Selects appropriate normalizer based on source type
    - Supports fallback normalizers
 
-3. **Generated Normalizers** (`core/internal/normalizer/generated/`)
+3. **Generated Normalizers** (`ingest/internal/normalizer/generated/`)
    - Auto-generated from OCSF schema
    - Type-safe, consistent implementations
    - Support multiple event classes
 
-4. **Helper Functions** (`core/internal/normalizer/generated/helpers.go`)
+4. **Helper Functions** (`ingest/internal/normalizer/generated/helpers.go`)
    - Shared field extraction logic
    - Handles field name variants
    - Provides timestamp parsing, status mapping, etc.
+
+5. **OCSF Types** (`common/ocsf/`)
+   - Shared OCSF event structures
+   - Used across all services
+   - Generated from OCSF schema
 
 ## Generated Normalizers
 
@@ -85,14 +90,15 @@ The following normalizers are currently integrated:
 
 ### Main Application
 
-The normalizers are integrated in `core/cmd/core/main.go`:
+The normalizers are integrated in `ingest/cmd/ingest/main.go`:
 
 ```go
 import (
-    "github.com/telhawk-systems/telhawk-stack/core/internal/normalizer"
-    "github.com/telhawk-systems/telhawk-stack/core/internal/normalizer/generated"
-    "github.com/telhawk-systems/telhawk-stack/core/internal/pipeline"
-    "github.com/telhawk-systems/telhawk-stack/core/internal/validator"
+    "github.com/telhawk-systems/telhawk-stack/ingest/internal/normalizer"
+    "github.com/telhawk-systems/telhawk-stack/ingest/internal/normalizer/generated"
+    "github.com/telhawk-systems/telhawk-stack/ingest/internal/pipeline"
+    "github.com/telhawk-systems/telhawk-stack/ingest/internal/validator"
+    "github.com/telhawk-systems/telhawk-stack/common/ocsf"
 )
 
 // Initialize all generated normalizers
@@ -187,7 +193,7 @@ Raw severity levels are mapped to OCSF severity codes:
 
 ### Test Data
 
-Sample log files are provided in `core/testdata/`:
+Sample log files are provided in `ingest/testdata/`:
 
 - `auth_login.json` - Successful login event
 - `auth_logout.json` - Logout event with different field names
@@ -314,7 +320,7 @@ To add support for new event types:
 
 3. **Update Integration**
    ```go
-   // In core/cmd/core/main.go
+   // In ingest/cmd/ingest/main.go
    registry := normalizer.NewRegistry(
        // ... existing normalizers
        generated.NewYourNewNormalizer(),
@@ -323,12 +329,12 @@ To add support for new event types:
 
 4. **Add Test Data**
    ```bash
-   # Create core/testdata/your_event.json
+   # Create ingest/testdata/your_event.json
    ```
 
 5. **Test**
    ```bash
-   cd core
+   cd ingest
    go test ./internal/pipeline/... -v
    ```
 

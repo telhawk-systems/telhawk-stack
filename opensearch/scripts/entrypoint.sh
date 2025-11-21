@@ -26,8 +26,14 @@ chmod 644 /usr/share/opensearch/config/*.pem
 chmod 644 /usr/share/opensearch/config/*-key.pem
 
 # Configure OpenSearch - single-node + SSL
-# Remove any existing cluster.initial_cluster_manager_nodes to avoid duplicates
+# Remove any existing conflicting configuration to avoid duplicates
 sed -i '/^cluster\.initial_cluster_manager_nodes:/d' /usr/share/opensearch/config/opensearch.yml
+sed -i '/^node\.name:/d' /usr/share/opensearch/config/opensearch.yml
+sed -i '/^plugins\.security\.ssl\./d' /usr/share/opensearch/config/opensearch.yml
+sed -i '/^plugins\.security\.allow_unsafe_democertificates:/d' /usr/share/opensearch/config/opensearch.yml
+sed -i '/^plugins\.security\.allow_default_init_securityindex:/d' /usr/share/opensearch/config/opensearch.yml
+sed -i '/^plugins\.security\.authcz\.admin_dn:/d' /usr/share/opensearch/config/opensearch.yml
+sed -i '/CN=admin,OU=Security/d' /usr/share/opensearch/config/opensearch.yml
 
 cat >> /usr/share/opensearch/config/opensearch.yml << 'EOF'
 

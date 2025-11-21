@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf"
+	"github.com/telhawk-systems/telhawk-stack/common/ocsf"
 )
 
 // TestAuthentication demonstrates creating an OCSF Authentication event

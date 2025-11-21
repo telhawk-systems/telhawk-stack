@@ -28,15 +28,15 @@ Failed events are written to disk as JSON files with full context:
 ### Configuration
 
 ```yaml
-# core/config.yaml
+# ingest/config.yaml
 dlq:
   enabled: true
   base_path: /var/lib/telhawk/dlq
 ```
 
 Environment variables:
-- `CORE_DLQ_ENABLED=true|false`
-- `CORE_DLQ_BASE_PATH=/custom/path`
+- `INGEST_DLQ_ENABLED=true|false`
+- `INGEST_DLQ_BASE_PATH=/custom/path`
 
 ### File Structure
 
@@ -228,7 +228,7 @@ Handle transient failures gracefully:
 
 ### Implementation
 
-The ingest service now retries failed requests to the core service with exponential backoff.
+The ingest service retries failed requests to the storage service with exponential backoff after normalizing events to OCSF format.
 
 ### Retry Strategy
 
@@ -351,16 +351,16 @@ Backpressure prevents cascade failures:
 #### Simulate Transient Failure
 
 ```bash
-# Stop core service
-docker-compose stop core
+# Stop storage service
+docker-compose stop storage
 
 # Send event via ingest
 curl -X POST http://localhost:8088/services/collector/event \
   -H "Authorization: Telhawk $TOKEN" \
   -d '{"event": "test"}'
 
-# Restart core service (during retry window)
-docker-compose start core
+# Restart storage service (during retry window)
+docker-compose start storage
 
 # Check if event succeeded
 ```
@@ -418,7 +418,7 @@ DLQ and retries work together:
 - Simple file-based storage
 - No additional infrastructure
 - Easy inspection (JSON files)
-- Built-in to core service
+- Built-in to ingest service
 
 **Message Queue Advantages:**
 - Higher throughput

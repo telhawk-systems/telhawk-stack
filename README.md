@@ -20,12 +20,12 @@ OCSF‑compatible SIEM built in Go with Splunk‑compatible ingestion, OpenSearc
 
 ```
 ├── auth/         # Authentication & RBAC
-├── core/         # OCSF normalization and processing
-├── ingest/       # Splunk HEC‑compatible ingestion
+├── ingest/       # Splunk HEC‑compatible ingestion + OCSF normalization
 ├── query/        # Query API service
 ├── storage/      # OpenSearch client and lifecycle
 ├── web/          # Frontend UI
 ├── cli/          # CLI (thawk)
+├── common/       # Shared libraries (OCSF types, utilities)
 ├── docs/         # Documentation (see docs/README.md)
 └── scripts/      # Helper scripts
 ```
@@ -128,12 +128,11 @@ See `docs/README.md` for configuration, services, production, metrics, helper sc
 telhawk-stack/
 ├── auth/           # Authentication service (+ Dockerfile)
 ├── cli/            # CLI tool (thawk) (+ Dockerfile)
-├── core/           # OCSF normalization engine
-├── ingest/         # Event ingestion service (+ Dockerfile)
+├── ingest/         # Event ingestion + OCSF normalization (+ Dockerfile)
 ├── query/          # Query API service
 ├── storage/        # OpenSearch storage layer
 ├── web/            # Web UI
-├── common/         # Shared libraries
+├── common/         # Shared libraries (OCSF types, utilities)
 ├── docs/           # Documentation
 ├── docker-compose.yml  # Complete stack orchestration
 └── bin/            # Compiled binaries (local dev only)
@@ -160,7 +159,7 @@ cd cli && go build -o ../bin/thawk . && cd ..
 go test ./...
 
 # Test specific module
-cd core && go test ./...
+cd ingest && go test ./...
 ```
 
 ### Running Tests

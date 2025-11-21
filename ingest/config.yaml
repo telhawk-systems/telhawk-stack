@@ -38,3 +38,20 @@ ingestion:
 logging:
   level: info  # debug, info, warn, error
   format: json  # json or text
+
+# Dead Letter Queue for failed events
+dlq:
+  enabled: false
+  base_path: /var/lib/telhawk/dlq
+
+# HEC Acknowledgement channel
+ack:
+  enabled: true
+  ttl: 10m
+
+# Redis configuration
+redis:
+  enabled: true
+  url: redis://redis:6379/0
+  max_retries: 3
+  pool_size: 10

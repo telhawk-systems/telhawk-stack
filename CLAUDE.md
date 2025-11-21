@@ -9,7 +9,7 @@ Guidance for code agents working in this repository. Keep commits clean and avoi
 
 ## Project Overview
 
-TelHawk Stack is an OCSF‑compatible SIEM in Go with Splunk‑compatible ingestion and OpenSearch storage. Services: ingest → core → storage ↔ OpenSearch → query → web.
+TelHawk Stack is an OCSF‑compatible SIEM in Go with Splunk‑compatible ingestion and OpenSearch storage. Services: ingest → storage ↔ OpenSearch → query → web.
 
 ## Development Commands
 
@@ -439,33 +439,33 @@ See `docs/SERVICES.md` for service flow and summaries.
 
 ## Code Architecture
 
-### Event Pipeline (Ingest → Core → Storage)
+### Event Pipeline (Ingest → Storage)
 
 1. **Ingest Service** receives raw events via HEC endpoint (`/services/collector/event`)
    - Validates HEC token via auth service (with 5-min caching)
    - IP-based and token-based rate limiting (Redis-backed)
-   - Forwards to core service for normalization
+   - **Normalizes events to OCSF format**:
+     - Registry pattern matches raw event format/source_type to normalizer
+     - 77 auto-generated normalizers (one per OCSF class) in `ingest/internal/normalizer/generated/`
+     - HECNormalizer as fallback for generic HEC events
+     - Validation chain ensures OCSF compliance
+     - Failed events → Dead Letter Queue (file-based at `/var/lib/telhawk/dlq`)
+   - Forwards normalized events to storage service
    - Implements retry with exponential backoff (3 attempts, ~700ms total)
    - Supports HEC ack channel for event tracking
 
-2. **Core Service** normalizes events to OCSF format
-   - Registry pattern matches raw event format/source_type to normalizer
-   - 77 auto-generated normalizers (one per OCSF class) in `core/internal/normalizer/generated/`
-   - HECNormalizer as fallback for generic HEC events
-   - Validation chain ensures OCSF compliance
-   - Failed events → Dead Letter Queue (file-based at `/var/lib/telhawk/dlq`)
-   - Successful events → forwarded to storage service
-
-3. **Storage Service** persists to OpenSearch
+2. **Storage Service** persists to OpenSearch
    - Bulk indexing with automatic retry (3 attempts, exponential backoff)
    - Index pattern: `telhawk-events-YYYY.MM.DD`
    - OCSF-optimized field mappings
 
 **Key Files:**
-- `core/internal/pipeline/pipeline.go`: Orchestrates normalization and validation
-- `core/internal/normalizer/normalizer.go`: Registry and interface definitions
+- `ingest/internal/pipeline/pipeline.go`: Orchestrates normalization and validation
+- `ingest/internal/normalizer/normalizer.go`: Registry and interface definitions
+- `ingest/internal/normalizer/generated/`: Auto-generated normalizers (77 OCSF classes)
 - `ingest/internal/handlers/hec.go`: HEC endpoint implementation
 - `storage/internal/client/opensearch.go`: OpenSearch bulk operations
+- `common/ocsf/`: Shared OCSF event structures and types
 
 ### Authentication Flow
 
@@ -498,9 +498,11 @@ Example resources include Saved Searches (`type: saved-search`), where immutable
 The system uses a code generator approach for OCSF compliance:
 
 1. **OCSF Schema** (`ocsf-schema/`): Git submodule tracking OCSF 1.1.0 schema
-2. **Generator** (`tools/normalizer-generator/`): Reads OCSF schema, generates Go normalizers
-3. **Generated Code** (`core/internal/normalizer/generated/`): One file per OCSF class (77 total)
-4. **Runtime**: Registry matches events to normalizers based on source_type patterns
+2. **OCSF Type Generator** (`tools/ocsf-generator/`): Generates Go structs for OCSF events and objects
+3. **Normalizer Generator** (`tools/normalizer-generator/`): Generates normalizers for each OCSF class
+4. **Generated OCSF Types** (`common/ocsf/`): Shared OCSF event structures used across services
+5. **Generated Normalizers** (`ingest/internal/normalizer/generated/`): One normalizer per OCSF class (77 total)
+6. **Runtime**: Registry in ingest service matches events to normalizers based on source_type patterns
 
 Each normalizer implements:
 - Field mapping (common variants → OCSF standard fields)
@@ -508,9 +510,11 @@ Each normalizer implements:
 - Metadata enrichment (product info, timestamps, severity)
 
 **Key Files:**
-- `tools/normalizer-generator/main.go`: Code generator
-- `core/internal/normalizer/registry.go`: Normalizer registration
-- `core/pkg/ocsf/event.go`: Base OCSF event structure
+- `tools/ocsf-generator/main.go`: OCSF type generator
+- `tools/normalizer-generator/main.go`: Normalizer code generator
+- `common/ocsf/`: Shared OCSF event types and objects (generated)
+- `ingest/internal/normalizer/registry.go`: Normalizer registration
+- `ingest/internal/normalizer/generated/`: Auto-generated normalizers
 
 ### Configuration Management
 
