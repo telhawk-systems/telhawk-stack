@@ -13,7 +13,7 @@ This document specifies how TelHawk integrates with the OCSF `correlation_uid` f
 The OCSF schema includes a `correlation_uid` field in the metadata object:
 
 ```go
-// core/pkg/ocsf/objects/metadata.go
+// ocsf/objects/metadata.go
 type Metadata struct {
     CorrelationUid string `json:"correlation_uid,omitempty"`
     // ... other fields
@@ -495,4 +495,4 @@ alerting:
 - [OCSF Schema](https://github.com/ocsf/ocsf-schema) - metadata.correlation_uid definition
 - [OpenTelemetry Tracing](https://opentelemetry.io/docs/concepts/signals/traces/) - trace_id conventions
 - [CORE_TYPES.md](CORE_TYPES.md) - join correlation type
-- `core/pkg/ocsf/objects/metadata.go:11` - correlation_uid field definition
+- `common/ocsf/ocsf/objects/metadata.go:11` - correlation_uid field definition

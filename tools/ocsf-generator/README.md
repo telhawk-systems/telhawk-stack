@@ -33,16 +33,16 @@ go run main.go
 # Or specify custom paths
 go run main.go \
   -schema /path/to/ocsf-schema \
-  -output ../../core/pkg/ocsf/classes \
+  -output ../../common/ocsf/ocsf/classes \
   -v  # verbose output
 ```
 
 ### Output
 
-Generated files will be created in `core/pkg/ocsf/classes/`:
+Generated files will be created in `common/ocsf/ocsf/classes/`:
 
 ```
-core/pkg/ocsf/classes/
+common/ocsf/ocsf/classes/
 ├── authentication.go
 ├── network_activity.go
 ├── process_activity.go
@@ -103,7 +103,7 @@ Once generated, use the classes like this:
 package main
 
 import (
-    "github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf/classes"
+    "github.com/telhawk-systems/telhawk-stack/common/ocsf/ocsf/classes"
 )
 
 func main() {
@@ -142,7 +142,7 @@ All classes will be regenerated with the latest schema definitions.
 ## Flags
 
 - `-schema` - Path to OCSF schema directory (default: `../../ocsf-schema`)
-- `-output` - Output directory for generated code (default: `../../core/pkg/ocsf/classes`)
+- `-output` - Output directory for generated code
 - `-v` - Verbose output showing each generated class
 
 ## Architecture
@@ -176,7 +176,7 @@ OCSF types are mapped to Go types:
 
 ## Limitations
 
-- Object types (like `User`, `Endpoint`, etc.) need to be defined separately in `core/pkg/ocsf/`
+- Object types (like `User`, `Endpoint`, etc.) need to be defined separately in `common/ocsf/ocsf/`
 - Complex nested structures may need manual adjustment
 - Extensions and profiles are not yet fully supported
 - Deprecated fields are included but marked

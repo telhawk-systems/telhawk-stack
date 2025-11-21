@@ -146,6 +146,4 @@ Normalizers:   77 ✅ (100% coverage)
 ## Related
 
 - `tools/ocsf-generator/` - Schema-driven event class generation
-- `core/pkg/ocsf/events/` - 77 generated event classes
-- `tools/normalizer-generator/sourcetype_patterns.json` - 7 pattern definitions
-- `core/internal/normalizer/generated/` - 7 generated normalizers
+- `tools/normalizer-generator/sourcetype_patterns.json` - 7 pattern definitionss

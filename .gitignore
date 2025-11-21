@@ -10,7 +10,6 @@ bin/
 # Go binaries (by service/tool name)
 /auth/auth
 /ingest/ingest
-/core/core
 /storage/storage
 /query/query
 /web/backend/web

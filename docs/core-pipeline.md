@@ -5,7 +5,7 @@ shipping them downstream to storage and query services.
 
 ## Package Layout
 
-- `core/pkg/ocsf` – canonical Go structs that mirror the OCSF schema for use across
+- `common/ocsf/ocsf` – canonical Go structs that mirror the OCSF schema for use across
   services.
   - `event.go` - Core OCSF Event structure with all required fields
   - `constants.go` - OCSF category, class, activity, severity, and status enumerations
@@ -75,5 +75,5 @@ type Event struct {
 ```
 
 Use the helper function `ocsf.ComputeTypeUID(categoryUID, classUID, activityID)` to
-calculate the proper `type_uid` value. See `core/pkg/ocsf/examples_test.go` for
+calculate the proper `type_uid` value. See `common/ocsf/ocsf/examples_test.go` for
 complete examples.

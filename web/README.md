@@ -58,7 +58,6 @@ The Dockerfile:
 
 ### Proxy Endpoints
 - `/api/query/*` - Proxied to query service (protected)
-- `/api/core/*` - Proxied to core service (protected)
 
 All proxied requests include `X-User-ID` header with authenticated user ID.
 

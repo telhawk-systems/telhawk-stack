@@ -132,7 +132,7 @@ func (h *AuthHandler) ValidateToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp, err := h.service.ValidateToken(req.Token)
+	resp, err := h.service.ValidateToken(r.Context(), req.Token)
 	if err != nil {
 		http.Error(w, "Invalid token", http.StatusUnauthorized)
 		return

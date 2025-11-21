@@ -24,6 +24,7 @@ type Repository interface {
 
 	CreateSession(ctx context.Context, session *models.Session) error
 	GetSession(ctx context.Context, refreshToken string) (*models.Session, error)
+	GetSessionByAccessToken(ctx context.Context, accessToken string) (*models.Session, error)
 	RevokeSession(ctx context.Context, refreshToken string) error
 
 	CreateHECToken(ctx context.Context, token *models.HECToken) error

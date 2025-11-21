@@ -59,9 +59,6 @@ go test ./...
 ```bash
 # Coverage for all packages
 go test -cover ./...
-
-# Coverage for specific package
-go test -cover ./core/internal/pipeline
 ```
 
 #### HTML Coverage Report
@@ -121,11 +118,6 @@ go test -v -args -test.v
 
 ## Key Test Files
 
-### Core Service Tests
-- `core/internal/pipeline/integration_test.go`: End-to-end normalization pipeline
-- `core/internal/normalizer/ocsf_passthrough_test.go`: OCSF passthrough normalizer
-- `core/internal/service/storage_test.go`: Storage service tests
-- `core/pkg/ocsf/examples_test.go`: OCSF event examples
 
 ### Ingest Service Tests
 - `ingest/internal/handlers/hec_handler_test.go`: HEC endpoint handler tests

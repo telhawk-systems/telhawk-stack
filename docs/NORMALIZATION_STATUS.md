@@ -199,25 +199,6 @@ The normalization loop is **complete and tested**. The system successfully:
 
 ---
 
-## Files Changed
-
-```
-core/cmd/core/main.go                              (modified)
-core/internal/pipeline/integration_test.go         (new, 281 lines)
-core/internal/normalizer/generated/*.go            (fixed)
-core/testdata/auth_login.json                      (new)
-core/testdata/auth_logout.json                     (new)
-core/testdata/network_connection.json              (new)
-core/testdata/process_start.json                   (new)
-core/testdata/file_create.json                     (new)
-core/testdata/dns_query.json                       (new)
-core/testdata/http_request.json                    (new)
-core/testdata/detection_finding.json               (new)
-core/verify_integration.sh                         (new, executable)
-docs/NORMALIZATION_INTEGRATION.md                  (new, 418 lines)
-docs/NORMALIZER_GENERATION.md                      (updated)
-```
-
 ## Verification Command
 
 ```bash

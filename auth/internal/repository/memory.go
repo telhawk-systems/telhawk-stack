@@ -92,6 +92,18 @@ func (r *InMemoryRepository) GetSession(ctx context.Context, refreshToken string
 	return session, nil
 }
 
+func (r *InMemoryRepository) GetSessionByAccessToken(ctx context.Context, accessToken string) (*models.Session, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	for _, session := range r.sessions {
+		if session.AccessToken == accessToken {
+			return session, nil
+		}
+	}
+	return nil, ErrSessionNotFound
+}
+
 func (r *InMemoryRepository) RevokeSession(ctx context.Context, refreshToken string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()

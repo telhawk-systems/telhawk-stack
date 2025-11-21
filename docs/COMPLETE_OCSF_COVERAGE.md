@@ -16,7 +16,7 @@ TelHawk Stack now has **100% OCSF normalizer coverage** with all 77 event class 
 **Changes**:
 - ✅ Schema-driven generation (scans generated event classes)
 - ✅ Auto-generates normalizers for ALL 77 OCSF classes
-- ✅ Works without OCSF schema (uses `core/pkg/ocsf/events/`)
+- ✅ Works without OCSF schema (uses `common/ocsf/ocsf/events/`)
 - ✅ Auto-generates sensible default patterns from class names
 - ✅ Optional custom patterns via `sourcetype_patterns.json`
 
@@ -113,7 +113,7 @@ go run main.go -v
 
 **All 77 OCSF event classes are now supported!**
 
-See `core/pkg/ocsf/events/` for complete list organized by category.
+See `common/ocsf/ocsf/events/` for complete list organized by category.
 
 ## Performance
 

@@ -10,7 +10,7 @@ TelHawk Stack currently has **minimal OCSF implementation** with only a generic 
 
 ### Current Status
 - ✅ **Infrastructure Ready**: Core normalization pipeline architecture is in place
-- ✅ **Base Event Model**: Generic OCSF event structure defined in `core/pkg/ocsf/event.go`
+- ✅ **Base Event Model**: Generic OCSF event structure defined in `common/ocsf/ocsf/event.go`
 - ⚠️ **Event Mapping**: Only HEC normalizer exists, creates generic placeholder events
 - ❌ **Class-Specific Implementation**: No specific OCSF class implementations
 - ❌ **Validators**: No class-specific validators implemented
@@ -46,7 +46,7 @@ The OCSF schema defines **82 total event classes** across 8 categories:
 
 ### Implemented Components
 
-#### 1. Base Event Structure (`core/pkg/ocsf/event.go`)
+#### 1. Base Event Structure (`common/ocsf/ocsf/event.go`)
 ```go
 type Event struct {
     Class        string                 // Currently hardcoded to "generic_event"
@@ -73,7 +73,7 @@ type Event struct {
 - Missing `time` (event occurrence time) vs `observed_time`
 - Actor/Target structures are too generic for OCSF compliance
 
-#### 2. HEC Normalizer (`core/internal/normalizer/hec.go`)
+#### 2. HEC Normalizer
 - Only normalizer implemented
 - Creates generic placeholder events
 - Does not map to specific OCSF classes
@@ -218,14 +218,14 @@ Metadata     Metadata               `json:"metadata"`       // Product, version,
 
 **Goal**: Fix base Event structure to be OCSF-compliant
 
-1. **Update `core/pkg/ocsf/event.go`**:
+1. **Update `common/ocsf/ocsf/event.go`**:
    - Add missing required fields: `class_uid`, `category_uid`, `activity_id`, `type_uid`, `severity_id`
    - Add `metadata` object with `product`, `version`, `profiles[]`
    - Separate `time` (event occurrence) from `observed_time` (event collection)
    - Make Actor/Target structures optional and class-specific
    - Add `status` and `status_id` fields
 
-2. **Create OCSF Constants Package** (`core/pkg/ocsf/constants.go`):
+2. **Create OCSF Constants Package** (`common/ocsf/ocsf/constants.go`):
    - Define enums for categories, classes, activities, severities, statuses
    - Provide type-safe constants instead of magic numbers
    - Add helper functions for `type_uid` calculation
@@ -292,7 +292,7 @@ core/internal/normalizer/
 ### 2. Create OCSF Event Builders
 
 ```go
-// core/pkg/ocsf/builders/authentication.go
+// common/ocsf/ocsf/builders/authentication.go
 func NewAuthenticationEvent(activity AuthenticationActivity) *ocsf.Event {
     return &ocsf.Event{
         ClassUID:    3002,

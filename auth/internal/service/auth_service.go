@@ -223,9 +223,22 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*m
 	}, nil
 }
 
-func (s *AuthService) ValidateToken(tokenString string) (*models.ValidateTokenResponse, error) {
+func (s *AuthService) ValidateToken(ctx context.Context, tokenString string) (*models.ValidateTokenResponse, error) {
 	claims, err := s.tokenGen.ValidateAccessToken(tokenString)
 	if err != nil {
+		return &models.ValidateTokenResponse{Valid: false}, nil
+	}
+
+	// Verify session exists in database and is active
+	// This ensures tokens are invalidated when sessions are revoked or database is wiped
+	session, err := s.repo.GetSessionByAccessToken(ctx, tokenString)
+	if err != nil {
+		// Session not found in database - token is invalid
+		return &models.ValidateTokenResponse{Valid: false}, nil
+	}
+
+	if !session.IsActive() {
+		// Session has been revoked or expired
 		return &models.ValidateTokenResponse{Valid: false}, nil
 	}
 

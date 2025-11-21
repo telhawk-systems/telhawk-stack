@@ -137,6 +137,18 @@ func (m *mockRepository) GetSession(ctx context.Context, refreshToken string) (*
 	return session, nil
 }
 
+func (m *mockRepository) GetSessionByAccessToken(ctx context.Context, accessToken string) (*models.Session, error) {
+	if m.getSessionErr != nil {
+		return nil, m.getSessionErr
+	}
+	for _, session := range m.sessions {
+		if session.AccessToken == accessToken {
+			return session, nil
+		}
+	}
+	return nil, repository.ErrSessionNotFound
+}
+
 func (m *mockRepository) RevokeSession(ctx context.Context, refreshToken string) error {
 	if m.revokeSessionErr != nil {
 		return m.revokeSessionErr
@@ -637,12 +649,26 @@ func TestRefreshToken(t *testing.T) {
 }
 
 func TestValidateToken(t *testing.T) {
-	service, _ := setupTestService()
+	service, repo := setupTestService()
+	ctx := context.Background()
 
 	// Generate a valid token for testing
 	validToken, err := service.tokenGen.GenerateAccessToken("user-123", []string{"admin"})
 	if err != nil {
 		t.Fatalf("Failed to generate test token: %v", err)
+	}
+
+	// Create a session for the valid token (required for session validation)
+	session := &models.Session{
+		ID:           "session-123",
+		UserID:       "user-123",
+		AccessToken:  validToken,
+		RefreshToken: "refresh-token-123",
+		ExpiresAt:    time.Now().Add(7 * 24 * time.Hour),
+		CreatedAt:    time.Now(),
+	}
+	if err := repo.CreateSession(ctx, session); err != nil {
+		t.Fatalf("Failed to create test session: %v", err)
 	}
 
 	tests := []struct {
@@ -653,7 +679,7 @@ func TestValidateToken(t *testing.T) {
 		expectRoles  []string
 	}{
 		{
-			name:         "valid token",
+			name:         "valid token with session",
 			token:        validToken,
 			expectValid:  true,
 			expectUserID: "user-123",
@@ -673,7 +699,7 @@ func TestValidateToken(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			resp, err := service.ValidateToken(tt.token)
+			resp, err := service.ValidateToken(ctx, tt.token)
 			if err != nil {
 				t.Fatalf("Unexpected error: %v", err)
 			}
@@ -691,6 +717,62 @@ func TestValidateToken(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestValidateToken_NoSession(t *testing.T) {
+	service, _ := setupTestService()
+	ctx := context.Background()
+
+	// Generate a valid JWT token but don't create a session
+	validToken, err := service.tokenGen.GenerateAccessToken("user-123", []string{"admin"})
+	if err != nil {
+		t.Fatalf("Failed to generate test token: %v", err)
+	}
+
+	// Token should be invalid because no session exists
+	resp, err := service.ValidateToken(ctx, validToken)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	if resp.Valid {
+		t.Error("Expected token to be invalid when no session exists")
+	}
+}
+
+func TestValidateToken_RevokedSession(t *testing.T) {
+	service, repo := setupTestService()
+	ctx := context.Background()
+
+	// Generate a valid token and create a revoked session
+	validToken, err := service.tokenGen.GenerateAccessToken("user-123", []string{"admin"})
+	if err != nil {
+		t.Fatalf("Failed to generate test token: %v", err)
+	}
+
+	now := time.Now()
+	session := &models.Session{
+		ID:           "session-123",
+		UserID:       "user-123",
+		AccessToken:  validToken,
+		RefreshToken: "refresh-token-123",
+		ExpiresAt:    time.Now().Add(7 * 24 * time.Hour),
+		CreatedAt:    time.Now(),
+		RevokedAt:    &now, // Session is revoked
+	}
+	if err := repo.CreateSession(ctx, session); err != nil {
+		t.Fatalf("Failed to create test session: %v", err)
+	}
+
+	// Token should be invalid because session is revoked
+	resp, err := service.ValidateToken(ctx, validToken)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	if resp.Valid {
+		t.Error("Expected token to be invalid when session is revoked")
 	}
 }
 

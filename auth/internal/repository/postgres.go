@@ -195,6 +195,32 @@ func (r *PostgresRepository) GetSession(ctx context.Context, refreshToken string
 	return &session, nil
 }
 
+func (r *PostgresRepository) GetSessionByAccessToken(ctx context.Context, accessToken string) (*models.Session, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	query := `
+		SELECT id, user_id, access_token, refresh_token, expires_at, created_at, revoked_at, revoked_by
+		FROM sessions
+		WHERE access_token = $1
+	`
+
+	var session models.Session
+	err := r.pool.QueryRow(ctx, query, accessToken).Scan(
+		&session.ID, &session.UserID, &session.AccessToken, &session.RefreshToken,
+		&session.ExpiresAt, &session.CreatedAt, &session.RevokedAt, &session.RevokedBy,
+	)
+
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrSessionNotFound
+		}
+		return nil, fmt.Errorf("failed to get session by access token: %w", err)
+	}
+
+	return &session, nil
+}
+
 func (r *PostgresRepository) RevokeSession(ctx context.Context, refreshToken string) error {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()

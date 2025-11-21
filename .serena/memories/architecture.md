@@ -80,7 +80,7 @@ External Sources → Ingest (8088) → Core (8090) → Storage (8083) → OpenSe
 
 **Key Files**:
 - `tools/normalizer-generator/main.go`: Code generator
-- `core/pkg/ocsf/event.go`: Base OCSF event structure
+- `common/ocsf/ocsf/event.go`: Base OCSF event structure
 
 ## Configuration Management
 

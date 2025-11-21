@@ -104,6 +104,15 @@ func (r *testRepo) GetSession(ctx context.Context, refreshToken string) (*models
 	return nil, repository.ErrSessionNotFound
 }
 
+func (r *testRepo) GetSessionByAccessToken(ctx context.Context, accessToken string) (*models.Session, error) {
+	for _, session := range r.sessions {
+		if session.AccessToken == accessToken {
+			return session, nil
+		}
+	}
+	return nil, repository.ErrSessionNotFound
+}
+
 func (r *testRepo) RevokeSession(ctx context.Context, refreshToken string) error {
 	s, ok := r.sessions[refreshToken]
 	if !ok {
