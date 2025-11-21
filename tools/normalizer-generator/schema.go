@@ -70,6 +70,7 @@ func loadEventClass(path string) (*EventClass, error) {
 func generateFromSchema(schemaEventsDir string, outputDir string) (int, error) {
 	totalGenerated := 0
 	allValidationRules := make([]*ValidationRules, 0)
+	allClasses := make([]*EventClass, 0)
 
 	categoryDirs, err := os.ReadDir(schemaEventsDir)
 	if err != nil {
@@ -114,6 +115,9 @@ func generateFromSchema(schemaEventsDir string, outputDir string) (int, error) {
 			// Override category with the actual directory name (not the extends field)
 			class.Category = categoryName
 
+			// Track this class for the registry
+			allClasses = append(allClasses, class)
+
 			// Generate normalizer
 			pattern := getPatternForClass(class)
 			if err := generateNormalizer(class.Name, pattern, outputDir); err != nil {
@@ -155,6 +159,15 @@ func generateFromSchema(schemaEventsDir string, outputDir string) (int, error) {
 		}
 	} else if *verbose {
 		fmt.Printf("Generated: validators_registry.go (%d validators)\n", len(allValidationRules))
+	}
+
+	// Generate normalizers registry
+	if err := generateNormalizersRegistry(allClasses, outputDir); err != nil {
+		if *verbose {
+			fmt.Printf("Warning: failed to generate normalizers registry: %v\n", err)
+		}
+	} else if *verbose {
+		fmt.Printf("Generated: normalizers_registry.go (%d normalizers)\n", len(allClasses))
 	}
 
 	return totalGenerated, nil

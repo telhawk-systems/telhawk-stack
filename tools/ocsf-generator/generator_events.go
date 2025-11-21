@@ -59,9 +59,9 @@ func generateEventClassFile(class *EventClass, categoryUID int, outputDir, packa
 		buf.WriteString("\t\"fmt\"\n")
 	}
 	buf.WriteString("\t\"time\"\n")
-	buf.WriteString("\t\"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf\"\n")
+	buf.WriteString("\t\"github.com/telhawk-systems/telhawk-stack/common/ocsf\"\n")
 	if needsObjects {
-		buf.WriteString("\t\"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf/objects\"\n")
+		buf.WriteString("\t\"github.com/telhawk-systems/telhawk-stack/common/ocsf/objects\"\n")
 	}
 	buf.WriteString(")\n\n")
 

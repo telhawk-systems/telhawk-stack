@@ -1,8 +1,0 @@
-{
-  "query_name": "example.com",
-  "query_type": "A",
-  "response_code": "NOERROR",
-  "answers": ["93.184.216.34"],
-  "timestamp": "2025-11-03T23:40:00Z",
-  "src_ip": "192.168.1.100"
-}

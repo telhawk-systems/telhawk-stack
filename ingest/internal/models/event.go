@@ -50,3 +50,14 @@ type IngestionStats struct {
 	FailedEvents     int64     `json:"failed_events"`
 	LastEvent        time.Time `json:"last_event"`
 }
+
+// RawEventEnvelope represents a raw event for normalization pipeline
+type RawEventEnvelope struct {
+	ID         string            `json:"id"`
+	Source     string            `json:"source"`
+	SourceType string            `json:"source_type"`
+	Format     string            `json:"format"`
+	Payload    []byte            `json:"payload"` // Base64 encoded raw event
+	Attributes map[string]string `json:"attributes,omitempty"`
+	ReceivedAt time.Time         `json:"received_at"`
+}

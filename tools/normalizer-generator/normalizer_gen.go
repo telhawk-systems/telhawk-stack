@@ -20,14 +20,14 @@ func generateNormalizer(className string, pattern Pattern, outputDir string) err
 	buf.WriteString("\t\"encoding/json\"\n")
 	buf.WriteString("\t\"fmt\"\n")
 	buf.WriteString("\t\"strings\"\n\n")
-	buf.WriteString("\t\"github.com/telhawk-systems/telhawk-stack/core/internal/model\"\n")
-	buf.WriteString("\t\"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf\"\n")
+	buf.WriteString("\t\"github.com/telhawk-systems/telhawk-stack/ingest/internal/models\"\n")
+	buf.WriteString("\t\"github.com/telhawk-systems/telhawk-stack/common/ocsf\"\n")
 
 	// Add category-specific imports
 	if pattern.Category != "" {
-		buf.WriteString(fmt.Sprintf("\t\"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf/events/%s\"\n", pattern.Category))
+		buf.WriteString(fmt.Sprintf("\t\"github.com/telhawk-systems/telhawk-stack/common/ocsf/events/%s\"\n", pattern.Category))
 	}
-	buf.WriteString("\t\"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf/objects\"\n")
+	buf.WriteString("\t\"github.com/telhawk-systems/telhawk-stack/common/ocsf/objects\"\n")
 	buf.WriteString(")\n\n")
 
 	structName := toGoStructName(className) + "Normalizer"
@@ -84,7 +84,7 @@ func generateNormalizeMethod(structName, className string, pattern Pattern) stri
 	var buf strings.Builder
 
 	buf.WriteString(fmt.Sprintf("// Normalize converts raw event to OCSF %s\n", className))
-	buf.WriteString(fmt.Sprintf("func (n *%s) Normalize(ctx context.Context, envelope *model.RawEventEnvelope) (*ocsf.Event, error) {\n", structName))
+	buf.WriteString(fmt.Sprintf("func (n *%s) Normalize(ctx context.Context, envelope *models.RawEventEnvelope) (*ocsf.Event, error) {\n", structName))
 	buf.WriteString("\tvar payload map[string]interface{}\n")
 	buf.WriteString("\tif err := json.Unmarshal(envelope.Payload, &payload); err != nil {\n")
 	buf.WriteString("\t\treturn nil, fmt.Errorf(\"decode payload: %w\", err)\n")
@@ -166,4 +166,33 @@ func generateActivityDetermination(structName string, pattern Pattern) string {
 	buf.WriteString("}\n\n")
 
 	return buf.String()
+}
+
+// generateNormalizersRegistry generates a registry file that includes all normalizers
+func generateNormalizersRegistry(allClasses []*EventClass, outputDir string) error {
+	var buf strings.Builder
+
+	buf.WriteString(generateHeader())
+	buf.WriteString("package generated\n\n")
+	buf.WriteString("import (\n")
+	buf.WriteString("\t\"github.com/telhawk-systems/telhawk-stack/ingest/internal/normalizer\"\n")
+	buf.WriteString(")\n\n")
+
+	buf.WriteString("// AllNormalizers returns all generated normalizers\n")
+	buf.WriteString("func AllNormalizers() []normalizer.Normalizer {\n")
+	buf.WriteString("\treturn []normalizer.Normalizer{\n")
+
+	for _, class := range allClasses {
+		if class.UID == 0 {
+			continue // Skip base_event
+		}
+		structName := toGoStructName(class.Name) + "Normalizer"
+		buf.WriteString(fmt.Sprintf("\t\tNew%s(),\n", structName))
+	}
+
+	buf.WriteString("\t}\n")
+	buf.WriteString("}\n")
+
+	filename := filepath.Join(outputDir, "normalizers_registry.go")
+	return os.WriteFile(filename, []byte(buf.String()), 0644)
 }

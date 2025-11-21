@@ -16,8 +16,8 @@ func generateHelpersFile(outputDir string) error {
 	buf.WriteString("\t\"strconv\"\n")
 	buf.WriteString("\t\"strings\"\n")
 	buf.WriteString("\t\"time\"\n\n")
-	buf.WriteString("\t\"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf\"\n")
-	buf.WriteString("\t\"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf/objects\"\n")
+	buf.WriteString("\t\"github.com/telhawk-systems/telhawk-stack/common/ocsf\"\n")
+	buf.WriteString("\t\"github.com/telhawk-systems/telhawk-stack/common/ocsf/objects\"\n")
 	buf.WriteString(")\n\n")
 
 	buf.WriteString(`// Shared helper methods for field extraction

@@ -1,9 +1,0 @@
-{
-  "http_method": "GET",
-  "url": "https://api.example.com/v1/users",
-  "status_code": 200,
-  "user_agent": "curl/7.68.0",
-  "src_ip": "192.168.1.100",
-  "timestamp": "2025-11-03T23:45:00Z",
-  "response_time": 125
-}

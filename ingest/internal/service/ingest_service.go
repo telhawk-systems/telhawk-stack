@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -9,11 +10,13 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/telhawk-systems/telhawk-stack/common/ocsf"
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/ack"
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/authclient"
-	"github.com/telhawk-systems/telhawk-stack/ingest/internal/coreclient"
+	"github.com/telhawk-systems/telhawk-stack/ingest/internal/dlq"
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/metrics"
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/models"
+	"github.com/telhawk-systems/telhawk-stack/ingest/internal/pipeline"
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/storageclient"
 )
 
@@ -22,15 +25,12 @@ type IngestService struct {
 	statsMutex    sync.RWMutex
 	eventQueue    chan *models.Event
 	stopChan      chan struct{}
-	coreClient    NormalizationClient
+	pipeline      *pipeline.Pipeline
+	dlq           *dlq.Queue
 	storageClient StorageClient
 	authClient    AuthClient
 	ackManager    *ack.Manager
 	queueCapacity int
-}
-
-type NormalizationClient interface {
-	Normalize(ctx context.Context, event *models.Event) (*coreclient.NormalizationResult, error)
 }
 
 type StorageClient interface {
@@ -41,7 +41,7 @@ type AuthClient interface {
 	ValidateHECToken(ctx context.Context, token string) (*authclient.ValidateHECTokenResponse, error)
 }
 
-func NewIngestService(coreClient NormalizationClient, storageClient StorageClient, authClient AuthClient) *IngestService {
+func NewIngestService(pipeline *pipeline.Pipeline, dlq *dlq.Queue, storageClient StorageClient, authClient AuthClient) *IngestService {
 	queueCap := 10000
 	s := &IngestService{
 		eventQueue:    make(chan *models.Event, queueCap),
@@ -50,7 +50,8 @@ func NewIngestService(coreClient NormalizationClient, storageClient StorageClien
 		stats: models.IngestionStats{
 			LastEvent: time.Now(),
 		},
-		coreClient:    coreClient,
+		pipeline:      pipeline,
+		dlq:           dlq,
 		storageClient: storageClient,
 		authClient:    authClient,
 	}
@@ -220,8 +221,8 @@ func (s *IngestService) processEvents() {
 }
 
 func (s *IngestService) normalizeEvent(event *models.Event) (map[string]interface{}, error) {
-	if s.coreClient == nil {
-		log.Printf("core client not configured; skipping normalization for event %s", event.ID)
+	if s.pipeline == nil {
+		log.Printf("normalization pipeline not configured; skipping normalization for event %s", event.ID)
 		// Return basic event structure without normalization
 		return s.eventToMap(event), nil
 	}
@@ -229,19 +230,56 @@ func (s *IngestService) normalizeEvent(event *models.Event) (map[string]interfac
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	result, err := s.coreClient.Normalize(ctx, event)
+	// Create raw event envelope for pipeline
+	envelope := &models.RawEventEnvelope{
+		ID:         event.ID,
+		Source:     event.Source,
+		SourceType: event.SourceType,
+		Format:     "json",
+		Payload:    []byte(base64.StdEncoding.EncodeToString(event.Raw)),
+		Attributes: map[string]string{
+			"host":      event.Host,
+			"index":     event.Index,
+			"source_ip": event.SourceIP,
+		},
+		ReceivedAt: event.Timestamp,
+	}
+
+	// Process through normalization pipeline
+	normalizedEvent, err := s.pipeline.Process(ctx, envelope)
 	if err != nil {
+		// Write to DLQ if available
+		if s.dlq != nil {
+			if dlqErr := s.dlq.Write(ctx, envelope, err, "normalization_failed"); dlqErr != nil {
+				log.Printf("failed to write to DLQ for event %s: %v", event.ID, dlqErr)
+			}
+		}
 		return nil, fmt.Errorf("normalization failed: %w", err)
 	}
 
-	// Parse normalized event
-	var normalizedEvent map[string]interface{}
-	if err := json.Unmarshal(result.Event, &normalizedEvent); err != nil {
-		return nil, fmt.Errorf("failed to parse normalized event: %w", err)
+	// Convert OCSF event to map for storage
+	eventMap, err := s.ocsfEventToMap(normalizedEvent)
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert OCSF event: %w", err)
 	}
 
-	log.Printf("event %s normalized via core service", event.ID)
-	return normalizedEvent, nil
+	log.Printf("event %s normalized via pipeline", event.ID)
+	return eventMap, nil
+}
+
+// ocsfEventToMap converts an OCSF event to a map for storage
+func (s *IngestService) ocsfEventToMap(event *ocsf.Event) (map[string]interface{}, error) {
+	data, err := json.Marshal(event)
+	if err != nil {
+		return nil, err
+	}
+
+	var result map[string]interface{}
+	if err := json.Unmarshal(data, &result); err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }
 
 func (s *IngestService) forwardToStorage(event map[string]interface{}) error {

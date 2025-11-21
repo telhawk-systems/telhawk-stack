@@ -1,9 +1,0 @@
-{
-  "finding": "Suspicious login attempt",
-  "severity": "high",
-  "user": "admin",
-  "src_ip": "203.0.113.45",
-  "timestamp": "2025-11-03T23:50:00Z",
-  "confidence": 85,
-  "status": "active"
-}

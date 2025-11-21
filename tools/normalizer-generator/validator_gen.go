@@ -92,7 +92,7 @@ func generateValidator(rules *ValidationRules, outputDir string) error {
 	if needsFmt {
 		buf.WriteString("\t\"fmt\"\n")
 	}
-	buf.WriteString("\n\t\"github.com/telhawk-systems/telhawk-stack/core/pkg/ocsf\"\n")
+	buf.WriteString("\n\t\"github.com/telhawk-systems/telhawk-stack/common/ocsf\"\n")
 	buf.WriteString(")\n\n")
 
 	// Struct definition
@@ -231,7 +231,7 @@ func generateValidatorsRegistry(allRules []*ValidationRules, outputDir string) e
 	buf.WriteString(generateHeader())
 	buf.WriteString("package generated\n\n")
 	buf.WriteString("import (\n")
-	buf.WriteString("\t\"github.com/telhawk-systems/telhawk-stack/core/internal/validator\"\n")
+	buf.WriteString("\t\"github.com/telhawk-systems/telhawk-stack/ingest/internal/validator\"\n")
 	buf.WriteString(")\n\n")
 
 	buf.WriteString("// AllValidators returns all generated validators\n")

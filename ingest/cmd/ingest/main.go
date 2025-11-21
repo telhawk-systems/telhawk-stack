@@ -16,12 +16,16 @@ import (
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/ack"
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/authclient"
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/config"
-	"github.com/telhawk-systems/telhawk-stack/ingest/internal/coreclient"
+	"github.com/telhawk-systems/telhawk-stack/ingest/internal/dlq"
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/handlers"
+	"github.com/telhawk-systems/telhawk-stack/ingest/internal/normalizer"
+	"github.com/telhawk-systems/telhawk-stack/ingest/internal/normalizer/generated"
+	"github.com/telhawk-systems/telhawk-stack/ingest/internal/pipeline"
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/ratelimit"
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/server"
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/service"
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/storageclient"
+	"github.com/telhawk-systems/telhawk-stack/ingest/internal/validator"
 )
 
 func main() {
@@ -52,7 +56,6 @@ func main() {
 	}
 	slog.Info("Service URLs configured",
 		slog.String("auth_url", cfg.Auth.URL),
-		slog.String("core_url", cfg.Core.URL),
 		slog.String("storage_url", cfg.Storage.URL),
 		slog.String("opensearch_url", cfg.OpenSearch.URL),
 	)
@@ -96,11 +99,53 @@ func main() {
 		log.Println("HEC acknowledgement channel disabled")
 	}
 
-	// Initialize ingestion service
+	// Initialize Dead Letter Queue
+	var dlqWriter *dlq.Queue
+	if cfg.DLQ.Enabled {
+		var err error
+		dlqWriter, err = dlq.NewQueue(cfg.DLQ.BasePath)
+		if err != nil {
+			log.Fatalf("Failed to initialize DLQ: %v", err)
+		}
+		log.Printf("Dead Letter Queue enabled at: %s", cfg.DLQ.BasePath)
+	} else {
+		log.Println("Dead Letter Queue disabled")
+	}
+
+	// Initialize normalization pipeline
+	// Create normalizer registry with OCSF passthrough (highest priority)
+	normalizers := []normalizer.Normalizer{
+		&normalizer.OCSFPassthroughNormalizer{},
+	}
+
+	// Add all generated normalizers (77 normalizers for OCSF event classes)
+	normalizers = append(normalizers, generated.AllNormalizers()...)
+
+	// Add HEC fallback normalizer (lowest priority)
+	normalizers = append(normalizers, &normalizer.HECNormalizer{})
+
+	normalizerRegistry := normalizer.NewRegistry(normalizers...)
+
+	// Initialize validator chain with basic validator
+	validators := []validator.Validator{
+		&validator.BasicValidator{},
+	}
+
+	// Add all generated validators
+	validators = append(validators, generated.AllValidators()...)
+
+	validatorChain := validator.NewChain(validators...)
+
+	// Create normalization pipeline
+	normalizationPipeline := pipeline.New(normalizerRegistry, validatorChain)
+	log.Printf("Normalization pipeline initialized with %d normalizers and %d validators", len(normalizers), len(validators))
+
+	// Initialize clients
 	authClient := authclient.New(cfg.Auth.URL, 5*time.Second, cfg.Auth.TokenValidationCacheTTL)
-	coreClient := coreclient.New(cfg.Core.URL, 10*time.Second)
 	storageClient := storageclient.New(cfg.Storage.URL, 30*time.Second)
-	ingestService := service.NewIngestService(coreClient, storageClient, authClient)
+
+	// Initialize ingestion service with pipeline
+	ingestService := service.NewIngestService(normalizationPipeline, dlqWriter, storageClient, authClient)
 
 	// Configure ack manager if enabled
 	if ackManager != nil {

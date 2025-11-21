@@ -1,9 +1,0 @@
-{
-  "file_path": "/var/log/app.log",
-  "file_name": "app.log",
-  "action": "create",
-  "user": "appuser",
-  "timestamp": "2025-11-03T23:35:00Z",
-  "status": "success",
-  "file_size": 4096
-}

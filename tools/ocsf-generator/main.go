@@ -10,7 +10,7 @@ import (
 
 var (
 	schemaDir = flag.String("schema", "../../ocsf-schema", "Path to OCSF schema directory")
-	outputDir = flag.String("output", "../../core/pkg/ocsf", "Output directory for generated code")
+	outputDir = flag.String("output", "../../common/ocsf", "Output directory for generated code")
 	verbose   = flag.Bool("v", false, "Verbose output")
 
 	// Global dictionary loaded once and used throughout generation

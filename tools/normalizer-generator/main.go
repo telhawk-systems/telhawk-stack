@@ -9,7 +9,7 @@ import (
 
 var (
 	schemaDir = flag.String("schema", "../../ocsf-schema", "Path to OCSF schema directory")
-	outputDir = flag.String("output", "../../core/internal/normalizer/generated", "Output directory for generated code")
+	outputDir = flag.String("output", "../../ingest/internal/normalizer/generated", "Output directory for generated code")
 	verbose   = flag.Bool("v", false, "Verbose output")
 )
 
