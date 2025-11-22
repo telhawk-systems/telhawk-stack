@@ -1,8 +1,8 @@
-# Query Service: Cursor Pagination and Aggregations
+# search service: Cursor Pagination and Aggregations
 
 ## Overview
 
-The query service now supports advanced OpenSearch features for production SOC operations:
+The search service now supports advanced OpenSearch features for production SOC operations:
 
 - **Cursor-based pagination** - Efficiently paginate through millions of events
 - **Aggregations** - Statistical analysis and grouping without loading all documents

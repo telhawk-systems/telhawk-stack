@@ -9,29 +9,25 @@ TelHawk Stack supports HTTPS/TLS for all service-to-service communication. This 
 Create a `.env` file in the project root:
 
 ```bash
-# Enable HTTPS/TLS for all Go services
-AUTH_TLS_ENABLED=true
+# Enable HTTPS/TLS for all Go services (V2 Architecture)
+AUTHENTICATE_TLS_ENABLED=true
 INGEST_TLS_ENABLED=true
-CORE_TLS_ENABLED=true
-STORAGE_TLS_ENABLED=true
-QUERY_TLS_ENABLED=true
+SEARCH_TLS_ENABLED=true
+RESPOND_TLS_ENABLED=true
 WEB_TLS_ENABLED=true
 
 # Allow self-signed certificates (development only)
 # Set to "false" for production with valid certificates
-AUTH_TLS_SKIP_VERIFY=true
-CORE_TLS_SKIP_VERIFY=true
-STORAGE_TLS_SKIP_VERIFY=true
-QUERY_TLS_SKIP_VERIFY=true
+AUTHENTICATE_TLS_SKIP_VERIFY=true
+INGEST_TLS_SKIP_VERIFY=true
+SEARCH_TLS_SKIP_VERIFY=true
+RESPOND_TLS_SKIP_VERIFY=true
 
 # Update service URLs to use HTTPS
-INGEST_AUTH_URL=https://auth:8080
-INGEST_CORE_URL=https://core:8090
-INGEST_STORAGE_URL=https://storage:8083
-CORE_STORAGE_URL=https://storage:8083
-WEB_AUTH_SERVICE_URL=https://auth:8080
-WEB_QUERY_SERVICE_URL=https://query:8082
-WEB_CORE_SERVICE_URL=https://core:8090
+INGEST_AUTH_URL=https://authenticate:8080
+WEB_AUTH_SERVICE_URL=https://authenticate:8080
+WEB_SEARCH_SERVICE_URL=https://search:8082
+WEB_RESPOND_SERVICE_URL=https://respond:8085
 ```
 
 Then start the stack:
@@ -47,7 +43,7 @@ docker-compose up -d
 TelHawk automatically generates self-signed certificates for development:
 
 1. **Certificate Generator Container** (`telhawk-certs`) runs on first startup
-2. Generates certificates for all services: `auth`, `ingest`, `core`, `storage`, `query`, `web`
+2. Generates certificates for all services: `authenticate`, `ingest`, `search`, `respond`, `web`
 3. Stores certificates in Docker volume `telhawk-certs`
 4. Certificates are valid for 10 years with proper Subject Alternative Names (SANs)
 
@@ -85,20 +81,19 @@ Each service supports these environment variables:
 - `{SERVICE}_TLS_KEY_FILE` - Path to private key file
 
 Examples:
-- `AUTH_TLS_ENABLED=true`
+- `AUTHENTICATE_TLS_ENABLED=true`
 - `INGEST_TLS_ENABLED=true`
-- `CORE_TLS_ENABLED=true`
-- `STORAGE_TLS_ENABLED=true`
-- `QUERY_TLS_ENABLED=true`
+- `SEARCH_TLS_ENABLED=true`
+- `RESPOND_TLS_ENABLED=true`
 - `WEB_TLS_ENABLED=true`
 
 #### Client TLS (Outgoing Connections)
 - `{SERVICE}_TLS_SKIP_VERIFY` - Skip certificate verification (default: `false`)
 
 Examples:
-- `AUTH_TLS_SKIP_VERIFY=true` - Skip verification when connecting to auth service
-- `CORE_TLS_SKIP_VERIFY=true` - Skip verification when connecting to core service
-- `STORAGE_TLS_SKIP_VERIFY=true` - Skip verification when connecting to storage service
+- `AUTHENTICATE_TLS_SKIP_VERIFY=true` - Skip verification when connecting to authenticate service
+- `INGEST_TLS_SKIP_VERIFY=true` - Skip verification when connecting to ingest service
+- `SEARCH_TLS_SKIP_VERIFY=true` - Skip verification when connecting to search service
 
 ### OpenSearch TLS
 
@@ -157,27 +152,24 @@ AUTH_TLS_SKIP_VERIFY=false  # Validate certificates (IMPORTANT!)
 
 `.env` file:
 ```bash
-# Enable HTTPS for all services
-AUTH_TLS_ENABLED=true
+# Enable HTTPS for all services (V2)
+AUTHENTICATE_TLS_ENABLED=true
 INGEST_TLS_ENABLED=true
-CORE_TLS_ENABLED=true
-STORAGE_TLS_ENABLED=true
-QUERY_TLS_ENABLED=true
+SEARCH_TLS_ENABLED=true
+RESPOND_TLS_ENABLED=true
 WEB_TLS_ENABLED=true
 
 # Accept self-signed certificates
-AUTH_TLS_SKIP_VERIFY=true
-CORE_TLS_SKIP_VERIFY=true
-STORAGE_TLS_SKIP_VERIFY=true
+AUTHENTICATE_TLS_SKIP_VERIFY=true
+INGEST_TLS_SKIP_VERIFY=true
+SEARCH_TLS_SKIP_VERIFY=true
+RESPOND_TLS_SKIP_VERIFY=true
 
 # HTTPS URLs
-INGEST_AUTH_URL=https://auth:8080
-INGEST_CORE_URL=https://core:8090
-INGEST_STORAGE_URL=https://storage:8083
-CORE_STORAGE_URL=https://storage:8083
-WEB_AUTH_SERVICE_URL=https://auth:8080
-WEB_QUERY_SERVICE_URL=https://query:8082
-WEB_CORE_SERVICE_URL=https://core:8090
+INGEST_AUTH_URL=https://authenticate:8080
+WEB_AUTH_SERVICE_URL=https://authenticate:8080
+WEB_SEARCH_SERVICE_URL=https://search:8082
+WEB_RESPOND_SERVICE_URL=https://respond:8085
 ```
 
 ### Example 2: Selective HTTPS (Ingest Only)
@@ -187,42 +179,39 @@ WEB_CORE_SERVICE_URL=https://core:8090
 INGEST_TLS_ENABLED=true
 
 # Other services remain HTTP
-AUTH_TLS_ENABLED=false
-CORE_TLS_ENABLED=false
+AUTHENTICATE_TLS_ENABLED=false
+SEARCH_TLS_ENABLED=false
 ```
 
 ### Example 3: Production Configuration
 
 ```bash
-# Enable HTTPS for all services
-AUTH_TLS_ENABLED=true
+# Enable HTTPS for all services (V2)
+AUTHENTICATE_TLS_ENABLED=true
 INGEST_TLS_ENABLED=true
-CORE_TLS_ENABLED=true
-STORAGE_TLS_ENABLED=true
-QUERY_TLS_ENABLED=true
+SEARCH_TLS_ENABLED=true
+RESPOND_TLS_ENABLED=true
 WEB_TLS_ENABLED=true
 
 # Validate all certificates (production certs required)
-AUTH_TLS_SKIP_VERIFY=false
-CORE_TLS_SKIP_VERIFY=false
-STORAGE_TLS_SKIP_VERIFY=false
+AUTHENTICATE_TLS_SKIP_VERIFY=false
+INGEST_TLS_SKIP_VERIFY=false
+SEARCH_TLS_SKIP_VERIFY=false
+RESPOND_TLS_SKIP_VERIFY=false
 
 # HTTPS URLs
-INGEST_AUTH_URL=https://auth:8080
-INGEST_CORE_URL=https://core:8090
-INGEST_STORAGE_URL=https://storage:8083
-CORE_STORAGE_URL=https://storage:8083
-WEB_AUTH_SERVICE_URL=https://auth:8080
-WEB_QUERY_SERVICE_URL=https://query:8082
-WEB_CORE_SERVICE_URL=https://core:8090
+INGEST_AUTH_URL=https://authenticate:8080
+WEB_AUTH_SERVICE_URL=https://authenticate:8080
+WEB_SEARCH_SERVICE_URL=https://search:8082
+WEB_RESPOND_SERVICE_URL=https://respond:8085
 
 # Secure cookies
 COOKIE_SECURE=true
 
 # Production credentials
 OPENSEARCH_PASSWORD=<strong-password>
-AUTH_DB_PASSWORD=<strong-password>
-AUTH_JWT_SECRET=<strong-secret>
+AUTHENTICATE_DB_PASSWORD=<strong-password>
+AUTHENTICATE_JWT_SECRET=<strong-secret>
 ```
 
 ## Troubleshooting
@@ -280,10 +269,10 @@ docker-compose up -d
            ▼
     [telhawk-certs volume]
            │
-           ├────────────┬────────────┬────────────┐
-           ▼            ▼            ▼            ▼
-      [auth:8080]  [ingest:8088]  [core:8090]  [storage:8083]
-      [query:8082] [web:3000]
+           ├───────────────┬───────────────┬───────────────┐
+           ▼               ▼               ▼               ▼
+  [authenticate:8080] [ingest:8088] [search:8082] [respond:8085]
+                      [web:3000]
 ```
 
 ### TLS Verification

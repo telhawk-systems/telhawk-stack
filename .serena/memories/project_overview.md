@@ -5,7 +5,8 @@ TelHawk Stack is a lightweight, OCSF-compliant SIEM (Security Information and Ev
 
 ## Technology Stack
 - **Primary Language**: Go 1.24.2
-- **Storage**: OpenSearch (primary datastore), PostgreSQL (auth service)
+- **Storage**: OpenSearch (events), PostgreSQL (users, rules, alerts, cases)
+- **Message Broker**: NATS (async communication)
 - **Caching/Rate Limiting**: Redis
 - **Frontend**: React (web UI)
 - **Containerization**: Docker, Docker Compose
@@ -14,22 +15,27 @@ TelHawk Stack is a lightweight, OCSF-compliant SIEM (Security Information and Ev
 - **Database Migrations**: golang-migrate
 
 ## Architecture Type
-Microservices architecture where events flow through multiple services:
-**Ingestion → Normalization → Storage → Query/Web**
+Microservices architecture (V2 - 5 services):
+**Ingestion → OpenSearch ← Search**
+**Respond (rules/alerts/cases) ↔ Search**
+**Authenticate → All services**
 
-## Key Services (6 main + CLI)
-1. **auth** (port 8080): JWT authentication, user management, HEC token management, RBAC
-2. **ingest** (port 8088): Splunk HEC-compatible ingestion endpoint
-3. **core** (port 8090): OCSF normalization engine (77 event classes)
-4. **storage** (port 8083): OpenSearch abstraction layer
-5. **query** (port 8082): Query API with SPL-subset support
-6. **web** (port 3000): React-based search console and event viewer
-7. **cli** (thawk): Command-line tool for auth, token management, ingestion, search
+## Services (5 main + CLI)
 
-## Supporting Services
-- **opensearch** (9200, 9600): Primary datastore with TLS
-- **auth-db** (PostgreSQL): User/session/token storage
-- **redis** (6379): Rate limiting and caching
+| Service | Port | Purpose |
+|---------|------|---------|
+| `authenticate` | 8080 | JWT auth, user management, HEC tokens, RBAC |
+| `ingest` | 8088 | Splunk HEC-compatible ingestion + OpenSearch writes |
+| `search` | 8082 | Query API, correlation evaluation |
+| `respond` | 8085 | Detection rules, alerts, case management |
+| `web` | 3000 | React-based UI and API gateway |
+| `cli` (thawk) | - | Command-line tool |
+
+## Supporting Infrastructure
+- **OpenSearch** (9200): Primary event datastore with TLS
+- **PostgreSQL** (5432): Users, rules, alerts, cases
+- **NATS** (4222): Async message broker
+- **Redis** (6379): Rate limiting and caching
 
 ## Key Features
 - Splunk HEC-compatible ingestion
@@ -38,23 +44,41 @@ Microservices architecture where events flow through multiple services:
 - Dead Letter Queue for failed events
 - JWT-based authentication with RBAC
 - Rate limiting (IP-based and token-based)
+- Detection rules with immutable versioning
+- Alert and case management
 - TLS/mTLS support for service communication
 - Docker-based deployment
 
 ## Repository Structure
 ```
 telhawk-stack/
-├── auth/           # Authentication service
-├── ingest/         # HEC ingestion service
-├── core/           # OCSF normalization engine
-├── storage/        # OpenSearch storage layer
-├── query/          # Query API service
+├── authenticate/   # Authentication service
+├── ingest/         # HEC ingestion + OpenSearch storage
+├── search/         # Query API service (formerly 'query')
+├── respond/        # Detection rules, alerts, cases
 ├── web/            # React frontend + Go backend
 ├── cli/            # Command-line tool (thawk)
-├── common/         # Shared Go code
+├── common/         # Shared Go code (OCSF types, messaging)
 ├── tools/          # Code generators and utilities
 ├── docs/           # Documentation
 ├── certs/          # Certificate generation
 ├── opensearch/     # OpenSearch configuration
 └── auth-db/        # PostgreSQL setup
 ```
+
+## V1 → V2 Migration
+
+The V2 architecture consolidated 7 services into 5:
+
+| V1 | V2 | Notes |
+|----|----|----|
+| auth | authenticate | Renamed |
+| ingest | ingest | Now includes storage |
+| storage | _(merged)_ | Merged into ingest |
+| core | _(merged)_ | Merged into ingest |
+| query | search | Renamed |
+| rules | respond | Merged with alerting |
+| alerting | respond | Merged with rules |
+| web | web | Unchanged |
+
+Old directories (auth/, rules/, alerting/, query/, storage/, core/) may still exist but are deprecated.

@@ -477,7 +477,6 @@ func TestCreateUser(t *testing.T) {
 - [JSON:API Specification](https://jsonapi.org/format/)
 - [Go net/http Documentation](https://pkg.go.dev/net/http)
 - `common/httputil` package documentation
-- `docs/CODE_STYLE_AND_CONVENTIONS.md`
 
 ---
 

@@ -1,5 +1,5 @@
 ## Query Language
-  * **Documentation:** docs/QUERY_LANGUAGE_DESIGN.md ✅
+  * **Documentation:** [search/QUERY_LANGUAGE_DESIGN.md](../search/QUERY_LANGUAGE_DESIGN.md) ✅
 - [ ] Phase 3: Text Syntax Parser (Future)
   * Design text syntax grammar (field:value, operators, boolean logic)
   * Implement parser using participle (Go parser library)

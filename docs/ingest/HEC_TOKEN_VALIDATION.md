@@ -231,7 +231,7 @@ curl http://localhost:8088/readyz | jq
 **Debug:**
 ```bash
 # Check ingest can reach auth
-docker exec telhawk-ingest wget -O- http://auth:8080/healthz
+docker exec telhawk-ingest wget -O- http://authenticate:8080/healthz
 
 # Validate token directly
 curl -X POST http://localhost:8080/api/v1/auth/validate-hec \

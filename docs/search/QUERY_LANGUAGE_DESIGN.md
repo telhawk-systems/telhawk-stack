@@ -950,7 +950,7 @@ class_uid:1007 cmd_line:*mimikatz* OR cmd_line:*invoke-* OR cmd_line:*powershell
 **Goals:**
 - Define canonical JSON query structure
 - Implement JSON → OpenSearch DSL translator
-- Update query service API to accept JSON queries
+- Update search service API to accept JSON queries
 - Validate with existing OpenSearch queries
 
 **Deliverables:**
@@ -1076,7 +1076,7 @@ CREATE TABLE saved_searches (
 
 **Architecture:**
 ```
-Query Service
+search service
     ├─ JSON Query Input
     ├─ Time range router
     │   ├─ 0-7 days → OpenSearch (hot)
@@ -1272,7 +1272,7 @@ Anomaly detection and pattern matching:
 ### Related Documentation
 
 - [UX Design Philosophy](UX_DESIGN_PHILOSOPHY.md) - Filter bar and UI design
-- [Query Service README](../query/README.md) - Current query implementation
+- [search service README](../query/README.md) - Current query implementation
 - [OCSF Schema 1.1.0](https://schema.ocsf.io/1.1.0/) - Field reference
 - [OpenSearch Query DSL](https://opensearch.org/docs/latest/query-dsl/) - Backend query format
 

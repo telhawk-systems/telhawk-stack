@@ -1,148 +1,138 @@
-# TelHawk Stack - Architecture
+# TelHawk Stack - Architecture (V2)
 
-## Service Communication Flow
+## Service Overview (5 Services)
+
 ```
-External Sources → Ingest (8088) → Core (8090) → Storage (8083) → OpenSearch (9200)
-                       ↓                                                    ↑
-                   Auth (8080)                                              |
-                                                                             |
-                                    Query (8082) ←---------------------------+
-                                        ↓
-                                    Web (3000)
+                    ┌─────────────────────────────────────────┐
+                    │                  NATS                   │
+                    │         (Message Broker)                │
+                    └──────┬─────────────┬───────────────────┘
+                           │             │
+    ┌──────────────────────┼─────────────┼──────────────────────┐
+    │                      ↓             ↓                      │
+    │  ┌─────────┐    ┌─────────┐   ┌─────────┐   ┌─────────┐  │
+    │  │ ingest  │    │ search  │   │ respond │   │   web   │  │
+    │  │  8088   │    │  8082   │   │  8085   │   │  3000   │  │
+    │  └────┬────┘    └────┬────┘   └────┬────┘   └────┬────┘  │
+    │       │              │             │             │        │
+    │       ↓              ↓             ↓             │        │
+    │  ┌─────────────────────┐    ┌───────────┐       │        │
+    │  │     OpenSearch      │    │ PostgreSQL│       │        │
+    │  │        9200         │    │    5432   │       │        │
+    │  └─────────────────────┘    └───────────┘       │        │
+    │                                    ↑             │        │
+    │                             ┌──────┴─────┐      │        │
+    │                             │authenticate│←─────┘        │
+    │                             │    8080    │               │
+    │                             └────────────┘               │
+    └──────────────────────────────────────────────────────────┘
+                         Internal Network
 ```
 
-## Event Pipeline (Core Data Flow)
+## Services
 
-### 1. Ingestion (ingest service - port 8088)
+| Service | Purpose | Port | Storage |
+|---------|---------|------|---------|
+| `authenticate` | Identity, sessions, JWT/HEC tokens | 8080 | PostgreSQL |
+| `ingest` | Event ingestion + OpenSearch writes | 8088 | OpenSearch (write) |
+| `search` | Ad-hoc queries + correlation | 8082 | OpenSearch (read) |
+| `respond` | Detection rules, alerts, cases | 8085 | PostgreSQL |
+| `web` | Frontend UI + API gateway | 3000 | Stateless |
+
+## Service Details
+
+### authenticate (Authentication & RBAC)
+- User authentication (login, logout, sessions)
+- JWT token generation and validation
+- HEC token management
+- Role-based access control (admin, analyst, viewer, ingester)
+- Audit logging (auth events → ingest)
+
+**Key Files**: `authenticate/internal/repository/postgres.go`, `authenticate/pkg/tokens/jwt.go`
+
+### ingest (Event Ingestion + Storage)
 - Receives raw events via HEC endpoint `/services/collector/event`
-- Validates HEC token via auth service (with 5-min caching)
+- Validates HEC token via authenticate service (with 5-min caching)
 - IP-based and token-based rate limiting (Redis-backed)
-- Forwards to core service for normalization
-- Retry with exponential backoff (3 attempts, ~700ms total)
-- Supports HEC ack channel for event tracking
+- Normalizes events to OCSF format (77 auto-generated normalizers)
+- Writes directly to OpenSearch (bulk indexing)
+- Dead Letter Queue for failed events (`/var/lib/telhawk/dlq`)
 
-**Key Files**: `ingest/internal/handlers/hec.go`
+**Key Files**: `ingest/internal/handlers/hec_handler.go`, `ingest/internal/storage/opensearch.go`
 
-### 2. Normalization (core service - port 8090)
-- Registry pattern matches raw event format/source_type to normalizer
-- 77 auto-generated normalizers (one per OCSF class) in `core/internal/normalizer/generated/`
-- HECNormalizer as fallback for generic HEC events
-- Validation chain ensures OCSF compliance
-- Failed events → Dead Letter Queue (file-based at `/var/lib/telhawk/dlq`)
-- Successful events → forwarded to storage service
+### search (Query API + Correlation)
+- Execute ad-hoc searches (user-initiated)
+- Execute correlation scans (scheduled, triggered by respond)
+- Saved searches management
+- Aggregate results, time-windowed analysis
 
-**Key Files**:
-- `core/internal/pipeline/pipeline.go`: Orchestrates normalization
-- `core/internal/normalizer/normalizer.go`: Registry and interfaces
-- `core/internal/normalizer/registry.go`: Normalizer registration
+**Key Files**: `search/internal/service/search.go`, `search/internal/translator/opensearch.go`
 
-### 3. Storage (storage service - port 8083)
-- Bulk indexing with automatic retry (3 attempts, exponential backoff)
-- Index pattern: `telhawk-events-YYYY.MM.DD`
-- OCSF-optimized field mappings
+### respond (Detection Rules + Alerting + Cases)
+- Detection rule storage (CRUD, versioning, lifecycle)
+- Alert management (create, acknowledge, close)
+- Case management (triage, investigation, resolution)
+- Correlation scheduling (triggers search service)
 
-**Key Files**: `storage/internal/client/opensearch.go`
+**Key Files**: `respond/internal/handlers/handlers.go`, `respond/internal/repository/postgres.go`
 
-### 4. Query (query service - port 8082)
-- SPL-subset query language support
-- Time-based filtering and aggregations
-- Cursor-based pagination
-- Direct OpenSearch integration
+### web (Frontend UI + API Gateway)
+- Serve frontend UI (React app)
+- API gateway / reverse proxy to backend services
+- Async query orchestration
+- Session management (cookies)
 
-**Key Files**: `query/internal/service/service.go`
+**Key Files**: `web/backend/internal/server/router.go`
+
+## Event Pipeline (Ingest → OpenSearch)
+
+1. **HEC Endpoint** receives raw events
+2. **Token Validation** via authenticate service (cached 5 min)
+3. **Rate Limiting** via Redis (IP-based and token-based)
+4. **OCSF Normalization**: Registry matches events to normalizers
+   - 77 auto-generated normalizers in `ingest/internal/normalizer/generated/`
+   - HECNormalizer as fallback
+5. **Validation Chain** ensures OCSF compliance
+6. **OpenSearch Write** (bulk indexing)
+   - Index pattern: `telhawk-events-YYYY.MM.DD`
 
 ## Authentication Flow
 
 1. User login (`POST /api/v1/auth/login`) → JWT access token + refresh token
 2. Access token used in `Authorization: Bearer <token>` header
 3. Token validation endpoint (`POST /api/v1/auth/validate`) called by other services
-4. Refresh tokens stored in PostgreSQL sessions table with revocation
+4. Refresh tokens stored in PostgreSQL sessions table
 5. HEC tokens stored separately with user association
-6. All auth events forwarded to ingest as OCSF Authentication events (class_uid: 3002)
 
-**Key Files**:
-- `auth/internal/repository/postgres.go`: Database operations
-- `auth/pkg/tokens/jwt.go`: JWT generation/validation
-- `auth/migrations/001_init.up.sql`: Database schema
-
-## OCSF Normalization Architecture
-
-### Code Generation Approach
-1. **OCSF Schema** (`ocsf-schema/`): Git submodule tracking OCSF 1.1.0
-2. **Generator** (`tools/normalizer-generator/`): Reads schema, generates Go code
-3. **Generated Code** (`core/internal/normalizer/generated/`): 77 normalizer files
-4. **Runtime**: Registry matches events to normalizers via source_type patterns
-
-### Normalizer Responsibilities
-- Field mapping (common variants → OCSF standard fields)
-- Event classification (category_uid, class_uid, activity_id, type_uid)
-- Metadata enrichment (product info, timestamps, severity)
-
-**Key Files**:
-- `tools/normalizer-generator/main.go`: Code generator
-- `common/ocsf/ocsf/event.go`: Base OCSF event structure
-
-## Configuration Management
-
-All services follow consistent pattern:
-- **YAML config** embedded at `/etc/telhawk/<service>/config.yaml`
-- **Environment variables** override YAML (12-factor app)
-- **Viper library** for config loading
-- **No CLI arguments** for configuration
+## Configuration
 
 Environment variable naming: `<SERVICE>_<SECTION>_<KEY>`
-Examples:
-- `AUTH_SERVER_PORT=8080`
-- `INGEST_AUTH_URL=http://auth:8080`
-- `QUERY_OPENSEARCH_PASSWORD=secret`
+- `AUTHENTICATE_SERVER_PORT=8080`
+- `AUTHENTICATE_AUTH_JWT_SECRET=secret`
+- `INGEST_AUTHENTICATE_URL=http://authenticate:8080`
+- `SEARCH_OPENSEARCH_PASSWORD=secret`
+- `RESPOND_DATABASE_POSTGRES_HOST=auth-db`
 
 ## Database Architecture
 
-### PostgreSQL (auth service)
-- UUID primary keys
-- Timestamp tracking (created_at, updated_at)
-- Trigger-based updated_at automation
-- Foreign keys with CASCADE delete
-- JSONB for flexible metadata
-- Tables: users, sessions, hec_tokens, audit_log
+### PostgreSQL
+- `authenticate`: users, sessions, hec_tokens, audit_log
+- `respond`: detection_schemas (rules), alerts, cases
 
 ### OpenSearch
-- Daily time-based indices: `telhawk-events-YYYY.MM.DD`
-- OCSF-optimized mappings (nested objects for actors, devices)
+- Daily indices: `telhawk-events-YYYY.MM.DD`
+- OCSF-optimized mappings
 - Query pattern: `telhawk-events-*`
-- Retention via index lifecycle policies
 
-## Error Handling
+## V1 → V2 Migration Reference
 
-### Dead Letter Queue (DLQ)
-- File-based storage at `/var/lib/telhawk/dlq`
-- Captures normalization and storage failures
-- Preserves full event context
-- API: `GET /dlq/list`, `POST /dlq/purge`
-
-### Retry Strategy
-- Ingest → Core: 3 attempts, exponential backoff
-- Core → Storage: 3 attempts, exponential backoff
-- Retries on 5xx, 429, network errors
-- No retry on 4xx (except 429)
-
-### Rate Limiting
-- Redis-backed sliding window algorithm
-- IP-based (pre-auth) and token-based (post-auth)
-- Returns HTTP 429 when exceeded
-- Graceful degradation if Redis unavailable
-
-## TLS/Certificate Management
-
-### Certificate Generation
-- Two init containers create certificates before services start
-- `telhawk-certs`: For Go services
-- `opensearch-certs`: For OpenSearch
-
-### Certificate Storage
-- `telhawk-certs:/certs` - mounted read-only to Go services
-- `opensearch-certs:/certs` - mounted read-only to OpenSearch
-
-### TLS Configuration
-- `<SERVICE>_TLS_ENABLED=true/false`: Enable TLS per service
-- `<SERVICE>_TLS_SKIP_VERIFY=true/false`: Skip verification (dev only)
+| V1 Service | V2 Service | Notes |
+|------------|------------|-------|
+| `auth` | `authenticate` | Renamed |
+| `ingest` | `ingest` | Now includes storage |
+| `storage` | _(merged)_ | Merged into ingest |
+| `core` | _(merged)_ | Merged into ingest |
+| `query` | `search` | Renamed |
+| `rules` | `respond` | Merged with alerting |
+| `alerting` | `respond` | Merged with rules |
+| `web` | `web` | Unchanged |

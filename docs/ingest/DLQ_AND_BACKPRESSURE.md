@@ -102,7 +102,7 @@ Response:
 
 Example:
 ```bash
-curl http://localhost:8090/api/v1/dlq
+curl http://localhost:8088/api/v1/dlq
 ```
 
 #### Purge All Failed Events
@@ -120,7 +120,7 @@ Response:
 
 Example:
 ```bash
-curl -X DELETE http://localhost:8090/api/v1/dlq/purge
+curl -X DELETE http://localhost:8088/api/v1/dlq/purge
 ```
 
 #### Health Check (includes DLQ stats)
@@ -162,13 +162,13 @@ Alert on:
 
 1. **Identify Failed Events**
    ```bash
-   curl http://localhost:8090/api/v1/dlq | jq '.events[] | {timestamp, reason, error}'
+   curl http://localhost:8088/api/v1/dlq | jq '.events[] | {timestamp, reason, error}'
    ```
 
 2. **Analyze Failures**
    ```bash
    # Download and examine
-   curl http://localhost:8090/api/v1/dlq > failed_events.json
+   curl http://localhost:8088/api/v1/dlq > failed_events.json
    jq '.events[] | select(.reason == "normalization_failed")' failed_events.json
    ```
 
@@ -186,7 +186,7 @@ Alert on:
 
 5. **Purge Successfully Replayed**
    ```bash
-   curl -X DELETE http://localhost:8090/api/v1/dlq/purge
+   curl -X DELETE http://localhost:8088/api/v1/dlq/purge
    ```
 
 ### Best Practices
@@ -228,7 +228,7 @@ Handle transient failures gracefully:
 
 ### Implementation
 
-The ingest service retries failed requests to the storage service with exponential backoff after normalizing events to OCSF format.
+The ingest service retries failed requests to the ingest service with exponential backoff after normalizing events to OCSF format.
 
 ### Retry Strategy
 
@@ -243,7 +243,7 @@ Total max retry time: ~700ms
 
 ### Retryable Errors
 
-- **5xx Server Errors** - Core service temporarily unavailable
+- **5xx Server Errors** - ingest service temporarily unavailable
 - **429 Rate Limit** - Too many requests, back off
 - **Network Errors** - Connection refused, timeout, DNS failure
 
@@ -298,7 +298,7 @@ Event written to DLQ (if enabled)
 ### Flow Diagram
 
 ```
-[Ingest] → [Core Service]
+[Ingest] → [ingest service]
               ↓
           Success? → [Storage]
               ↓ No
@@ -323,7 +323,7 @@ Track retry metrics:
 Recommended alerts:
 - Retry rate > 10% (indicates systemic issues)
 - DLQ write rate increasing
-- Core service 5xx error rate high
+- ingest service 5xx error rate high
 
 ### Load Shedding
 
@@ -331,18 +331,18 @@ Backpressure prevents cascade failures:
 
 1. **Ingest Service**
    - Receives high event rate
-   - Core service slow/unavailable
+   - ingest service slow/unavailable
    - Retries with backoff
    - Slows down request rate automatically
 
-2. **Core Service**
+2. **ingest service**
    - Under load, returns 5xx or 429
    - Ingest backs off
    - Gives core time to recover
    - Prevents overload spiral
 
 3. **Recovery**
-   - Core service recovers
+   - ingest service recovers
    - Retries succeed
    - Normal throughput resumes
 
@@ -351,7 +351,7 @@ Backpressure prevents cascade failures:
 #### Simulate Transient Failure
 
 ```bash
-# Stop storage service
+# Stop ingest service
 docker-compose stop storage
 
 # Send event via ingest
@@ -359,7 +359,7 @@ curl -X POST http://localhost:8088/services/collector/event \
   -H "Authorization: Telhawk $TOKEN" \
   -d '{"event": "test"}'
 
-# Restart storage service (during retry window)
+# Restart ingest service (during retry window)
 docker-compose start storage
 
 # Check if event succeeded
@@ -384,14 +384,14 @@ docker-compose logs -f ingest | grep "retry"
 ```yaml
 # ingest/config.yaml
 core:
-  url: http://core:8090
+  url: http://ingest:8088
   timeout_seconds: 10
   max_retries: 3
   retry_delay_ms: 100
 ```
 
 Environment overrides:
-- `INGEST_CORE_URL=http://core:8090`
+- `INGEST_OPENSEARCH_URL=http://ingest:8088`
 - `INGEST_CORE_TIMEOUT_SECONDS=10`
 
 ## Combined Workflow

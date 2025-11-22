@@ -312,15 +312,22 @@ open → investigating → resolved → closed
 
 ## Service Architecture
 
-### Rules Service (Port 8084)
+### Respond Service (Port 8085)
+
+The `respond` service consolidates detection rules, alerting, and case management into a single service.
 
 **Responsibilities**:
 - CRUD operations for Detection Schemas
 - Schema versioning and lifecycle management
 - Schema validation
-- Serve schemas to Alerting Service
+- Periodic evaluation of Detection Schemas
+- Query OpenSearch for events
+- Apply aggregation and threshold logic
+- Create alerts in OpenSearch
+- Manage cases in PostgreSQL
+- Auto-group related alerts into cases
 
-**API Endpoints**:
+**API Endpoints - Detection Schemas**:
 ```
 POST   /api/v1/schemas          Create new schema (auto-version)
 GET    /api/v1/schemas          List active schemas
@@ -332,24 +339,29 @@ DELETE /api/v1/schemas/:id      Soft delete (hide)
 GET    /api/v1/schemas/:id/test      Test schema against historical data
 ```
 
-**Database**: `rules-db` (PostgreSQL)
+**API Endpoints - Alerts and Cases**:
+```
+GET    /api/v1/alerts           List alerts (paginated, filterable)
+GET    /api/v1/alerts/:id       Get alert details
+POST   /api/v1/alerts/:id/test  Test rule against historical data (replay)
+PUT    /api/v1/alerts/:id       Update alert status
 
-### Alerting Service (Port 8085)
+GET    /api/v1/cases            List cases
+POST   /api/v1/cases            Create case manually
+GET    /api/v1/cases/:id        Get case details
+PUT    /api/v1/cases/:id        Update case (assign, change status)
+POST   /api/v1/cases/:id/alerts Link alert to case
+DELETE /api/v1/cases/:id/alerts/:alert_id  Unlink alert
+```
 
-**Responsibilities**:
-- Periodic evaluation of Detection Schemas
-- Query OpenSearch for events
-- Apply aggregation and threshold logic
-- Create alerts in OpenSearch
-- Manage cases in PostgreSQL
-- Auto-group related alerts into cases
+**Database**: `respond-db` (PostgreSQL)
 
 **Components**:
 
 1. **Schema Cache**:
    - In-memory cache of active Detection Schemas
    - TTL: 5 minutes (configurable)
-   - Refresh on webhook from Rules Service
+   - Refresh on schema changes
    - Pre-compiled query templates
 
 2. **Evaluation Scheduler**:
@@ -381,29 +393,12 @@ GET    /api/v1/schemas/:id/test      Test schema against historical data
    - Groups related alerts (configurable grouping rules)
    - Updates case metadata (alert count, severity, etc.)
 
-**API Endpoints**:
-```
-GET    /api/v1/alerts           List alerts (paginated, filterable)
-GET    /api/v1/alerts/:id       Get alert details
-POST   /api/v1/alerts/:id/test  Test rule against historical data (replay)
-PUT    /api/v1/alerts/:id       Update alert status
-
-GET    /api/v1/cases            List cases
-POST   /api/v1/cases            Create case manually
-GET    /api/v1/cases/:id        Get case details
-PUT    /api/v1/cases/:id        Update case (assign, change status)
-POST   /api/v1/cases/:id/alerts Link alert to case
-DELETE /api/v1/cases/:id/alerts/:alert_id  Unlink alert
-```
-
-**Database**: `alerting-db` (PostgreSQL)
-
 ## Evaluation Flow
 
 ### Step 1: Load Active Schemas
 ```
-Alerting Service startup:
-1. Fetch all active Detection Schemas from Rules Service
+Respond Service startup:
+1. Load all active Detection Schemas from database
 2. Cache in memory with TTL
 3. Pre-compile query templates
 4. Start evaluation scheduler
@@ -639,27 +634,33 @@ When creating/updating Detection Schemas:
 - Parallel evaluation with worker pool
 
 ### Scalability
-- Horizontal scaling: Multiple Alerting Service instances
-- Distributed work queue (future: use message queue like NATS)
+- Horizontal scaling: Multiple Respond Service instances
+- Distributed work queue (uses NATS message broker)
 - Partition by schema priority (high-priority rules evaluated first)
 
 ## Configuration
 
-### Rules Service
+### Respond Service
 
-`rules/config.yaml`:
+`respond/config.yaml`:
 ```yaml
 server:
-  port: 8084
+  port: 8085
 
 database:
   postgres:
-    host: rules-db
+    host: respond-db
     port: 5432
-    database: telhawk_rules
+    database: telhawk_respond
     user: telhawk
-    password: ${RULES_DB_PASSWORD}
+    password: ${RESPOND_DB_PASSWORD}
     sslmode: require
+
+opensearch:
+  url: https://opensearch:9200
+  username: admin
+  password: ${OPENSEARCH_PASSWORD}
+  alerts_index_prefix: telhawk-alerts
 
 validation:
   max_time_window: 24h
@@ -670,33 +671,6 @@ validation:
     - avg
     - max
     - min
-```
-
-### Alerting Service
-
-`alerting/config.yaml`:
-```yaml
-server:
-  port: 8085
-
-database:
-  postgres:
-    host: alerting-db
-    port: 5432
-    database: telhawk_alerting
-    user: telhawk
-    password: ${ALERTING_DB_PASSWORD}
-
-opensearch:
-  url: https://opensearch:9200
-  username: admin
-  password: ${OPENSEARCH_PASSWORD}
-  alerts_index_prefix: telhawk-alerts
-
-rules:
-  url: http://rules:8084
-  cache_ttl: 5m
-  refresh_interval: 5m
 
 evaluation:
   enabled: true

@@ -1,6 +1,6 @@
 # Alert Scheduling and Notification Delivery
 
-The Query service implements a comprehensive alert scheduling and notification system that executes saved queries on a schedule and delivers notifications when results are found.
+The search service implements a comprehensive alert scheduling and notification system that executes saved queries on a schedule and delivers notifications when results are found.
 
 ## Architecture
 
@@ -384,7 +384,7 @@ Test with a local alert:
 export QUERY_ALERTING_ENABLED=true
 export QUERY_ALERTING_CHECK_INTERVAL_SECONDS=30
 
-# Start query service
+# Start search service
 go run cmd/query/main.go
 
 # Create test alert

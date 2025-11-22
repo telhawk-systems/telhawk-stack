@@ -18,17 +18,16 @@ This approach ensures:
 
 Configuration values are resolved in this order (highest to lowest priority):
 
-1. **Environment variables** (e.g., `AUTH_SERVER_PORT=9090`)
-2. **Config file** (e.g., `/etc/telhawk/auth/config.yaml`)
+1. **Environment variables** (e.g., `AUTHENTICATE_SERVER_PORT=9090`)
+2. **Config file** (e.g., `/etc/telhawk/authenticate/config.yaml`)
 3. **Built-in defaults** (hardcoded in service)
 
-## Auth Service Configuration
+## Service Configuration
 
-### Config File Location
-- Default: `/etc/telhawk/auth/config.yaml`
-- Custom: `auth -config /path/to/config.yaml`
+### authenticate (Authentication & RBAC)
 
-### Sample Configuration
+**Config file**: `/etc/telhawk/authenticate/config.yaml`
+**Env prefix**: `AUTHENTICATE_`
 
 ```yaml
 server:
@@ -57,33 +56,21 @@ logging:
   format: json  # json or text
 ```
 
-### Environment Variable Overrides
-
-All config values can be overridden using environment variables with the `AUTH_` prefix:
-
+**Environment overrides:**
 ```bash
-# Override server port
-AUTH_SERVER_PORT=9090
-
-# Override JWT secret
-AUTH_AUTH_JWT_SECRET="my-production-secret-key"
-
-# Override database type
-AUTH_DATABASE_TYPE=postgres
-
-# Override nested postgres config
-AUTH_DATABASE_POSTGRES_HOST=db.example.com
-AUTH_DATABASE_POSTGRES_PORT=5432
-AUTH_DATABASE_POSTGRES_PASSWORD=secret
+AUTHENTICATE_SERVER_PORT=8080
+AUTHENTICATE_AUTH_JWT_SECRET="my-production-secret-key"
+AUTHENTICATE_DATABASE_TYPE=postgres
+AUTHENTICATE_DATABASE_POSTGRES_HOST=db.example.com
+AUTHENTICATE_DATABASE_POSTGRES_PASSWORD=secret
 ```
 
-## Ingest Service Configuration
+---
 
-### Config File Location
-- Default: `/etc/telhawk/ingest/config.yaml`
-- Custom: `ingest -config /path/to/config.yaml`
+### ingest (Event Ingestion + Storage)
 
-### Sample Configuration
+**Config file**: `/etc/telhawk/ingest/config.yaml`
+**Env prefix**: `INGEST_`
 
 ```yaml
 server:
@@ -92,8 +79,8 @@ server:
   write_timeout: 30s
   idle_timeout: 120s
 
-auth:
-  url: http://localhost:8080
+authenticate:
+  url: http://authenticate:8080
   token_validation_cache_ttl: 5m
 
 opensearch:
@@ -116,27 +103,115 @@ logging:
   format: json
 ```
 
-### Environment Variable Overrides
-
-All config values can be overridden using environment variables with the `INGEST_` prefix:
-
+**Environment overrides:**
 ```bash
-# Override server port
 INGEST_SERVER_PORT=8088
-
-# Override auth URL
-INGEST_AUTH_URL=http://auth-service:8080
-
-# Override OpenSearch connection
+INGEST_AUTHENTICATE_URL=http://authenticate:8080
 INGEST_OPENSEARCH_URL=https://opensearch-cluster:9200
 INGEST_OPENSEARCH_USERNAME=admin
 INGEST_OPENSEARCH_PASSWORD=MySecurePassword123!
 INGEST_OPENSEARCH_TLS_SKIP_VERIFY=false
-
-# Override rate limiting
 INGEST_INGESTION_RATE_LIMIT_REQUESTS=50000
-INGEST_INGESTION_MAX_EVENT_SIZE=2097152  # 2MB
 ```
+
+---
+
+### search (Query API + Correlation)
+
+**Config file**: `/etc/telhawk/search/config.yaml`
+**Env prefix**: `SEARCH_`
+
+```yaml
+server:
+  port: 8082
+
+opensearch:
+  url: https://opensearch:9200
+  username: admin
+  password: ""
+
+auth:
+  url: http://authenticate:8080
+
+logging:
+  level: info
+  format: json
+```
+
+**Environment overrides:**
+```bash
+SEARCH_SERVER_PORT=8082
+SEARCH_OPENSEARCH_URL=https://opensearch:9200
+SEARCH_OPENSEARCH_PASSWORD=MySecurePassword123!
+SEARCH_AUTH_URL=http://authenticate:8080
+```
+
+---
+
+### respond (Detection Rules + Alerting + Cases)
+
+**Config file**: `/etc/telhawk/respond/config.yaml`
+**Env prefix**: `RESPOND_`
+
+```yaml
+server:
+  port: 8085
+
+database:
+  postgres:
+    host: auth-db
+    port: 5432
+    database: telhawk_respond
+    user: telhawk
+    password: ""
+
+auth:
+  url: http://authenticate:8080
+
+logging:
+  level: info
+  format: json
+```
+
+**Environment overrides:**
+```bash
+RESPOND_SERVER_PORT=8085
+RESPOND_DATABASE_POSTGRES_HOST=db.example.com
+RESPOND_DATABASE_POSTGRES_PASSWORD=secret
+RESPOND_AUTH_URL=http://authenticate:8080
+```
+
+---
+
+### web (Frontend UI + API Gateway)
+
+**Config file**: `/etc/telhawk/web/config.yaml`
+**Env prefix**: `WEB_`
+
+```yaml
+server:
+  port: 3000
+
+services:
+  authenticate_url: http://authenticate:8080
+  search_url: http://search:8082
+  respond_url: http://respond:8085
+  ingest_url: http://ingest:8088
+
+logging:
+  level: info
+  format: json
+```
+
+**Environment overrides:**
+```bash
+WEB_SERVER_PORT=3000
+WEB_SERVICES_AUTHENTICATE_URL=http://authenticate:8080
+WEB_SERVICES_SEARCH_URL=http://search:8082
+WEB_SERVICES_RESPOND_URL=http://respond:8085
+```
+
+---
 
 ## Docker Compose Configuration
 
@@ -144,18 +219,28 @@ The `docker-compose.yml` demonstrates environment variable usage:
 
 ```yaml
 services:
-  auth:
+  authenticate:
     environment:
-      - AUTH_SERVER_PORT=8080
-      - AUTH_LOGGING_LEVEL=info
-      - AUTH_AUTH_JWT_SECRET=${AUTH_JWT_SECRET:-change-this-in-production}
+      - AUTHENTICATE_SERVER_PORT=8080
+      - AUTHENTICATE_LOGGING_LEVEL=info
+      - AUTHENTICATE_AUTH_JWT_SECRET=${AUTHENTICATE_JWT_SECRET:-change-this-in-production}
 
   ingest:
     environment:
       - INGEST_SERVER_PORT=8088
-      - INGEST_AUTH_URL=http://auth:8080
+      - INGEST_AUTHENTICATE_URL=http://authenticate:8080
       - INGEST_OPENSEARCH_URL=https://opensearch:9200
       - INGEST_OPENSEARCH_PASSWORD=${OPENSEARCH_PASSWORD:-TelHawk123!}
+
+  search:
+    environment:
+      - SEARCH_SERVER_PORT=8082
+      - SEARCH_AUTH_URL=http://authenticate:8080
+
+  respond:
+    environment:
+      - RESPOND_SERVER_PORT=8085
+      - RESPOND_AUTH_URL=http://authenticate:8080
 ```
 
 ### Using .env File
@@ -164,7 +249,7 @@ Create a `.env` file in the same directory as `docker-compose.yml`:
 
 ```bash
 # .env
-AUTH_JWT_SECRET=my-super-secret-jwt-key-change-in-production
+AUTHENTICATE_JWT_SECRET=my-super-secret-jwt-key-change-in-production
 OPENSEARCH_PASSWORD=MyStrongPassword123!
 ```
 
@@ -178,7 +263,7 @@ Docker Compose automatically loads `.env` and substitutes variables.
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: auth-config
+  name: authenticate-config
 data:
   config.yaml: |
     server:
@@ -195,11 +280,11 @@ data:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: auth-secrets
+  name: authenticate-secrets
 type: Opaque
 stringData:
-  AUTH_AUTH_JWT_SECRET: "production-jwt-secret-key"
-  AUTH_DATABASE_POSTGRES_PASSWORD: "db-password"
+  AUTHENTICATE_AUTH_JWT_SECRET: "production-jwt-secret-key"
+  AUTHENTICATE_DATABASE_POSTGRES_PASSWORD: "db-password"
 ```
 
 ### Deployment with ConfigMap and Secrets
@@ -208,23 +293,23 @@ stringData:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: auth
+  name: authenticate
 spec:
   template:
     spec:
       containers:
-      - name: auth
-        image: telhawk/auth:latest
+      - name: authenticate
+        image: telhawk/authenticate:latest
         envFrom:
         - secretRef:
-            name: auth-secrets
+            name: authenticate-secrets
         volumeMounts:
         - name: config
-          mountPath: /etc/telhawk/auth
+          mountPath: /etc/telhawk/authenticate
       volumes:
       - name: config
         configMap:
-          name: auth-config
+          name: authenticate-config
 ```
 
 ## Configuration Best Practices
@@ -257,17 +342,14 @@ spec:
 Services log their configuration on startup:
 
 ```bash
-# Auth service
-docker-compose logs auth | grep "Starting Auth"
-# Output: Starting Auth service on port 8080
-# Output: Loaded config from: /etc/telhawk/auth/config.yaml
+# Authenticate service
+docker-compose logs authenticate | grep "Starting"
 
 # Ingest service
-docker-compose logs ingest | grep -A 3 "Starting Ingest"
-# Output: Starting Ingest service on port 8088
-# Output: Loaded config from: /etc/telhawk/ingest/config.yaml
-# Output: Auth URL: http://auth:8080
-# Output: OpenSearch URL: https://opensearch:9200
+docker-compose logs ingest | grep -A 3 "Starting"
+
+# Search service
+docker-compose logs search | grep "Starting"
 ```
 
 ## Troubleshooting
@@ -278,9 +360,9 @@ Services fallback to defaults if config file is missing. Check logs for warnings
 ### Environment Variables Not Applied
 Ensure environment variable names match the config structure:
 - Use uppercase
-- Prefix with service name (AUTH_, INGEST_)
+- Prefix with service name (AUTHENTICATE_, INGEST_, SEARCH_, RESPOND_, WEB_)
 - Separate nested keys with underscores
-- Example: `auth.jwt_secret` → `AUTH_AUTH_JWT_SECRET`
+- Example: `auth.jwt_secret` → `AUTHENTICATE_AUTH_JWT_SECRET`
 
 ### Invalid Configuration Values
 Services will log errors and fail to start. Check logs:

@@ -4,171 +4,138 @@ A lightweight, OCSF-compliant SIEM (Security Information and Event Management) p
 
 ## Overview
 
-OCSF‑compatible SIEM built in Go with Splunk‑compatible ingestion, OpenSearch storage, and a web UI. See `docs/README.md` for full documentation.
- 
-## Docs
-- Local development: `docs/LOCAL_DEVELOPMENT.md`
-- Configuration: `docs/CONFIGURATION.md`
-- Services & architecture: `docs/SERVICES.md`
-- Production considerations: `docs/PRODUCTION.md`
-- Splunk compatibility (HEC + ACK): `docs/SPLUNK_COMPATIBILITY.md`
-- Prometheus metrics: `docs/PROMETHEUS_METRICS.md`
-- Helper scripts: `docs/HELPER_SCRIPTS.md`
-- UX design philosophy: `docs/UX_DESIGN_PHILOSOPHY.md`
- 
+OCSF-compliant SIEM built in Go with Splunk-compatible ingestion, OpenSearch storage, and a web UI. See `docs/README.md` for full documentation.
+
+## Architecture
+
+```
+                    ┌─────────────────────────────────────────┐
+                    │                  NATS                   │
+                    │         (Message Broker)                │
+                    └──────┬─────────────┬───────────────────┘
+                           │             │
+    ┌──────────────────────┼─────────────┼──────────────────────┐
+    │                      ↓             ↓                      │
+    │  ┌─────────┐    ┌─────────┐   ┌─────────┐   ┌─────────┐  │
+    │  │ ingest  │    │ search  │   │ respond │   │   web   │  │
+    │  └────┬────┘    └────┬────┘   └────┬────┘   └────┬────┘  │
+    │       │              │             │             │        │
+    │       ↓              ↓             ↓             │        │
+    │  ┌─────────────────────┐    ┌───────────┐       │        │
+    │  │     OpenSearch      │    │ PostgreSQL│       │        │
+    │  └─────────────────────┘    └───────────┘       │        │
+    │                                    ↑             │        │
+    │                             ┌──────┴─────┐      │        │
+    │                             │authenticate│←─────┘        │
+    │                             └────────────┘               │
+    └──────────────────────────────────────────────────────────┘
+                         Internal Network
+```
+
+## Services
+
+| Service | Purpose | Port |
+|---------|---------|------|
+| `authenticate` | Identity, sessions, JWT/HEC tokens | 8080 |
+| `ingest` | Event ingestion + OpenSearch writes | 8088 |
+| `search` | Ad-hoc queries + correlation | 8082 |
+| `respond` | Detection rules, alerts, cases | 8085 |
+| `web` | Frontend UI + API gateway | 3000 |
+
+See `docs/SERVICES.md` for detailed service descriptions.
+
 ## Project Structure
 
 ```
-├── auth/         # Authentication & RBAC
-├── ingest/       # Splunk HEC‑compatible ingestion + OCSF normalization
-├── query/        # Query API service
-├── storage/      # OpenSearch client and lifecycle
-├── web/          # Frontend UI
-├── cli/          # CLI (thawk)
-├── common/       # Shared libraries (OCSF types, utilities)
+├── authenticate/ # Authentication & RBAC service
+├── ingest/       # Splunk HEC-compatible ingestion + OCSF normalization
+├── search/       # Query API service (formerly 'query')
+├── respond/      # Detection rules, alerting, case management
+├── web/          # Frontend UI (React) + Go backend
+├── cli/          # CLI tool (thawk)
+├── common/       # Shared libraries (OCSF types, messaging, utilities)
 ├── docs/         # Documentation (see docs/README.md)
 └── scripts/      # Helper scripts
 ```
 
-## Architecture
-See the high‑level diagram and flow in `docs/SERVICES.md`.
-
-## Services
-See `docs/SERVICES.md` for microservice descriptions and architecture.
-
-Quick links:
-- Splunk compatibility: `docs/SPLUNK_COMPATIBILITY.md`
-- Prometheus metrics: `docs/PROMETHEUS_METRICS.md`
-
-### `/query` - Query API Service
-**Purpose:** Programmatic access to security data
-
-**Responsibilities:**
-- RESTful query API
-- SPL (Search Processing Language) subset support
-- Saved searches and alerts
-- Data aggregation and analytics
-- Export capabilities (CSV, JSON)
-
-**API Endpoints:**
-- `POST /api/v1/search` - Execute searches
-- `GET /api/v1/alerts` - Manage alerts
-- `GET /api/v1/dashboards` - Dashboard definitions
-- `POST /api/v1/export` - Data export
-
-**Key Features:**
-- SPL-compatible query syntax (subset)
-- Time-based queries and aggregations
-- Field-based filtering
-- Real-time and historical search
-- Query caching
-
-### `/web` - Web Interface
-**Purpose:** Frontend for security analysts and SOC teams
-
-**Responsibilities:**
-- Search interface with SPL support
-- Security dashboards and visualizations
-- Alert management UI
-- User management and RBAC
-- Investigation workspace
-
-**Key Features:**
-- Real-time event streaming
-- Customizable dashboards
-- Saved searches and reports
-- Dark mode (SOC-friendly)
-- Mobile-responsive design
-
-### `/common` - Shared Libraries
-**Purpose:** Common utilities and libraries used across services
-
-**Responsibilities:**
-- Configuration management
-- Logging and observability
-- Authentication/authorization middleware
-- OpenTelemetry instrumentation
-- Shared data structures
-
-**Includes:**
-- HTTP server utilities
-- Database connection pooling
-- Metrics and tracing
-- Error handling patterns
-- Validation helpers
-
-### CLI (`thawk`)
-Keep handy:
-- `thawk auth login`
-- `thawk token create`
-- `thawk ingest send`
-- `thawk search`
-More in `cli/README.md` and `docs/CLI_CONFIGURATION.md`.
-
-## Getting Started
-For setup and local usage, see `docs/LOCAL_DEVELOPMENT.md`. For configuration, production, metrics, helper scripts, and compatibility, see `docs/README.md`.
-
-#### 8. Stop the Stack
-```bash
-# Stop all services
-docker-compose down
-
-# Stop and remove volumes (deletes all data)
-docker-compose down -v
-```
-
 ## Documentation
 
-See `docs/README.md` for configuration, services, production, metrics, helper scripts, and compatibility notes.
+- **Getting Started**: `docs/LOCAL_DEVELOPMENT.md`
+- **Configuration**: `docs/CONFIGURATION.md`
+- **Services & Architecture**: `docs/SERVICES.md`
+- **Production**: `docs/PRODUCTION.md`
+- **Splunk Compatibility**: `docs/SPLUNK_COMPATIBILITY.md`
+- **Helper Scripts**: `docs/HELPER_SCRIPTS.md`
+
+See `docs/README.md` for the full documentation index.
+
+## Quick Start
+
+```bash
+# Start the stack
+docker-compose up -d
+
+# Wait for services to be healthy
+docker-compose ps
+
+# Access the web UI
+open http://localhost:3000
+
+# Default credentials: admin / admin123
+```
+
+## CLI (thawk)
+
+```bash
+# Authentication
+./scripts/thawk auth login -u admin -p admin123
+./scripts/thawk auth whoami
+
+# Detection rules
+./scripts/thawk rules list
+./scripts/thawk rules get <rule-id>
+
+# Alerts and cases
+./scripts/thawk alerts list
+
+# Event seeding (for development)
+./scripts/thawk seeder run --from-rules ./alerting/dist/rules/
+
+# All commands
+./scripts/thawk --help
+```
+
+See `docs/CLI_CONFIGURATION.md` for detailed CLI usage.
 
 ## Development
 
-### Project Structure
-```
-telhawk-stack/
-├── auth/           # Authentication service (+ Dockerfile)
-├── cli/            # CLI tool (thawk) (+ Dockerfile)
-├── ingest/         # Event ingestion + OCSF normalization (+ Dockerfile)
-├── query/          # Query API service
-├── storage/        # OpenSearch storage layer
-├── web/            # Web UI
-├── common/         # Shared libraries (OCSF types, utilities)
-├── docs/           # Documentation
-├── docker-compose.yml  # Complete stack orchestration
-└── bin/            # Compiled binaries (local dev only)
-```
-
-### Local Development (Without Docker)
-
-If you want to develop locally with Go installed:
+### Building Services
 
 ```bash
-# Build individual services
-cd auth && go build -o ../bin/auth ./cmd/auth && cd ..
-cd ingest && go build -o ../bin/ingest ./cmd/ingest && cd ..
-cd cli && go build -o ../bin/thawk . && cd ..
+# Build a single service
+cd authenticate && go build -o ../bin/authenticate ./cmd/authenticate
 
-# Run locally (requires separate OpenSearch instance)
-./bin/auth &
-./bin/ingest &
+# Build CLI
+cd cli && go build -o ../bin/thawk .
+
+# Run tests
+go test ./...
 ```
 
 ### Running Tests
+
 ```bash
 # Test all modules
 go test ./...
 
-# Test specific module
-cd ingest && go test ./...
-```
+# Test with verbose output
+go test -v ./...
 
-### Running Tests
-```bash
-go test ./...
+# Run pre-push checks (same as CI)
+./scripts/pre-push.sh
 ```
 
 ## Configuration
-See `docs/CONFIGURATION.md`.
 
 TelHawk Stack uses **enterprise-grade configuration management**:
 
@@ -176,57 +143,25 @@ TelHawk Stack uses **enterprise-grade configuration management**:
 - **Environment variable overrides** for deployment-specific settings
 - **No CLI arguments** for configuration (12-factor compliant)
 
-### Quick Configuration
-
-Each service has a `config.yaml` file embedded in its Docker image at `/etc/telhawk/<service>/config.yaml`.
-
-Override any setting via environment variables:
+Each service has a `config.yaml` file. Override via environment variables:
 
 ```bash
-# Auth service
-AUTH_SERVER_PORT=8080
-AUTH_AUTH_JWT_SECRET="your-secret-key"
+# Authenticate service
+AUTHENTICATE_SERVER_PORT=8080
+AUTHENTICATE_AUTH_JWT_SECRET="your-secret-key"
 
-# Ingest service  
+# Ingest service
 INGEST_SERVER_PORT=8088
-INGEST_AUTH_URL=http://auth:8080
+INGEST_AUTH_URL=http://authenticate:8080
 INGEST_OPENSEARCH_URL=https://opensearch:9200
-INGEST_OPENSEARCH_PASSWORD="YourPassword"
 ```
 
-See [`docs/CONFIGURATION.md`](docs/CONFIGURATION.md) for complete configuration guide.
-
-### Docker Compose Configuration
-
-The `docker-compose.yml` demonstrates proper configuration:
-
-```yaml
-services:
-  auth:
-    environment:
-      - AUTH_SERVER_PORT=8080
-      - AUTH_AUTH_JWT_SECRET=${AUTH_JWT_SECRET:-default-secret}
-  
-  ingest:
-    environment:
-      - INGEST_OPENSEARCH_PASSWORD=${OPENSEARCH_PASSWORD:-TelHawk123!}
-```
-
-Refer to `docs/CONFIGURATION.md` for enterprise‑grade configuration management and quick configuration.
-
-## Deployment
-
-See `docs/PRODUCTION.md` for production considerations. Docker Compose usage is standard; consult `docker-compose.yml` as needed.
-
-## Roadmap
-
-Active ML work continues; other major items shipped. See `docs/todo/` for current planning notes.
+See `docs/CONFIGURATION.md` for complete configuration guide.
 
 ## License
 
 TelHawk Stack is licensed under the **TelHawk Systems Source Available License (TSSAL) v1.0**.
 
-**What this means:**
 - ✅ **Free to use** - Run TelHawk in your own environment at no cost
 - ✅ **Source available** - View and study the code
 - ✅ **Modify for yourself** - Customize for your internal needs
@@ -240,31 +175,6 @@ See the [LICENSE](LICENSE) file for full terms.
 **Note:** This project does not accept external contributions or pull requests from forks. Development is handled internally by the TelHawk team.
 
 For bug reports and feature requests, please open an issue on GitHub.
-
-### Git Hooks and Testing
-
-**Install Git hooks** (recommended - run once after cloning):
-
-```bash
-./scripts/install-hooks.sh
-```
-
-This installs a pre-commit hook that automatically formats Go code with `gofmt` before each commit.
-
-**Run pre-push checks** before committing changes:
-
-```bash
-./scripts/pre-push.sh
-```
-
-This script runs the same checks as CI:
-- Code formatting (gofmt)
-- Go module tidiness
-- Static analysis (go vet)
-- Unit tests with race detector
-- Linting (golangci-lint, if installed)
-
-For detailed information about CI, Git hooks, and local development checks, see [docs/CI_DEVELOPMENT.md](docs/CI_DEVELOPMENT.md).
 
 ## Related Projects
 

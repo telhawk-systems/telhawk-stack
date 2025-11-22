@@ -10,7 +10,7 @@
   * Threshold-based alerting
   * Notification channels (email, webhook, Slack)
   * Alert history and status tracking
-  * **API Documentation:** See [docs/ALERTING_API.md](docs/ALERTING_API.md) for Rules and Alerting service endpoints
+  * **API Documentation:** See [alerting/ALERTING_API.md](../alerting/ALERTING_API.md) for Respond service endpoints
 - [ ] Threat intelligence
   * IOC (Indicators of Compromise) management
   * STIX/TAXII feed integration

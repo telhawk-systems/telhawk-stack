@@ -144,7 +144,7 @@ tools/normalizer-generator/main.go
   - sourcetype_patterns.json now optional
 ```
 
-### Core Service
+### Ingest Service
 ```
 core/cmd/core/main.go
   - Registered all 77 normalizers

@@ -1,6 +1,6 @@
 Saved Searches
 
-- Purpose: Create, version, and run saved OpenSearch queries via the Query service.
+- Purpose: Create, version, and run saved OpenSearch queries via the search service.
 
 API (JSON:API)
 - Content-Type: `application/vnd.api+json`
@@ -17,7 +17,7 @@ Endpoints
 - POST `/api/v1/saved-searches/{id}/run` → execute latest; 409 if disabled
 
 Auth
-- Mutating endpoints require `Authorization: Bearer <JWT>`; the Query service validates via Auth `POST /api/v1/auth/validate` and uses returned `user_id` for `owner_id` and `created_by`.
+- Mutating endpoints require `Authorization: Bearer <JWT>`; the search service validates via Auth `POST /api/v1/auth/validate` and uses returned `user_id` for `owner_id` and `created_by`.
 
 Storage
 - Migration: `query/migrations/002_saved_searches.up.sql` (immutable versioning: `id` + `version_id` v7, lifecycle: `disabled_at/by`, `hidden_at/by`).

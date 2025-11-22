@@ -70,7 +70,7 @@ Line chart showing event volume over time.
 
 ## Dashboard Metrics
 
-The dashboard fetches aggregated metrics from the query service API:
+The dashboard fetches aggregated metrics from the search service API:
 
 ```typescript
 {
@@ -217,7 +217,7 @@ To test the dashboard:
 
 **No data showing:**
 - Check if events exist in OpenSearch
-- Verify query service is running
+- Verify search service is running
 - Check browser console for API errors
 - Confirm time range includes events
 

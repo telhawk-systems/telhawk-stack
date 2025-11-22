@@ -13,14 +13,13 @@
 ### 2. SSL/TLS Everywhere
 **Policy:** All internal service communication can use TLS with proper certificates.
 
-**Current Status (as of 2025-11-06):**
+**Current Status (V2 Architecture):**
 - ✅ **OpenSearch (9200, 9600):** HTTPS enabled with self-signed certificates
 - ✅ **PostgreSQL (5432):** SSL/TLS enabled with self-signed certificates
-- ✅ **Auth (8080):** TLS support with feature flag (`AUTH_TLS_ENABLED`)
+- ✅ **Authenticate (8080):** TLS support with feature flag (`AUTHENTICATE_TLS_ENABLED`)
 - ✅ **Ingest (8088):** TLS support with feature flag (`INGEST_TLS_ENABLED`)
-- ✅ **Core (8090):** TLS support with feature flag (`CORE_TLS_ENABLED`)
-- ✅ **Storage (8083):** TLS support with feature flag (`STORAGE_TLS_ENABLED`)
-- ✅ **Query (8082):** TLS support with feature flag (`QUERY_TLS_ENABLED`)
+- ✅ **Search (8082):** TLS support with feature flag (`SEARCH_TLS_ENABLED`)
+- ✅ **Respond (8085):** TLS support with feature flag (`RESPOND_TLS_ENABLED`)
 - ✅ **Web (3000):** TLS support with feature flag (`WEB_TLS_ENABLED`)
 
 **Implementation:** TLS is disabled by default but can be enabled via environment variables. See `docs/TLS_CONFIGURATION.md` for details.
@@ -43,7 +42,7 @@ TelHawk Stack uses automated certificate generation for both OpenSearch and Go s
 
 **Go Service Certificates:**
 1. **telhawk-certs** - Certificate generator for all Go services
-   - Generates certificates for: auth, ingest, core, storage, query, web
+   - Generates certificates for: authenticate, ingest, search, respond, web
    - Creates self-signed CA and service certificates
    - Stores certificates in `telhawk-certs` volume
    - Each certificate includes proper Subject Alternative Names (SANs)
@@ -73,11 +72,11 @@ TelHawk Stack uses automated certificate generation for both OpenSearch and Go s
 
 **Require health checks:**
 - opensearch
-- auth
-- auth-db
-- storage
-- query
-- core
+- authenticate
+- authenticate-db
+- respond-db
+- search
+- respond
 - ingest
 - web
 
@@ -190,5 +189,5 @@ docker-compose restart opensearch
 ## Related Documentation
 
 - [AUTH_INTEGRATION.md](./AUTH_INTEGRATION.md) - Auth service and JWT tokens
-- [QUERY_SERVICE_READ_PATH.md](./QUERY_SERVICE_READ_PATH.md) - Query service security
 - [DLQ_AND_BACKPRESSURE.md](./DLQ_AND_BACKPRESSURE.md) - Pipeline security
+- [TLS_CONFIGURATION.md](./TLS_CONFIGURATION.md) - TLS setup guide

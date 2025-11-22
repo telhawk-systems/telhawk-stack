@@ -349,8 +349,8 @@ DB_CONNECTION=postgres://user:pass@postgres:5432/telhawk_auth
 **Web Service:**
 ```bash
 WEB_PORT=3000
-AUTH_SERVICE_URL=http://auth:8080
-QUERY_SERVICE_URL=http://query:8081
+AUTHENTICATE_SERVICE_URL=http://authenticate:8080
+SEARCH_SERVICE_URL=http://search:8082
 SESSION_COOKIE_DOMAIN=.telhawk.example.com
 SESSION_COOKIE_SECURE=true
 ```

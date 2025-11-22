@@ -6,7 +6,7 @@ The `thawk` CLI provides complete user management capabilities for TelHawk Stack
 
 Login to the system first:
 ```bash
-./scripts/thawk auth login -u admin -p admin123 --auth-url http://auth:8080
+./scripts/thawk auth login -u admin -p admin123 --auth-url http://authenticate:8080
 ```
 
 The configuration is now persisted in a Docker volume, so you only need to login once.

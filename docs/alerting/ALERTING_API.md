@@ -1,10 +1,11 @@
 # TelHawk Alerting System API Reference
 
-## Rules Service API (Port 8084)
+## Respond Service API (Port 8085)
 
-Base URL: `http://rules:8084/api/v1`
+Base URL: `http://respond:8085/api/v1`
 
-### Detection Schemas
+
+### Detection Schemas (Rules)
 
 #### Create Detection Schema
 
@@ -359,10 +360,6 @@ Authorization: Bearer {token}
 
 ---
 
-## Alerting Service API (Port 8085)
-
-Base URL: `http://alerting:8085/api/v1`
-
 ### Alerts
 
 #### List Alerts
@@ -629,13 +626,6 @@ Authorization: Bearer {token}
       "severity": "high",
       "triggered_at": "2025-01-09T12:00:00Z",
       "added_at": "2025-01-09T12:00:05Z"
-    },
-    {
-      "alert_id": "018d3c3a-7891-7000-8000-123456789def",
-      "title": "SSH Brute Force Attempt",
-      "severity": "high",
-      "triggered_at": "2025-01-09T14:30:00Z",
-      "added_at": "2025-01-09T14:30:03Z"
     }
   ],
   "timeline": [
@@ -644,18 +634,6 @@ Authorization: Bearer {token}
       "event": "case_created",
       "actor": "system",
       "details": "Auto-created from alert"
-    },
-    {
-      "timestamp": "2025-01-09T12:15:00Z",
-      "event": "case_assigned",
-      "actor": "018d3c3a-1111-7000-8000-admin000001",
-      "details": "Assigned to analyst001"
-    },
-    {
-      "timestamp": "2025-01-09T14:30:00Z",
-      "event": "alert_added",
-      "actor": "system",
-      "details": "Related alert linked to case"
     }
   ],
   "metadata": {
@@ -800,10 +778,6 @@ All endpoints may return the following error responses:
     {
       "field": "controller.query",
       "message": "Invalid query syntax: unexpected token 'AN'"
-    },
-    {
-      "field": "model.time_window",
-      "message": "Must be a valid duration (e.g., '5m', '1h', '24h')"
     }
   ]
 }
@@ -822,7 +796,7 @@ All endpoints may return the following error responses:
 
 ## Authentication
 
-All API endpoints require authentication using JWT tokens obtained from the auth service.
+All API endpoints require authentication using JWT tokens obtained from the authenticate service.
 
 **Header**:
 ```
@@ -841,8 +815,8 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
 API endpoints are rate-limited per user/token:
 
-- **Rules Service**: 100 requests/minute
-- **Alerting Service**: 200 requests/minute
+- **Schemas API**: 100 requests/minute
+- **Alerts API**: 200 requests/minute
 - **Test endpoint**: 10 requests/minute (expensive operation)
 
 **Rate Limit Headers**:
