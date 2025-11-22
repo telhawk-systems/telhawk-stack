@@ -64,7 +64,7 @@ func TestNewRouter_HealthCheck(t *testing.T) {
 
 	cfg := RouterConfig{
 		AuthHandler:       handlers.NewAuthHandler(authClient, "localhost", false),
-		DashboardHandler:  handlers.NewDashboardHandler(queryServer.URL),
+		DashboardHandler:  handlers.NewDashboardHandler(queryServer.URL, ""),
 		AuthMiddleware:    auth.NewMiddleware(authClient, "localhost", false),
 		AuthenticateProxy: proxy.NewProxy(authServer.URL, authClient),
 		SearchProxy:       proxy.NewProxy(queryServer.URL, authClient),
@@ -107,7 +107,7 @@ func TestNewRouter_AuthEndpoints_GetCSRFToken(t *testing.T) {
 
 	cfg := RouterConfig{
 		AuthHandler:       handlers.NewAuthHandler(authClient, "localhost", false),
-		DashboardHandler:  handlers.NewDashboardHandler(queryServer.URL),
+		DashboardHandler:  handlers.NewDashboardHandler(queryServer.URL, ""),
 		AuthMiddleware:    auth.NewMiddleware(authClient, "localhost", false),
 		AuthenticateProxy: proxy.NewProxy(authServer.URL, authClient),
 		SearchProxy:       proxy.NewProxy(queryServer.URL, authClient),
@@ -145,7 +145,7 @@ func TestNewRouter_ProtectedRoute_RequiresAuth(t *testing.T) {
 
 	cfg := RouterConfig{
 		AuthHandler:       handlers.NewAuthHandler(authClient, "localhost", false),
-		DashboardHandler:  handlers.NewDashboardHandler(queryServer.URL),
+		DashboardHandler:  handlers.NewDashboardHandler(queryServer.URL, ""),
 		AuthMiddleware:    auth.NewMiddleware(authClient, "localhost", false),
 		AuthenticateProxy: proxy.NewProxy(authServer.URL, authClient),
 		SearchProxy:       proxy.NewProxy(queryServer.URL, authClient),
@@ -193,7 +193,7 @@ func TestNewRouter_StaticFileServing(t *testing.T) {
 
 	cfg := RouterConfig{
 		AuthHandler:       handlers.NewAuthHandler(authClient, "localhost", false),
-		DashboardHandler:  handlers.NewDashboardHandler(queryServer.URL),
+		DashboardHandler:  handlers.NewDashboardHandler(queryServer.URL, ""),
 		AuthMiddleware:    auth.NewMiddleware(authClient, "localhost", false),
 		AuthenticateProxy: proxy.NewProxy(authServer.URL, authClient),
 		SearchProxy:       proxy.NewProxy(queryServer.URL, authClient),
@@ -232,7 +232,7 @@ func TestNewRouter_SPAFallback(t *testing.T) {
 
 	cfg := RouterConfig{
 		AuthHandler:       handlers.NewAuthHandler(authClient, "localhost", false),
-		DashboardHandler:  handlers.NewDashboardHandler(queryServer.URL),
+		DashboardHandler:  handlers.NewDashboardHandler(queryServer.URL, ""),
 		AuthMiddleware:    auth.NewMiddleware(authClient, "localhost", false),
 		AuthenticateProxy: proxy.NewProxy(authServer.URL, authClient),
 		SearchProxy:       proxy.NewProxy(queryServer.URL, authClient),
@@ -282,7 +282,7 @@ func TestNewRouter_RequestIDMiddleware(t *testing.T) {
 
 	cfg := RouterConfig{
 		AuthHandler:       handlers.NewAuthHandler(authClient, "localhost", false),
-		DashboardHandler:  handlers.NewDashboardHandler(queryServer.URL),
+		DashboardHandler:  handlers.NewDashboardHandler(queryServer.URL, ""),
 		AuthMiddleware:    auth.NewMiddleware(authClient, "localhost", false),
 		AuthenticateProxy: proxy.NewProxy(authServer.URL, authClient),
 		SearchProxy:       proxy.NewProxy(queryServer.URL, authClient),
@@ -322,7 +322,7 @@ func TestNewRouter_StripPrefixForProxies(t *testing.T) {
 
 	cfg := RouterConfig{
 		AuthHandler:       handlers.NewAuthHandler(authClient, "localhost", false),
-		DashboardHandler:  handlers.NewDashboardHandler(backendServer.URL),
+		DashboardHandler:  handlers.NewDashboardHandler(backendServer.URL, ""),
 		AuthMiddleware:    auth.NewMiddleware(authClient, "localhost", false),
 		AuthenticateProxy: proxy.NewProxy(backendServer.URL, authClient),
 		SearchProxy:       proxy.NewProxy(backendServer.URL, authClient),
@@ -404,7 +404,7 @@ func TestNewRouter_RouteOrdering(t *testing.T) {
 
 	cfg := RouterConfig{
 		AuthHandler:       handlers.NewAuthHandler(authClient, "localhost", false),
-		DashboardHandler:  handlers.NewDashboardHandler(queryServer.URL),
+		DashboardHandler:  handlers.NewDashboardHandler(queryServer.URL, ""),
 		AuthMiddleware:    auth.NewMiddleware(authClient, "localhost", false),
 		AuthenticateProxy: proxy.NewProxy(authServer.URL, authClient),
 		SearchProxy:       proxy.NewProxy(queryServer.URL, authClient),
@@ -445,7 +445,7 @@ func TestNewRouter_MethodRouting(t *testing.T) {
 
 	cfg := RouterConfig{
 		AuthHandler:       handlers.NewAuthHandler(authClient, "localhost", false),
-		DashboardHandler:  handlers.NewDashboardHandler(queryServer.URL),
+		DashboardHandler:  handlers.NewDashboardHandler(queryServer.URL, ""),
 		AuthMiddleware:    auth.NewMiddleware(authClient, "localhost", false),
 		AuthenticateProxy: proxy.NewProxy(authServer.URL, authClient),
 		SearchProxy:       proxy.NewProxy(queryServer.URL, authClient),
@@ -506,7 +506,7 @@ func TestNewRouter_ConfigComplete(t *testing.T) {
 	// Test with complete config
 	cfg := RouterConfig{
 		AuthHandler:       handlers.NewAuthHandler(authClient, "localhost", false),
-		DashboardHandler:  handlers.NewDashboardHandler(queryServer.URL),
+		DashboardHandler:  handlers.NewDashboardHandler(queryServer.URL, ""),
 		AuthMiddleware:    auth.NewMiddleware(authClient, "localhost", false),
 		AuthenticateProxy: proxy.NewProxy(authServer.URL, authClient),
 		SearchProxy:       proxy.NewProxy(queryServer.URL, authClient),

@@ -53,7 +53,7 @@ func TestDashboardHandler_GetMetrics_CacheMiss(t *testing.T) {
 	}))
 	defer queryServer.Close()
 
-	handler := NewDashboardHandler(queryServer.URL)
+	handler := NewDashboardHandler(queryServer.URL, "")
 
 	req := httptest.NewRequest("GET", "/api/v1/dashboard/metrics", nil)
 	req.AddCookie(&http.Cookie{Name: "access_token", Value: "test-token"})
@@ -103,7 +103,7 @@ func TestDashboardHandler_GetMetrics_CacheHit(t *testing.T) {
 	}))
 	defer queryServer.Close()
 
-	handler := NewDashboardHandler(queryServer.URL)
+	handler := NewDashboardHandler(queryServer.URL, "")
 
 	// First request - should be a cache miss
 	req1 := httptest.NewRequest("GET", "/api/v1/dashboard/metrics", nil)
@@ -165,7 +165,7 @@ func TestDashboardHandler_GetMetrics_CacheExpiration(t *testing.T) {
 	}))
 	defer queryServer.Close()
 
-	handler := NewDashboardHandler(queryServer.URL)
+	handler := NewDashboardHandler(queryServer.URL, "")
 
 	// First request
 	req1 := httptest.NewRequest("GET", "/api/v1/dashboard/metrics", nil)
@@ -237,7 +237,7 @@ func TestDashboardHandler_GetMetrics_CustomCacheDuration(t *testing.T) {
 			}))
 			defer queryServer.Close()
 
-			handler := NewDashboardHandler(queryServer.URL)
+			handler := NewDashboardHandler(queryServer.URL, "")
 
 			expectedDuration := time.Duration(tt.expectedSecs) * time.Second
 			if handler.cacheDuration != expectedDuration {
@@ -254,7 +254,7 @@ func TestDashboardHandler_GetMetrics_QueryServiceError(t *testing.T) {
 	}))
 	defer queryServer.Close()
 
-	handler := NewDashboardHandler(queryServer.URL)
+	handler := NewDashboardHandler(queryServer.URL, "")
 
 	req := httptest.NewRequest("GET", "/api/v1/dashboard/metrics", nil)
 	rr := httptest.NewRecorder()
@@ -273,7 +273,7 @@ func TestDashboardHandler_GetMetrics_QueryServiceUnauthorized(t *testing.T) {
 	}))
 	defer queryServer.Close()
 
-	handler := NewDashboardHandler(queryServer.URL)
+	handler := NewDashboardHandler(queryServer.URL, "")
 
 	req := httptest.NewRequest("GET", "/api/v1/dashboard/metrics", nil)
 	rr := httptest.NewRecorder()
@@ -302,7 +302,7 @@ func TestDashboardHandler_GetMetrics_AuthorizationHeader(t *testing.T) {
 	}))
 	defer queryServer.Close()
 
-	handler := NewDashboardHandler(queryServer.URL)
+	handler := NewDashboardHandler(queryServer.URL, "")
 
 	req := httptest.NewRequest("GET", "/api/v1/dashboard/metrics", nil)
 	req.AddCookie(&http.Cookie{Name: "access_token", Value: "test-access-token"})
@@ -333,7 +333,7 @@ func TestDashboardHandler_GetMetrics_NoAccessToken(t *testing.T) {
 	}))
 	defer queryServer.Close()
 
-	handler := NewDashboardHandler(queryServer.URL)
+	handler := NewDashboardHandler(queryServer.URL, "")
 
 	req := httptest.NewRequest("GET", "/api/v1/dashboard/metrics", nil)
 	rr := httptest.NewRecorder()
@@ -358,7 +358,7 @@ func TestDashboardHandler_GetMetrics_EmptyAggregations(t *testing.T) {
 	}))
 	defer queryServer.Close()
 
-	handler := NewDashboardHandler(queryServer.URL)
+	handler := NewDashboardHandler(queryServer.URL, "")
 
 	req := httptest.NewRequest("GET", "/api/v1/dashboard/metrics", nil)
 	rr := httptest.NewRecorder()
@@ -398,7 +398,7 @@ func TestDashboardHandler_GetMetrics_ConcurrentRequests(t *testing.T) {
 	}))
 	defer queryServer.Close()
 
-	handler := NewDashboardHandler(queryServer.URL)
+	handler := NewDashboardHandler(queryServer.URL, "")
 
 	// Make concurrent requests
 	numRequests := 5

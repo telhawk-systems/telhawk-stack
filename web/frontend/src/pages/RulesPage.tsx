@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '../components/Layout';
 import { DetectionSchema } from '../types/rules';
@@ -14,8 +14,27 @@ export function RulesPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [severityFilter, setSeverityFilter] = useState<string>('');
   const [titleFilter, setTitleFilter] = useState<string>('');
+  const [titleInput, setTitleInput] = useState<string>('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingSchema, setEditingSchema] = useState<DetectionSchema | null>(null);
+  const debounceRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Debounce title filter
+  useEffect(() => {
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+    debounceRef.current = setTimeout(() => {
+      setTitleFilter(titleInput);
+      setCurrentPage(1);
+    }, 300);
+
+    return () => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
+    };
+  }, [titleInput]);
 
   const fetchSchemas = async () => {
     try {
@@ -79,24 +98,21 @@ export function RulesPage() {
     }
   };
 
-  const handleDeleteSchema = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this detection schema? This cannot be undone.')) {
-      return;
-    }
-
+  const handleHideSchema = async (id: string, hidden: boolean) => {
     try {
-      const response = await fetch(`/api/rules/schemas/${id}`, {
-        method: 'DELETE',
+      const endpoint = hidden ? 'unhide' : 'hide';
+      const response = await fetch(`/api/rules/schemas/${id}/${endpoint}`, {
+        method: 'PUT',
       });
 
       if (!response.ok) {
-        throw new Error('Failed to delete schema');
+        throw new Error(`Failed to ${endpoint} schema`);
       }
 
       await fetchSchemas();
     } catch (err) {
-      console.error('Error deleting schema:', err);
-      alert(`Failed to delete schema: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      console.error('Error updating schema:', err);
+      alert(`Failed to update schema: ${err instanceof Error ? err.message : 'Unknown error'}`);
     }
   };
 
@@ -139,11 +155,8 @@ export function RulesPage() {
               </label>
               <input
                 type="text"
-                value={titleFilter}
-                onChange={(e) => {
-                  setTitleFilter(e.target.value);
-                  setCurrentPage(1);
-                }}
+                value={titleInput}
+                onChange={(e) => setTitleInput(e.target.value)}
                 placeholder="Filter by title..."
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
@@ -171,6 +184,7 @@ export function RulesPage() {
             <div className="flex items-end">
               <button
                 onClick={() => {
+                  setTitleInput('');
                   setTitleFilter('');
                   setSeverityFilter('');
                   setCurrentPage(1);
@@ -291,12 +305,14 @@ export function RulesPage() {
                         >
                           View
                         </button>
-                        <button
-                          onClick={() => setEditingSchema(schema)}
-                          className="text-indigo-600 hover:text-indigo-900"
-                        >
-                          Edit
-                        </button>
+                        {!schema.is_builtin && (
+                          <button
+                            onClick={() => setEditingSchema(schema)}
+                            className="text-indigo-600 hover:text-indigo-900"
+                          >
+                            Edit
+                          </button>
+                        )}
                         <button
                           onClick={() => handleDisableSchema(schema.id, !!schema.disabled_at)}
                           className={schema.disabled_at ? 'text-green-600 hover:text-green-900' : 'text-yellow-600 hover:text-yellow-900'}
@@ -304,10 +320,10 @@ export function RulesPage() {
                           {schema.disabled_at ? 'Enable' : 'Disable'}
                         </button>
                         <button
-                          onClick={() => handleDeleteSchema(schema.id)}
-                          className="text-red-600 hover:text-red-900"
+                          onClick={() => handleHideSchema(schema.id, !!schema.hidden_at)}
+                          className={schema.hidden_at ? 'text-blue-600 hover:text-blue-900' : 'text-gray-600 hover:text-gray-900'}
                         >
-                          Delete
+                          {schema.hidden_at ? 'Unhide' : 'Hide'}
                         </button>
                       </td>
                     </tr>

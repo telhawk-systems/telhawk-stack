@@ -76,7 +76,7 @@ func main() {
 	alertingProxy := proxy.NewProxy(cfg.AlertingServiceURL, authClient)
 
 	authHandler := handlers.NewAuthHandler(authClient, cfg.CookieDomain, cfg.CookieSecure)
-	dashboardHandler := handlers.NewDashboardHandler(cfg.SearchServiceURL)
+	dashboardHandler := handlers.NewDashboardHandler(cfg.SearchServiceURL, cfg.AlertingServiceURL)
 
 	// Initialize NATS client for async query support
 	var natsClient messaging.Client

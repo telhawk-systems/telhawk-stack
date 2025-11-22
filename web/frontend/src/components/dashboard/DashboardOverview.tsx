@@ -99,6 +99,7 @@ export function DashboardOverview() {
   const uniqueUsers = metrics?.aggregations?.unique_users?.value || 0;
   const uniqueIPs = metrics?.aggregations?.unique_ips?.value || 0;
   const totalEvents = metrics?.total_matches || 0;
+  const criticalAlerts = metrics?.critical_alerts || 0;
 
   const handleTimeRangeChange = (value: string) => {
     const selected = TIME_RANGES.find(r => r.value === value);
@@ -160,9 +161,9 @@ export function DashboardOverview() {
         />
         
         <MetricCard
-          title="Critical Events"
-          value={severityData.find((s: any) => s.key === '1')?.doc_count || 0}
-          subtitle="severity level 1"
+          title="Critical Alerts"
+          value={criticalAlerts}
+          subtitle="require attention"
           icon={
             <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />

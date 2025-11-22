@@ -41,6 +41,7 @@ export interface DetectionSchema {
   disabled_by?: string | null;
   hidden_at?: string | null;
   hidden_by?: string | null;
+  is_builtin?: boolean;
 }
 
 export interface DetectionSchemaCreateRequest {

@@ -15,13 +15,14 @@ import (
 
 type DashboardHandler struct {
 	queryURL      string
+	respondURL    string
 	cacheMutex    sync.RWMutex
 	cachedData    []byte
 	cacheTime     time.Time
 	cacheDuration time.Duration
 }
 
-func NewDashboardHandler(queryURL string) *DashboardHandler {
+func NewDashboardHandler(queryURL, respondURL string) *DashboardHandler {
 	cacheDuration := 300 * time.Second // Default 5 minutes
 
 	if envSeconds := os.Getenv("DASHBOARD_CACHE_SECONDS"); envSeconds != "" {
@@ -35,6 +36,7 @@ func NewDashboardHandler(queryURL string) *DashboardHandler {
 
 	return &DashboardHandler{
 		queryURL:      queryURL,
+		respondURL:    respondURL,
 		cacheDuration: cacheDuration,
 	}
 }
@@ -86,7 +88,7 @@ func (h *DashboardHandler) GetMetrics(w http.ResponseWriter, r *http.Request) {
 			{
 				"name":  "unique_ips",
 				"type":  "cardinality",
-				"field": ".src_endpoint.ip.keyword",
+				"field": ".src_endpoint.ip",
 			},
 		},
 	}
@@ -153,8 +155,39 @@ func (h *DashboardHandler) GetMetrics(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
+
+	// Fetch critical alerts count from respond service
+	criticalAlerts := 0
+	if h.respondURL != "" {
+		alertsReq, err := http.NewRequest("GET", h.respondURL+"/api/v1/alerts?severity=critical&limit=1", nil)
+		if err == nil {
+			alertsReq.Header.Set("Accept", "application/vnd.api+json")
+			if accessCookie, err := r.Cookie("access_token"); err == nil && accessCookie.Value != "" {
+				alertsReq.Header.Set("Authorization", "Bearer "+accessCookie.Value)
+			}
+			alertsResp, err := http.DefaultClient.Do(alertsReq)
+			if err == nil {
+				defer alertsResp.Body.Close()
+				if alertsResp.StatusCode == http.StatusOK {
+					alertsBody, _ := io.ReadAll(alertsResp.Body)
+					var alertsData struct {
+						Meta struct {
+							Pagination struct {
+								Total int `json:"total"`
+							} `json:"pagination"`
+						} `json:"meta"`
+					}
+					if json.Unmarshal(alertsBody, &alertsData) == nil {
+						criticalAlerts = alertsData.Meta.Pagination.Total
+					}
+				}
+			}
+		}
+	}
+
 	legacy := map[string]interface{}{
-		"total_matches": respObj.Meta.Total,
+		"total_matches":   respObj.Meta.Total,
+		"critical_alerts": criticalAlerts,
 	}
 	if len(respObj.Meta.Aggregations) > 0 {
 		legacy["aggregations"] = json.RawMessage(respObj.Meta.Aggregations)
