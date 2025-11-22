@@ -66,14 +66,8 @@ var alertsListCmd = &cobra.Command{
 				count = fmt.Sprintf("%d distinct", alert.DistinctCount())
 			}
 
-			// Truncate ID safely
-			idDisplay := alert.ID
-			if len(alert.ID) > 16 {
-				idDisplay = alert.ID[:16] + "..."
-			}
-
 			table.AddRow([]string{
-				idDisplay,
+				alert.ID,
 				alert.DetectionName(),
 				alert.Severity,
 				count,
@@ -187,14 +181,8 @@ var casesListCmd = &cobra.Command{
 
 		table := output.NewTable([]string{"ID", "Title", "Status", "Severity", "Alerts", "Created"})
 		for _, c := range casesResp.Cases {
-			// Truncate ID safely
-			idDisplay := c.ID
-			if len(c.ID) > 8 {
-				idDisplay = c.ID[:8] + "..."
-			}
-
 			table.AddRow([]string{
-				idDisplay,
+				c.ID,
 				c.Title,
 				c.Status,
 				c.Severity,

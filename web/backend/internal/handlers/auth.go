@@ -62,10 +62,30 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	h.setRefreshTokenCookie(w, loginResp.RefreshToken)
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"success": true,
-		"message": "Login successful",
-	})
+
+	// Check if this is a CLI request (non-browser) by checking for cookie support
+	// CLI clients need tokens in the response body since they can't use HTTP-only cookies
+	// Browser clients get tokens via secure HTTP-only cookies (more secure)
+	isCLIRequest := r.Header.Get("X-CLI-Client") == "true" ||
+		r.URL.Query().Get("cli") == "true"
+
+	if isCLIRequest {
+		// Return tokens in body for CLI clients
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success":       true,
+			"message":       "Login successful",
+			"access_token":  loginResp.AccessToken,
+			"refresh_token": loginResp.RefreshToken,
+			"expires_in":    loginResp.ExpiresIn,
+			"token_type":    "Bearer",
+		})
+	} else {
+		// Browser clients get tokens via cookies only (more secure)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": true,
+			"message": "Login successful",
+		})
+	}
 }
 
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {

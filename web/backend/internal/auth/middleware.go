@@ -29,13 +29,25 @@ func NewMiddleware(authClient *Client, cookieDomain string, cookieSecure bool) *
 
 func (m *Middleware) Protect(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		accessCookie, err := r.Cookie("access_token")
-		if err != nil {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
-			return
+		var accessToken string
+
+		// First, try to get token from Authorization header (CLI clients)
+		authHeader := r.Header.Get("Authorization")
+		if len(authHeader) > 7 && authHeader[:7] == "Bearer " {
+			accessToken = authHeader[7:]
 		}
 
-		validateResp, err := m.authClient.ValidateToken(accessCookie.Value)
+		// Fall back to cookie (browser clients)
+		if accessToken == "" {
+			accessCookie, err := r.Cookie("access_token")
+			if err != nil {
+				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				return
+			}
+			accessToken = accessCookie.Value
+		}
+
+		validateResp, err := m.authClient.ValidateToken(accessToken)
 		if err != nil {
 			log.Printf("Token validation error: %v", err)
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)

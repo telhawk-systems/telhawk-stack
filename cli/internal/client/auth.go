@@ -67,11 +67,14 @@ func (c *AuthClient) Login(username, password string) (*LoginResponse, error) {
 		return nil, err
 	}
 
-	resp, err := c.client.Post(
-		c.baseURL+"/api/auth/login",
-		"application/json",
-		bytes.NewBuffer(body),
-	)
+	req, err := http.NewRequest("POST", c.baseURL+"/api/auth/login", bytes.NewBuffer(body))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-CLI-Client", "true") // Request tokens in response body
+
+	resp, err := c.client.Do(req)
 	if err != nil {
 		return nil, err
 	}

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/telhawk-systems/telhawk-stack/cli/internal/client"
@@ -49,11 +50,12 @@ var rulesListCmd = &cobra.Command{
 			return nil
 		}
 
-		table := output.NewTable([]string{"ID", "Name", "Type", "Severity", "Status", "Created"})
+		table := output.NewTable([]string{"ID", "Name", "Correlation", "Filters", "Severity", "Status", "Created"})
 		for _, schema := range schemas {
 			name := getString(schema.Attributes.View, "name", "title")
 			severity := getString(schema.Attributes.View, "severity")
 			correlationType := getString(schema.Attributes.Model, "correlation_type")
+			filters := getFilterFields(schema.Attributes.Model)
 
 			status := "enabled"
 			if schema.Attributes.DisabledAt != nil {
@@ -63,16 +65,11 @@ var rulesListCmd = &cobra.Command{
 				status = "hidden"
 			}
 
-			// Truncate ID safely
-			idDisplay := schema.ID
-			if len(schema.ID) > 8 {
-				idDisplay = schema.ID[:8] + "..."
-			}
-
 			table.AddRow([]string{
-				idDisplay,
+				schema.ID,
 				name,
 				correlationType,
+				filters,
 				severity,
 				status,
 				schema.Attributes.CreatedAt.Format("2006-01-02"),
@@ -294,7 +291,7 @@ var rulesVersionsCmd = &cobra.Command{
 
 			table.AddRow([]string{
 				fmt.Sprintf("%d", len(versions)-i),
-				version.Attributes.VersionID[:16] + "...",
+				version.Attributes.VersionID,
 				version.Attributes.CreatedAt.Format("2006-01-02 15:04:05"),
 				status,
 			})
@@ -315,6 +312,40 @@ func getString(m map[string]interface{}, keys ...string) string {
 		}
 	}
 	return ""
+}
+
+// getFilterFields extracts filter field names from the model
+func getFilterFields(model map[string]interface{}) string {
+	params, ok := model["parameters"].(map[string]interface{})
+	if !ok {
+		return ""
+	}
+	query, ok := params["query"].(map[string]interface{})
+	if !ok {
+		return ""
+	}
+	filter, ok := query["filter"].(map[string]interface{})
+	if !ok {
+		return ""
+	}
+
+	var fields []string
+
+	// Check for compound filter with conditions array
+	if conditions, ok := filter["conditions"].([]interface{}); ok {
+		for _, cond := range conditions {
+			if c, ok := cond.(map[string]interface{}); ok {
+				if field, ok := c["field"].(string); ok {
+					fields = append(fields, field)
+				}
+			}
+		}
+	} else if field, ok := filter["field"].(string); ok {
+		// Simple single filter
+		fields = append(fields, field)
+	}
+
+	return strings.Join(fields, ", ")
 }
 
 func init() {
