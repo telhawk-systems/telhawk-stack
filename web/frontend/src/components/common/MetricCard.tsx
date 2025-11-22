@@ -1,15 +1,11 @@
-import React from 'react';
-
 interface MetricCardProps {
-  title: string;
+  label: string;
   value: string | number;
-  subtitle?: string;
-  icon?: React.ReactNode;
   trend?: {
-    value: string | number;
-    isPositive: boolean;
+    value: number;
     label?: string;
   };
+  icon?: React.ReactNode;
   onClick?: () => void;
 }
 
@@ -25,45 +21,51 @@ const TrendDownIcon = () => (
   </svg>
 );
 
-export function MetricCard({ title, value, subtitle, icon, trend, onClick }: MetricCardProps) {
-  const formattedValue = typeof value === 'number' ? value.toLocaleString() : value;
+export function MetricCard({ label, value, trend, icon, onClick }: MetricCardProps) {
+  const formattedValue = typeof value === 'number'
+    ? value.toLocaleString()
+    : value;
+
+  const isPositiveTrend = trend && trend.value > 0;
+  const isNegativeTrend = trend && trend.value < 0;
+  const trendValue = trend ? Math.abs(trend.value) : 0;
 
   return (
     <div
-      className={`bg-white rounded-lg p-5 shadow-sm border border-surface-border transition-all duration-150 ${
-        onClick ? 'cursor-pointer hover:shadow-md hover:border-gray-300' : ''
+      className={`bg-white rounded-lg p-5 shadow-sm border border-surface-border transition-shadow ${
+        onClick ? 'cursor-pointer hover:shadow-md' : ''
       }`}
       onClick={onClick}
     >
       <div className="flex items-start justify-between">
         <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-          {title}
+          {label}
         </span>
         {icon && (
-          <div className="p-2 bg-gray-50 rounded-lg">
-            {icon}
-          </div>
+          <span className="text-gray-400">{icon}</span>
         )}
       </div>
 
-      <div className="mt-3">
+      <div className="mt-2">
         <span className="text-3xl font-bold text-gray-900">
           {formattedValue}
         </span>
-        {subtitle && (
-          <span className="ml-2 text-sm text-gray-500">{subtitle}</span>
-        )}
       </div>
 
       {trend && (
         <div className="mt-2 flex items-center gap-1">
           <span
             className={`inline-flex items-center gap-0.5 text-xs font-medium ${
-              trend.isPositive ? 'text-green-600' : 'text-red-600'
+              isPositiveTrend
+                ? 'text-green-600'
+                : isNegativeTrend
+                ? 'text-red-600'
+                : 'text-gray-500'
             }`}
           >
-            {trend.isPositive ? <TrendUpIcon /> : <TrendDownIcon />}
-            {trend.value}%
+            {isPositiveTrend && <TrendUpIcon />}
+            {isNegativeTrend && <TrendDownIcon />}
+            {trendValue}%
           </span>
           {trend.label && (
             <span className="text-xs text-gray-400">{trend.label}</span>

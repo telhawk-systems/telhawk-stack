@@ -5,35 +5,36 @@ import { MetricCard } from './MetricCard';
 import { SeverityChart } from './SeverityChart';
 import { TimelineChart } from './TimelineChart';
 import { EventClassChart } from './EventClassChart';
+import { TimeRangeSelector } from '../common/TimeRangeSelector';
 
-interface TimeRange {
+interface TimeRangeConfig {
   label: string;
   value: string;
   start: string;
   end: string;
 }
 
-const TIME_RANGES: TimeRange[] = [
-  { 
-    label: 'Last 15 minutes', 
+const TIME_RANGES: TimeRangeConfig[] = [
+  {
+    label: 'Last 15 minutes',
     value: '15m',
     start: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
     end: new Date().toISOString()
   },
-  { 
-    label: 'Last hour', 
+  {
+    label: 'Last hour',
     value: '1h',
     start: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
     end: new Date().toISOString()
   },
-  { 
-    label: 'Last 24 hours', 
+  {
+    label: 'Last 24 hours',
     value: '24h',
     start: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
     end: new Date().toISOString()
   },
-  { 
-    label: 'Last 7 days', 
+  {
+    label: 'Last 7 days',
     value: '7d',
     start: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
     end: new Date().toISOString()
@@ -42,7 +43,7 @@ const TIME_RANGES: TimeRange[] = [
 
 export function DashboardOverview() {
   const { user } = useAuth();
-  const [timeRange, setTimeRange] = useState<TimeRange>(TIME_RANGES[2]); // 24h default
+  const [timeRange, setTimeRange] = useState<TimeRangeConfig>(TIME_RANGES[2]); // 24h default
   const [metrics, setMetrics] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -99,35 +100,30 @@ export function DashboardOverview() {
   const uniqueIPs = metrics?.aggregations?.unique_ips?.value || 0;
   const totalEvents = metrics?.total_matches || 0;
 
+  const handleTimeRangeChange = (value: string) => {
+    const selected = TIME_RANGES.find(r => r.value === value);
+    if (selected) setTimeRange(selected);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Security Dashboard</h2>
+          <h1 className="text-2xl font-semibold text-gray-900">Security Overview</h1>
           <p className="text-sm text-gray-500 mt-1">
-            Last updated: {new Date().toLocaleString()}
+            Last updated: {new Date().toLocaleTimeString()}
           </p>
         </div>
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center gap-3">
           {/* Time Range Selector */}
-          <select
+          <TimeRangeSelector
             value={timeRange.value}
-            onChange={(e) => {
-              const selected = TIME_RANGES.find(r => r.value === e.target.value);
-              if (selected) setTimeRange(selected);
-            }}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          >
-            {TIME_RANGES.map(range => (
-              <option key={range.value} value={range.value}>
-                {range.label}
-              </option>
-            ))}
-          </select>
+            onChange={handleTimeRangeChange}
+          />
 
           {/* Auto Refresh Toggle */}
-          <label className="flex items-center space-x-2 cursor-pointer">
+          <label className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-md cursor-pointer hover:bg-gray-50 transition-colors">
             <input
               type="checkbox"
               checked={autoRefresh}
@@ -140,8 +136,11 @@ export function DashboardOverview() {
           {/* Manual Refresh Button */}
           <button
             onClick={loadMetrics}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors"
           >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
             Refresh
           </button>
         </div>
