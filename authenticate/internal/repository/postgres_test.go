@@ -536,7 +536,7 @@ func TestCreateHECToken(t *testing.T) {
 		UserID:    user.ID,
 		Token:     "test_hec_token_123",
 		Name:      "Test Token",
-		TenantID:  "00000000-0000-0000-0000-000000000011", // Default Client
+		ClientID:  "00000000-0000-0000-0000-000000000011", // Default Client
 		CreatedBy: user.ID}
 
 	err := repo.CreateHECToken(ctx, token)
@@ -576,7 +576,7 @@ func TestGetHECToken(t *testing.T) {
 		UserID:    user.ID,
 		Token:     "get_hec_token_test",
 		Name:      "Get Test Token",
-		TenantID:  "00000000-0000-0000-0000-000000000011", // Default Client
+		ClientID:  "00000000-0000-0000-0000-000000000011", // Default Client
 		CreatedBy: user.ID}
 	repo.CreateHECToken(ctx, token)
 
@@ -653,21 +653,21 @@ func TestListHECTokensByUser(t *testing.T) {
 			UserID:    user1.ID,
 			Token:     "user1_token1",
 			Name:      "User 1 Token 1",
-			TenantID:  "00000000-0000-0000-0000-000000000011", // Default Client
+			ClientID:  "00000000-0000-0000-0000-000000000011", // Default Client
 			CreatedBy: user1.ID},
 		{
 			ID:        "00000007-0007-0007-0007-000000000007",
 			UserID:    user1.ID,
 			Token:     "user1_token2",
 			Name:      "User 1 Token 2",
-			TenantID:  "00000000-0000-0000-0000-000000000011", // Default Client
+			ClientID:  "00000000-0000-0000-0000-000000000011", // Default Client
 			CreatedBy: user1.ID},
 		{
 			ID:        "00000008-0008-0008-0008-000000000008",
 			UserID:    user2.ID,
 			Token:     "user2_token1",
 			Name:      "User 2 Token 1",
-			TenantID:  "00000000-0000-0000-0000-000000000011", // Default Client
+			ClientID:  "00000000-0000-0000-0000-000000000011", // Default Client
 			CreatedBy: user2.ID}}
 
 	for _, token := range tokens {
@@ -706,7 +706,7 @@ func TestRevokeHECToken(t *testing.T) {
 		UserID:    user.ID,
 		Token:     "revoke_hec_token_test",
 		Name:      "Revoke Test Token",
-		TenantID:  "00000000-0000-0000-0000-000000000011", // Default Client
+		ClientID:  "00000000-0000-0000-0000-000000000011", // Default Client
 		CreatedBy: user.ID}
 	repo.CreateHECToken(ctx, token)
 
@@ -754,7 +754,7 @@ func TestGetHECTokenByID(t *testing.T) {
 		UserID:    user.ID,
 		Token:     "get_by_id_token",
 		Name:      "Get By ID Test Token",
-		TenantID:  "00000000-0000-0000-0000-000000000011", // Default Client
+		ClientID:  "00000000-0000-0000-0000-000000000011", // Default Client
 		CreatedBy: user.ID}
 	repo.CreateHECToken(ctx, token)
 
@@ -813,7 +813,7 @@ func TestListAllHECTokens(t *testing.T) {
 		UserID:    user1.ID,
 		Token:     "list_all_token1",
 		Name:      "List All Token 1",
-		TenantID:  "00000000-0000-0000-0000-000000000011", // Default Client
+		ClientID:  "00000000-0000-0000-0000-000000000011", // Default Client
 		CreatedBy: user1.ID}
 	repo.CreateHECToken(ctx, token1)
 
@@ -822,7 +822,7 @@ func TestListAllHECTokens(t *testing.T) {
 		UserID:    user2.ID,
 		Token:     "list_all_token2",
 		Name:      "List All Token 2",
-		TenantID:  "00000000-0000-0000-0000-000000000011", // Default Client
+		ClientID:  "00000000-0000-0000-0000-000000000011", // Default Client
 		CreatedBy: user2.ID}
 	repo.CreateHECToken(ctx, token2)
 

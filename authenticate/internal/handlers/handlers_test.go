@@ -1567,7 +1567,8 @@ func TestCreateHECTokenHandler_Success(t *testing.T) {
 
 	// Create HEC token
 	createReq := models.CreateHECTokenRequest{
-		Name: "My Test Token"}
+		Name:     "My Test Token",
+		ClientID: "00000000-0000-0000-0000-000000000011"} // Default client
 	body, _ := json.Marshal(createReq)
 	req := httptest.NewRequest("POST", "/api/v1/hec/tokens", bytes.NewReader(body))
 	req.Header.Set("X-User-ID", "user-123")

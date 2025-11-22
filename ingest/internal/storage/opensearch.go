@@ -250,8 +250,8 @@ func (c *Client) getOCSFMappings() map[string]interface{} {
 			},
 		},
 		"properties": map[string]interface{}{
-			// Tenant isolation - CRITICAL for multi-tenant data segregation
-			"tenant_id": map[string]interface{}{
+			// Client isolation - CRITICAL for multi-tenant data segregation
+			"client_id": map[string]interface{}{
 				"type": "keyword",
 			},
 			"time": map[string]interface{}{

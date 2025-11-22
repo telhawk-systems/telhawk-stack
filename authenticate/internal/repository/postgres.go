@@ -329,12 +329,12 @@ func (r *PostgresRepository) CreateHECToken(ctx context.Context, token *models.H
 	defer cancel()
 
 	query := `
-		INSERT INTO hec_tokens (id, token, name, user_id, tenant_id, created_by, expires_at)
+		INSERT INTO hec_tokens (id, token, name, user_id, client_id, created_by, expires_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
 	`
 
 	_, err := r.pool.Exec(ctx, query,
-		token.ID, token.Token, token.Name, token.UserID, token.TenantID, token.CreatedBy, token.ExpiresAt,
+		token.ID, token.Token, token.Name, token.UserID, token.ClientID, token.CreatedBy, token.ExpiresAt,
 	)
 
 	if err != nil {
@@ -349,7 +349,7 @@ func (r *PostgresRepository) GetHECToken(ctx context.Context, token string) (*mo
 	defer cancel()
 
 	query := `
-		SELECT id, token, name, user_id, tenant_id, created_by, expires_at,
+		SELECT id, token, name, user_id, client_id, created_by, expires_at,
 		       disabled_at, disabled_by, revoked_at, revoked_by
 		FROM hec_tokens
 		WHERE token = $1
@@ -358,7 +358,7 @@ func (r *PostgresRepository) GetHECToken(ctx context.Context, token string) (*mo
 	var hecToken models.HECToken
 	err := r.pool.QueryRow(ctx, query, token).Scan(
 		&hecToken.ID, &hecToken.Token, &hecToken.Name, &hecToken.UserID,
-		&hecToken.TenantID, &hecToken.CreatedBy, &hecToken.ExpiresAt,
+		&hecToken.ClientID, &hecToken.CreatedBy, &hecToken.ExpiresAt,
 		&hecToken.DisabledAt, &hecToken.DisabledBy,
 		&hecToken.RevokedAt, &hecToken.RevokedBy,
 	)
@@ -379,7 +379,7 @@ func (r *PostgresRepository) GetHECTokenByID(ctx context.Context, id string) (*m
 	defer cancel()
 
 	query := `
-		SELECT id, token, name, user_id, tenant_id, created_by, expires_at,
+		SELECT id, token, name, user_id, client_id, created_by, expires_at,
 		       disabled_at, disabled_by, revoked_at, revoked_by
 		FROM hec_tokens
 		WHERE id = $1
@@ -388,7 +388,7 @@ func (r *PostgresRepository) GetHECTokenByID(ctx context.Context, id string) (*m
 	var hecToken models.HECToken
 	err := r.pool.QueryRow(ctx, query, id).Scan(
 		&hecToken.ID, &hecToken.Token, &hecToken.Name, &hecToken.UserID,
-		&hecToken.TenantID, &hecToken.CreatedBy, &hecToken.ExpiresAt,
+		&hecToken.ClientID, &hecToken.CreatedBy, &hecToken.ExpiresAt,
 		&hecToken.DisabledAt, &hecToken.DisabledBy,
 		&hecToken.RevokedAt, &hecToken.RevokedBy,
 	)
@@ -409,7 +409,7 @@ func (r *PostgresRepository) ListHECTokensByUser(ctx context.Context, userID str
 
 	// Order by id DESC (UUIDv7 = created_at)
 	query := `
-		SELECT id, token, name, user_id, tenant_id, created_by, expires_at,
+		SELECT id, token, name, user_id, client_id, created_by, expires_at,
 		       disabled_at, disabled_by, revoked_at, revoked_by
 		FROM hec_tokens
 		WHERE user_id = $1
@@ -427,7 +427,7 @@ func (r *PostgresRepository) ListHECTokensByUser(ctx context.Context, userID str
 		var token models.HECToken
 		err := rows.Scan(
 			&token.ID, &token.Token, &token.Name, &token.UserID,
-			&token.TenantID, &token.CreatedBy, &token.ExpiresAt,
+			&token.ClientID, &token.CreatedBy, &token.ExpiresAt,
 			&token.DisabledAt, &token.DisabledBy,
 			&token.RevokedAt, &token.RevokedBy,
 		)
@@ -446,7 +446,7 @@ func (r *PostgresRepository) ListAllHECTokens(ctx context.Context) ([]*models.HE
 
 	// Order by id DESC (UUIDv7 = created_at)
 	query := `
-		SELECT id, token, name, user_id, tenant_id, created_by, expires_at,
+		SELECT id, token, name, user_id, client_id, created_by, expires_at,
 		       disabled_at, disabled_by, revoked_at, revoked_by
 		FROM hec_tokens
 		ORDER BY id DESC
@@ -463,7 +463,7 @@ func (r *PostgresRepository) ListAllHECTokens(ctx context.Context) ([]*models.HE
 		var token models.HECToken
 		err := rows.Scan(
 			&token.ID, &token.Token, &token.Name, &token.UserID,
-			&token.TenantID, &token.CreatedBy, &token.ExpiresAt,
+			&token.ClientID, &token.CreatedBy, &token.ExpiresAt,
 			&token.DisabledAt, &token.DisabledBy,
 			&token.RevokedAt, &token.RevokedBy,
 		)

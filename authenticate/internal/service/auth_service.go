@@ -412,16 +412,22 @@ func (s *AuthService) ResetPassword(ctx context.Context, userID string, newPassw
 	return nil
 }
 
-func (s *AuthService) CreateHECToken(ctx context.Context, userID, name, expiresIn, ipAddress, userAgent string) (*models.HECToken, error) {
+func (s *AuthService) CreateHECToken(ctx context.Context, userID, clientID, name, expiresIn, ipAddress, userAgent string) (*models.HECToken, error) {
+	if clientID == "" {
+		return nil, fmt.Errorf("client_id is required for HEC token creation")
+	}
+
 	tokenUUID, _ := uuid.NewV7()
 	token := tokenUUID.String()
 
 	idUUID, _ := uuid.NewV7()
 	hecToken := &models.HECToken{
-		ID:     idUUID.String(),
-		UserID: userID,
-		Token:  token,
-		Name:   name,
+		ID:        idUUID.String(),
+		UserID:    userID,
+		ClientID:  clientID,
+		CreatedBy: userID,
+		Token:     token,
+		Name:      name,
 	}
 
 	if err := s.repo.CreateHECToken(ctx, hecToken); err != nil {

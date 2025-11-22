@@ -39,7 +39,7 @@ type Event struct {
 	Fields     map[string]interface{} `json:"fields"`
 	Raw        []byte                 `json:"raw"`
 	HECTokenID string                 `json:"hec_token_id"`
-	TenantID   string                 `json:"tenant_id"` // Client UUID for data isolation
+	ClientID   string                 `json:"client_id"` // Client UUID for data isolation
 	Signature  string                 `json:"signature"`
 	AckID      string                 `json:"ack_id,omitempty"` // Track ack ID for completion
 }

@@ -61,7 +61,7 @@ type HECToken struct {
 	Token     string `json:"token"`
 	Name      string `json:"name"`
 	UserID    string `json:"user_id"`    // Token owner (who can use it)
-	TenantID  string `json:"tenant_id"`  // Client tenant (data isolation)
+	ClientID  string `json:"client_id"`  // Client for data isolation
 	CreatedBy string `json:"created_by"` // Who created this token (audit)
 
 	ExpiresAt  *time.Time `json:"expires_at,omitempty"`
@@ -88,7 +88,7 @@ type HECTokenResponse struct {
 	Token     string     `json:"token"`
 	Name      string     `json:"name"`
 	UserID    string     `json:"user_id"`
-	TenantID  string     `json:"tenant_id"`
+	ClientID  string     `json:"client_id"`
 	Username  string     `json:"username,omitempty"` // Only included for admin users
 	Enabled   bool       `json:"enabled"`
 	ExpiresAt *time.Time `json:"expires_at,omitempty"`
@@ -101,7 +101,7 @@ func (t *HECToken) ToResponse() *HECTokenResponse {
 		Token:     t.Token,
 		Name:      t.Name,
 		UserID:    t.UserID,
-		TenantID:  t.TenantID,
+		ClientID:  t.ClientID,
 		Enabled:   t.IsActive(),
 		ExpiresAt: t.ExpiresAt,
 	}

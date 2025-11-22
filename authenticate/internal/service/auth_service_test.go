@@ -1036,6 +1036,7 @@ func TestCreateHECToken(t *testing.T) {
 			token, err := service.CreateHECToken(
 				context.Background(),
 				tt.userID,
+				"00000000-0000-0000-0000-000000000011", // Default client
 				tt.tokenName,
 				"",
 				"192.168.1.1",
@@ -1478,6 +1479,7 @@ func TestCreateHECToken_CreateError(t *testing.T) {
 	token, err := service.CreateHECToken(
 		context.Background(),
 		"user-123",
+		"00000000-0000-0000-0000-000000000011", // Default client
 		"Test Token",
 		"never",
 		"192.168.1.1",

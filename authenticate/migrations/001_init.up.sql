@@ -176,7 +176,7 @@ CREATE TABLE IF NOT EXISTS hec_tokens (
     token VARCHAR(255) NOT NULL UNIQUE,
     name VARCHAR(255) NOT NULL,
     user_id UUID NOT NULL,  -- References users(id) - token owner
-    tenant_id UUID NOT NULL,  -- References tenants(id) - client for data isolation
+    client_id UUID NOT NULL,  -- References tenants(id) - client for data isolation
     expires_at TIMESTAMPTZ,
 
     -- Audit
@@ -191,14 +191,14 @@ CREATE TABLE IF NOT EXISTS hec_tokens (
 
 CREATE INDEX idx_hec_tokens_token ON hec_tokens(token);
 CREATE INDEX idx_hec_tokens_user_id ON hec_tokens(user_id);
-CREATE INDEX idx_hec_tokens_tenant_id ON hec_tokens(tenant_id);
+CREATE INDEX idx_hec_tokens_client_id ON hec_tokens(client_id);
 CREATE INDEX idx_hec_tokens_active ON hec_tokens(token)
     WHERE disabled_at IS NULL AND revoked_at IS NULL;
 
 COMMENT ON TABLE hec_tokens IS 'HEC (HTTP Event Collector) tokens for data ingestion';
 COMMENT ON COLUMN hec_tokens.id IS 'Token ID (UUIDv7 timestamp = created_at)';
 COMMENT ON COLUMN hec_tokens.user_id IS 'Token owner (user who can use this token)';
-COMMENT ON COLUMN hec_tokens.tenant_id IS 'Client tenant - events ingested with this token belong to this client';
+COMMENT ON COLUMN hec_tokens.client_id IS 'Client - events ingested with this token belong to this client';
 COMMENT ON COLUMN hec_tokens.created_by IS 'User who created this token (may differ from owner)';
 
 -- ============================================================================

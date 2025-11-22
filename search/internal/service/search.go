@@ -201,12 +201,12 @@ func (s *SearchService) buildOpenSearchQuery(req *models.SearchRequest) map[stri
 	must := []interface{}{}
 	filter := []interface{}{}
 
-	// CRITICAL: Add tenant_id filter for data isolation
-	// This ensures users can only see events belonging to their tenant
-	if req.TenantID != "" {
+	// CRITICAL: Add client_id filter for data isolation
+	// This ensures users can only see events belonging to their client
+	if req.ClientID != "" {
 		filter = append(filter, map[string]interface{}{
 			"term": map[string]interface{}{
-				"tenant_id": req.TenantID,
+				"client_id": req.ClientID,
 			},
 		})
 	}

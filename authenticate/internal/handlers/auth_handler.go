@@ -192,7 +192,7 @@ func (h *AuthHandler) ValidateHECToken(w http.ResponseWriter, r *http.Request) {
 		TokenID:   hecToken.ID,
 		TokenName: hecToken.Name,
 		UserID:    hecToken.UserID,
-		TenantID:  hecToken.TenantID,
+		ClientID:  hecToken.ClientID,
 	})
 }
 
@@ -399,7 +399,7 @@ func (h *AuthHandler) CreateHECToken(w http.ResponseWriter, r *http.Request) {
 	ipAddress := httputil.GetClientIP(r)
 	userAgent := r.Header.Get("User-Agent")
 
-	token, err := h.service.CreateHECToken(r.Context(), userID, req.Name, req.ExpiresIn, ipAddress, userAgent)
+	token, err := h.service.CreateHECToken(r.Context(), userID, req.ClientID, req.Name, req.ExpiresIn, ipAddress, userAgent)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -415,6 +415,7 @@ func (h *AuthHandler) CreateHECToken(w http.ResponseWriter, r *http.Request) {
 				"token":      resp.Token,
 				"name":       resp.Name,
 				"user_id":    resp.UserID,
+				"client_id":  resp.ClientID,
 				"enabled":    resp.Enabled,
 				"expires_at": resp.ExpiresAt,
 			},
