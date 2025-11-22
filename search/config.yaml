@@ -20,3 +20,9 @@ alerting:
   webhook_url: ""  # Optional: Generic webhook URL
   slack_webhook_url: ""  # Optional: Slack webhook URL
   notification_timeout_seconds: 10
+
+nats:
+  url: "nats://nats:4222"  # NATS server URL
+  enabled: true            # Enable NATS messaging (service works without it)
+  max_reconnects: -1       # -1 for infinite reconnects
+  reconnect_wait_seconds: 2

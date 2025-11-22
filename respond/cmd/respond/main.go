@@ -10,14 +10,19 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
+	natsclient "github.com/telhawk-systems/telhawk-stack/common/messaging/nats"
 	"github.com/telhawk-systems/telhawk-stack/respond/internal/config"
 	"github.com/telhawk-systems/telhawk-stack/respond/internal/handlers"
+	respondnats "github.com/telhawk-systems/telhawk-stack/respond/internal/nats"
 	"github.com/telhawk-systems/telhawk-stack/respond/internal/repository"
+	"github.com/telhawk-systems/telhawk-stack/respond/internal/scheduler"
 	"github.com/telhawk-systems/telhawk-stack/respond/internal/server"
+	"github.com/telhawk-systems/telhawk-stack/respond/internal/service"
 )
 
 func main() {
@@ -60,13 +65,55 @@ func main() {
 	}
 	defer repo.Close()
 
-	// TODO: Initialize Redis for state management (from alerting)
-	// TODO: Initialize query executor for correlation rules (from alerting)
-	// TODO: Initialize evaluation engine (from alerting)
-	// TODO: Initialize rule importer (from alerting)
+	// Initialize service layer
+	svc := service.NewService(repo)
 
-	// Initialize handlers
-	handler := handlers.NewHandler()
+	// TODO: Initialize Redis for state management (correlation state, suppression cache)
+	// TODO: Initialize query executor for correlation rules (OpenSearch client)
+	// TODO: Initialize evaluation engine (correlation rule evaluator)
+	// TODO: Initialize rule importer (load rules from alerting/dist/rules/)
+
+	// Initialize NATS client (optional - service works without it)
+	var natsClient *natsclient.Client
+	var natsPublisher *respondnats.Publisher
+	var natsHandler *respondnats.Handler
+	var correlationScheduler *scheduler.Scheduler
+
+	if cfg.NATS.Enabled {
+		natsCfg := natsclient.Config{
+			URL:           cfg.NATS.URL,
+			Name:          "respond-service",
+			MaxReconnects: cfg.NATS.MaxReconnects,
+			ReconnectWait: cfg.NATS.ReconnectWait,
+		}
+
+		var err error
+		natsClient, err = natsclient.NewClient(natsCfg)
+		if err != nil {
+			log.Printf("Warning: Failed to connect to NATS: %v (continuing without NATS)", err)
+		} else {
+			log.Printf("Connected to NATS at %s", cfg.NATS.URL)
+
+			// Create publisher
+			natsPublisher = respondnats.NewPublisher(natsClient)
+
+			// Create and start handler
+			natsHandler = respondnats.NewHandler(natsClient, repo, natsPublisher)
+			if err := natsHandler.Start(context.Background()); err != nil {
+				log.Printf("Warning: Failed to start NATS handler: %v", err)
+				natsHandler = nil
+			}
+
+			// Start correlation scheduler (every 1 minute)
+			correlationScheduler = scheduler.NewScheduler(repo, natsPublisher, 1*time.Minute)
+			go correlationScheduler.Start(context.Background())
+		}
+	} else {
+		log.Println("NATS is disabled, running in HTTP-only mode")
+	}
+
+	// Initialize handlers with service
+	handler := handlers.NewHandler(svc)
 
 	// Setup HTTP router
 	router := server.NewRouter(handler)
@@ -94,12 +141,33 @@ func main() {
 	<-quit
 
 	log.Println("Shutting down server...")
+
+	// Stop NATS components first
+	if correlationScheduler != nil {
+		log.Println("Stopping correlation scheduler...")
+		correlationScheduler.Stop()
+	}
+	if natsHandler != nil {
+		log.Println("Stopping NATS handler...")
+		if err := natsHandler.Stop(); err != nil {
+			log.Printf("Warning: Error stopping NATS handler: %v", err)
+		}
+	}
+	if natsClient != nil {
+		log.Println("Closing NATS connection...")
+		if err := natsClient.Close(); err != nil {
+			log.Printf("Warning: Error closing NATS connection: %v", err)
+		}
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), cfg.Server.WriteTimeout)
-	defer cancel()
 
 	if err := srv.Shutdown(ctx); err != nil {
-		log.Fatalf("Server forced to shutdown: %v", err)
+		cancel()
+		repo.Close()                                     //nolint:errcheck // closing on fatal
+		log.Fatalf("Server forced to shutdown: %v", err) //nolint:gocritic // repo.Close() called explicitly above
 	}
+	cancel()
 
 	log.Println("Server stopped gracefully")
 }

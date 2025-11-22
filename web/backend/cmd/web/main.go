@@ -13,6 +13,7 @@ import (
 	"github.com/telhawk-systems/telhawk-stack/web/backend/internal/auth"
 	"github.com/telhawk-systems/telhawk-stack/web/backend/internal/handlers"
 	webmiddleware "github.com/telhawk-systems/telhawk-stack/web/backend/internal/middleware"
+	webnats "github.com/telhawk-systems/telhawk-stack/web/backend/internal/nats"
 	"github.com/telhawk-systems/telhawk-stack/web/backend/internal/proxy"
 	"github.com/telhawk-systems/telhawk-stack/web/backend/internal/server"
 )
@@ -80,6 +81,7 @@ func main() {
 	// Initialize NATS client for async query support
 	var natsClient messaging.Client
 	var asyncQueryHandler *handlers.AsyncQueryHandler
+	var resultSubscriber *webnats.ResultSubscriber
 
 	if cfg.NATSURL != "" {
 		natsCfg := nats.DefaultConfig()
@@ -94,6 +96,14 @@ func main() {
 		} else {
 			log.Printf("Connected to NATS at %s", cfg.NATSURL)
 			asyncQueryHandler = handlers.NewAsyncQueryHandler(natsClient, messaging.SubjectSearchJobsQuery)
+
+			// Start result subscriber to receive search results
+			resultSubscriber = webnats.NewResultSubscriber(natsClient, asyncQueryHandler)
+			if err := resultSubscriber.Start(); err != nil {
+				log.Printf("Warning: Failed to start result subscriber: %v", err)
+			} else {
+				log.Printf("Started search result subscriber")
+			}
 		}
 	}
 
@@ -147,7 +157,14 @@ func main() {
 	log.Printf("Dev Mode: %v", cfg.DevMode)
 	log.Printf("NATS URL: %s (async queries: %v)", cfg.NATSURL, natsClient != nil)
 
-	// Ensure NATS client is closed on shutdown
+	// Ensure NATS resources are cleaned up on shutdown
+	if resultSubscriber != nil {
+		defer func() {
+			if err := resultSubscriber.Stop(); err != nil {
+				log.Printf("Error stopping result subscriber: %v", err)
+			}
+		}()
+	}
 	if natsClient != nil {
 		defer func() {
 			if err := natsClient.Drain(); err != nil {

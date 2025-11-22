@@ -38,3 +38,9 @@ validation:
 logging:
   level: info
   format: json
+
+nats:
+  url: nats://nats:4222
+  enabled: true
+  max_reconnects: -1
+  reconnect_wait: 2s

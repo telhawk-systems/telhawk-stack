@@ -160,4 +160,12 @@ type HealthResponse struct {
 	Version       string                 `json:"version"`
 	UptimeSeconds int64                  `json:"uptime_seconds"`
 	Scheduler     map[string]interface{} `json:"scheduler,omitempty"`
+	NATS          *NATSHealthStatus      `json:"nats,omitempty"`
+}
+
+// NATSHealthStatus represents the health state of the NATS connection.
+type NATSHealthStatus struct {
+	Connected bool   `json:"connected"`
+	Latency   int64  `json:"latency_ms"`
+	Error     string `json:"error,omitempty"`
 }

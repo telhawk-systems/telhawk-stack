@@ -61,8 +61,9 @@ type QueryStatusResponse struct {
 }
 
 // QueryJobMessage is the message published to NATS for query execution.
+// NOTE: Uses "job_id" to match the search service's expected format.
 type QueryJobMessage struct {
-	QueryID   string `json:"query_id"`
+	JobID     string `json:"job_id"`
 	Query     string `json:"query"`
 	TimeRange string `json:"time_range,omitempty"`
 	Limit     int    `json:"limit,omitempty"`
@@ -102,7 +103,7 @@ func (h *AsyncQueryHandler) SubmitQuery(w http.ResponseWriter, r *http.Request) 
 
 	// Create job message
 	jobMsg := QueryJobMessage{
-		QueryID:   queryID,
+		JobID:     queryID,
 		Query:     req.Query,
 		TimeRange: req.TimeRange,
 		Limit:     req.Limit,

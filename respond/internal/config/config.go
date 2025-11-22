@@ -1,3 +1,4 @@
+// Package config provides configuration loading for the respond service.
 package config
 
 import (
@@ -16,6 +17,15 @@ type Config struct {
 	Storage    StorageConfig    `mapstructure:"storage"`
 	Validation ValidationConfig `mapstructure:"validation"`
 	Logging    LoggingConfig    `mapstructure:"logging"`
+	NATS       NATSConfig       `mapstructure:"nats"`
+}
+
+// NATSConfig holds NATS message broker configuration
+type NATSConfig struct {
+	URL           string        `mapstructure:"url"`
+	Enabled       bool          `mapstructure:"enabled"`
+	MaxReconnects int           `mapstructure:"max_reconnects"`
+	ReconnectWait time.Duration `mapstructure:"reconnect_wait"`
 }
 
 // ServerConfig holds HTTP server configuration
@@ -103,6 +113,11 @@ func Load(configPath string) (*Config, error) {
 
 	v.SetDefault("logging.level", "info")
 	v.SetDefault("logging.format", "json")
+
+	v.SetDefault("nats.url", "nats://nats:4222")
+	v.SetDefault("nats.enabled", true)
+	v.SetDefault("nats.max_reconnects", -1)
+	v.SetDefault("nats.reconnect_wait", "2s")
 
 	// Read config file
 	if configPath != "" {

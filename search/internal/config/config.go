@@ -15,8 +15,22 @@ type Config struct {
 	OpenSearch  OpenSearchConfig `yaml:"opensearch"`
 	Alerting    AlertingConfig   `yaml:"alerting"`
 	Logging     LoggingConfig    `yaml:"logging"`
+	NATS        NATSConfig       `yaml:"nats"`
 	DatabaseURL string           `yaml:"database_url"`
 	AuthURL     string           `yaml:"auth_url"`
+}
+
+// NATSConfig captures NATS message broker connection settings.
+type NATSConfig struct {
+	URL           string `yaml:"url"`
+	Enabled       bool   `yaml:"enabled"`
+	MaxReconnects int    `yaml:"max_reconnects"`
+	ReconnectWait int    `yaml:"reconnect_wait_seconds"`
+}
+
+// ReconnectWaitDuration returns the reconnect wait as a time.Duration.
+func (n NATSConfig) ReconnectWaitDuration() time.Duration {
+	return time.Duration(n.ReconnectWait) * time.Second
 }
 
 // OpenSearchConfig captures OpenSearch connection settings.
@@ -90,6 +104,12 @@ func Default() Config {
 		Logging: LoggingConfig{
 			Level:  "info",
 			Format: "json",
+		},
+		NATS: NATSConfig{
+			URL:           "nats://nats:4222",
+			Enabled:       true,
+			MaxReconnects: -1, // Infinite reconnects
+			ReconnectWait: 2,  // 2 seconds
 		},
 		DatabaseURL: "",
 		AuthURL:     "http://auth:8080",
@@ -179,5 +199,22 @@ func applyEnvOverrides(cfg *Config) {
 	}
 	if v := os.Getenv("SEARCH_AUTH_URL"); v != "" {
 		cfg.AuthURL = v
+	}
+	// NATS config overrides
+	if v := os.Getenv("SEARCH_NATS_URL"); v != "" {
+		cfg.NATS.URL = v
+	}
+	if v := os.Getenv("SEARCH_NATS_ENABLED"); v != "" {
+		cfg.NATS.Enabled = v == "true"
+	}
+	if v := os.Getenv("SEARCH_NATS_MAX_RECONNECTS"); v != "" {
+		if parsed, err := strconv.Atoi(v); err == nil {
+			cfg.NATS.MaxReconnects = parsed
+		}
+	}
+	if v := os.Getenv("SEARCH_NATS_RECONNECT_WAIT_SECONDS"); v != "" {
+		if parsed, err := strconv.Atoi(v); err == nil {
+			cfg.NATS.ReconnectWait = parsed
+		}
 	}
 }

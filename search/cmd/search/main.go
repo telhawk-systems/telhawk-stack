@@ -17,10 +17,12 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/telhawk-systems/telhawk-stack/common/logging"
+	natsclient "github.com/telhawk-systems/telhawk-stack/common/messaging/nats"
 	sauth "github.com/telhawk-systems/telhawk-stack/search/internal/auth"
 	"github.com/telhawk-systems/telhawk-stack/search/internal/client"
 	"github.com/telhawk-systems/telhawk-stack/search/internal/config"
 	"github.com/telhawk-systems/telhawk-stack/search/internal/handlers"
+	searchnats "github.com/telhawk-systems/telhawk-stack/search/internal/nats"
 	"github.com/telhawk-systems/telhawk-stack/search/internal/notification"
 	"github.com/telhawk-systems/telhawk-stack/search/internal/repository"
 	"github.com/telhawk-systems/telhawk-stack/search/internal/scheduler"
@@ -111,6 +113,40 @@ func main() {
 		log.Printf("alert scheduler disabled")
 	}
 
+	// Initialize NATS client (optional - service works without it)
+	var natsHandler *searchnats.Handler
+	if cfg.NATS.Enabled {
+		natsCfg := natsclient.Config{
+			URL:           cfg.NATS.URL,
+			Name:          "search-service",
+			MaxReconnects: cfg.NATS.MaxReconnects,
+			ReconnectWait: cfg.NATS.ReconnectWaitDuration(),
+			Timeout:       5 * time.Second,
+		}
+
+		natsClient, err := natsclient.NewClient(natsCfg)
+		if err != nil {
+			slog.Warn("Failed to connect to NATS (continuing without NATS)",
+				slog.String("url", cfg.NATS.URL),
+				slog.String("error", err.Error()))
+		} else {
+			slog.Info("Connected to NATS", slog.String("url", cfg.NATS.URL))
+
+			natsHandler = searchnats.NewHandler(natsClient, svc)
+			if err := natsHandler.Start(context.Background()); err != nil {
+				slog.Warn("Failed to start NATS handler",
+					slog.String("error", err.Error()))
+				natsClient.Close()
+				natsHandler = nil
+			} else {
+				// Set NATS handler on HTTP handler for health checks
+				h.WithNATSHandler(natsHandler)
+			}
+		}
+	} else {
+		slog.Info("NATS messaging disabled")
+	}
+
 	srv := &http.Server{
 		Addr:         listenAddr,
 		Handler:      server.NewRouter(h),
@@ -132,6 +168,18 @@ func main() {
 
 	<-shutdownCtx.Done()
 	log.Println("shutdown signal received")
+
+	// Stop NATS handler first
+	if natsHandler != nil {
+		log.Println("stopping NATS handler")
+		if err := natsHandler.Stop(); err != nil {
+			log.Printf("NATS handler shutdown error: %v", err)
+		}
+		// Close NATS client
+		if natsClient := natsHandler.Client(); natsClient != nil {
+			natsClient.Close()
+		}
+	}
 
 	if alertScheduler != nil {
 		log.Println("stopping alert scheduler")

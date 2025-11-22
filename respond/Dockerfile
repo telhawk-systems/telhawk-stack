@@ -34,14 +34,14 @@ WORKDIR /app
 # Copy binary from builder
 COPY --from=builder /build/respond/respond .
 
-# Copy config file
-COPY --from=builder /build/respond/config.yaml /etc/telhawk/respond/config.yaml
+# Copy config file with proper ownership for nonroot user
+COPY --from=builder --chown=nonroot:nonroot /build/respond/config.yaml /etc/telhawk/respond/config.yaml
 
 # Copy builtin detection rules (from alerting)
-COPY --from=builder /build/respond/rules /etc/telhawk/respond/rules
+COPY --from=builder --chown=nonroot:nonroot /build/respond/rules /etc/telhawk/respond/rules
 
 # Copy migrations
-COPY --from=builder /build/respond/migrations /app/migrations
+COPY --from=builder --chown=nonroot:nonroot /build/respond/migrations /app/migrations
 
 # Use nonroot user
 USER nonroot:nonroot
