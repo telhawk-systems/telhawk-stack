@@ -9,7 +9,8 @@ import (
 )
 
 func TestValidateSimpleQuery(t *testing.T) {
-	v := NewQueryValidator()
+	// Use validator without field mapping to test query structure validation
+	v := NewQueryValidatorWithoutFieldMapping()
 
 	query := &model.Query{
 		Filter: &model.FilterExpr{
@@ -41,7 +42,8 @@ func TestValidateNilQuery(t *testing.T) {
 }
 
 func TestValidateFieldPaths(t *testing.T) {
-	v := NewQueryValidator()
+	// Use validator without field mapping to test syntax validation only
+	v := NewQueryValidatorWithoutFieldMapping()
 
 	tests := []struct {
 		name      string
@@ -76,7 +78,8 @@ func TestValidateFieldPaths(t *testing.T) {
 }
 
 func TestValidateOperators(t *testing.T) {
-	v := NewQueryValidator()
+	// Use validator without field mapping to test operator validation
+	v := NewQueryValidatorWithoutFieldMapping()
 
 	tests := []struct {
 		name      string
@@ -123,7 +126,8 @@ func TestValidateOperators(t *testing.T) {
 }
 
 func TestValidateOperatorValues(t *testing.T) {
-	v := NewQueryValidator()
+	// Use validator without field mapping to test value validation
+	v := NewQueryValidatorWithoutFieldMapping()
 
 	tests := []struct {
 		name      string
@@ -172,7 +176,8 @@ func TestValidateOperatorValues(t *testing.T) {
 }
 
 func TestValidateCompoundFilters(t *testing.T) {
-	v := NewQueryValidator()
+	// Use validator without field mapping to test compound filter structure
+	v := NewQueryValidatorWithoutFieldMapping()
 
 	t.Run("Valid AND filter", func(t *testing.T) {
 		query := &model.Query{
@@ -269,7 +274,8 @@ func TestValidateCompoundFilters(t *testing.T) {
 }
 
 func TestValidateNestedFilters(t *testing.T) {
-	v := NewQueryValidator()
+	// Use validator without field mapping to test nested filter structure
+	v := NewQueryValidatorWithoutFieldMapping()
 
 	t.Run("Nested AND/OR", func(t *testing.T) {
 		query := &model.Query{
@@ -317,7 +323,8 @@ func TestValidateNestedFilters(t *testing.T) {
 }
 
 func TestValidateTimeRange(t *testing.T) {
-	v := NewQueryValidator()
+	// Use validator without field mapping since time range tests don't involve field names
+	v := NewQueryValidatorWithoutFieldMapping()
 
 	t.Run("Valid relative time", func(t *testing.T) {
 		validTimes := []string{"15m", "1h", "24h", "7d", "30d", "90d"}
@@ -399,7 +406,8 @@ func TestValidateTimeRange(t *testing.T) {
 }
 
 func TestValidateAggregations(t *testing.T) {
-	v := NewQueryValidator()
+	// Use validator without field mapping to test aggregation structure
+	v := NewQueryValidatorWithoutFieldMapping()
 
 	t.Run("Valid terms aggregation", func(t *testing.T) {
 		query := &model.Query{
@@ -557,7 +565,8 @@ func TestValidateAggregations(t *testing.T) {
 }
 
 func TestValidateSort(t *testing.T) {
-	v := NewQueryValidator()
+	// Use validator without field mapping to test sort structure
+	v := NewQueryValidatorWithoutFieldMapping()
 
 	t.Run("Valid sort", func(t *testing.T) {
 		query := &model.Query{
@@ -571,10 +580,10 @@ func TestValidateSort(t *testing.T) {
 		}
 	})
 
-	t.Run("Sort with invalid field", func(t *testing.T) {
+	t.Run("Sort with invalid field syntax", func(t *testing.T) {
 		query := &model.Query{
 			Sort: []model.SortSpec{
-				{Field: "invalid_field", Order: "desc"},
+				{Field: "invalid_field", Order: "desc"}, // Missing dot prefix
 			},
 		}
 		err := v.Validate(query)
@@ -597,7 +606,8 @@ func TestValidateSort(t *testing.T) {
 }
 
 func TestValidatePagination(t *testing.T) {
-	v := NewQueryValidator()
+	// Use validator without field mapping since pagination tests don't involve field names
+	v := NewQueryValidatorWithoutFieldMapping()
 
 	t.Run("Valid limit", func(t *testing.T) {
 		query := &model.Query{
@@ -663,7 +673,8 @@ func TestValidatePagination(t *testing.T) {
 }
 
 func TestValidateComplexQuery(t *testing.T) {
-	v := NewQueryValidator()
+	// Use validator without field mapping to test complex query structure
+	v := NewQueryValidatorWithoutFieldMapping()
 
 	// Complex query from the design doc
 	start := time.Now().Add(-24 * time.Hour)
@@ -703,7 +714,8 @@ func TestValidateComplexQuery(t *testing.T) {
 }
 
 func TestValidationErrorMessages(t *testing.T) {
-	v := NewQueryValidator()
+	// Use validator without field mapping to test error messages for other validations
+	v := NewQueryValidatorWithoutFieldMapping()
 
 	tests := []struct {
 		name      string
@@ -758,4 +770,288 @@ func TestValidationErrorMessages(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestValidateFieldMappings tests the OpenSearch field mapping validation feature.
+func TestValidateFieldMappings(t *testing.T) {
+	// Use the default validator which has field mapping validation enabled
+	v := NewQueryValidator()
+
+	t.Run("Valid OCSF fields pass validation", func(t *testing.T) {
+		query := &model.Query{
+			Select: []string{".time", ".severity", ".actor.user.name", ".src_endpoint.ip"},
+			Filter: &model.FilterExpr{
+				Type: model.FilterTypeAnd,
+				Conditions: []model.FilterExpr{
+					{Field: ".class_uid", Operator: model.OpEq, Value: 3002},
+					{Field: ".status", Operator: model.OpEq, Value: "Failed"},
+				},
+			},
+			Sort: []model.SortSpec{
+				{Field: ".time", Order: "desc"},
+			},
+		}
+
+		if err := v.Validate(query); err != nil {
+			t.Errorf("Query with valid OCSF fields should pass: %v", err)
+		}
+	})
+
+	t.Run("Single invalid field fails validation", func(t *testing.T) {
+		query := &model.Query{
+			Filter: &model.FilterExpr{
+				Field:    ".invalid_field_not_in_mapping",
+				Operator: model.OpEq,
+				Value:    "test",
+			},
+		}
+
+		err := v.Validate(query)
+		if err == nil {
+			t.Error("Query with invalid field should fail validation")
+		}
+		if !strings.Contains(err.Error(), "not supported by OpenSearch mapping") {
+			t.Errorf("Expected 'not supported by OpenSearch mapping' error, got: %v", err)
+		}
+		if !strings.Contains(err.Error(), ".invalid_field_not_in_mapping") {
+			t.Errorf("Error should list the invalid field, got: %v", err)
+		}
+	})
+
+	t.Run("Multiple invalid fields are all reported", func(t *testing.T) {
+		query := &model.Query{
+			Select: []string{".bad_field_1", ".time", ".bad_field_2"},
+			Filter: &model.FilterExpr{
+				Field:    ".another_bad_field",
+				Operator: model.OpEq,
+				Value:    "test",
+			},
+			Sort: []model.SortSpec{
+				{Field: ".yet_another_bad", Order: "desc"},
+			},
+		}
+
+		err := v.Validate(query)
+		if err == nil {
+			t.Error("Query with multiple invalid fields should fail validation")
+		}
+		// Check that all invalid fields are mentioned in the error
+		if !strings.Contains(err.Error(), ".bad_field_1") {
+			t.Errorf("Error should list .bad_field_1, got: %v", err)
+		}
+		if !strings.Contains(err.Error(), ".bad_field_2") {
+			t.Errorf("Error should list .bad_field_2, got: %v", err)
+		}
+		if !strings.Contains(err.Error(), ".another_bad_field") {
+			t.Errorf("Error should list .another_bad_field, got: %v", err)
+		}
+		if !strings.Contains(err.Error(), ".yet_another_bad") {
+			t.Errorf("Error should list .yet_another_bad, got: %v", err)
+		}
+	})
+
+	t.Run("Invalid fields in nested filters are detected", func(t *testing.T) {
+		query := &model.Query{
+			Filter: &model.FilterExpr{
+				Type: model.FilterTypeAnd,
+				Conditions: []model.FilterExpr{
+					{Field: ".class_uid", Operator: model.OpEq, Value: 3002}, // Valid
+					{
+						Type: model.FilterTypeOr,
+						Conditions: []model.FilterExpr{
+							{Field: ".nested_bad_field", Operator: model.OpEq, Value: "High"},
+						},
+					},
+				},
+			},
+		}
+
+		err := v.Validate(query)
+		if err == nil {
+			t.Error("Query with invalid field in nested filter should fail validation")
+		}
+		if !strings.Contains(err.Error(), ".nested_bad_field") {
+			t.Errorf("Error should list .nested_bad_field, got: %v", err)
+		}
+	})
+
+	t.Run("Invalid fields in aggregations are detected", func(t *testing.T) {
+		query := &model.Query{
+			Aggregations: []model.Aggregation{
+				{
+					Type:  model.AggTypeTerms,
+					Field: ".bad_agg_field",
+					Name:  "test_agg",
+					Size:  10,
+				},
+			},
+		}
+
+		err := v.Validate(query)
+		if err == nil {
+			t.Error("Query with invalid field in aggregation should fail validation")
+		}
+		if !strings.Contains(err.Error(), ".bad_agg_field") {
+			t.Errorf("Error should list .bad_agg_field, got: %v", err)
+		}
+	})
+
+	t.Run("Wildcard prefix fields are valid", func(t *testing.T) {
+		query := &model.Query{
+			Select: []string{
+				".actor.user.email",        // Under .actor.user. prefix
+				".actor.user.uid",          // Under .actor.user. prefix
+				".metadata.product.name",   // Under .metadata. prefix
+				".device.os.type",          // Under .device.os. prefix
+				".properties.custom_field", // Under .properties. prefix
+			},
+		}
+
+		if err := v.Validate(query); err != nil {
+			t.Errorf("Query with valid wildcard prefix fields should pass: %v", err)
+		}
+	})
+
+	t.Run("Validation can be disabled", func(t *testing.T) {
+		vDisabled := NewQueryValidatorWithoutFieldMapping()
+
+		query := &model.Query{
+			Filter: &model.FilterExpr{
+				Field:    ".any_field_should_work",
+				Operator: model.OpEq,
+				Value:    "test",
+			},
+		}
+
+		if err := vDisabled.Validate(query); err != nil {
+			t.Errorf("Query should pass with field mapping validation disabled: %v", err)
+		}
+	})
+
+	t.Run("Validation can be toggled via setter", func(t *testing.T) {
+		vToggle := NewQueryValidator()
+
+		query := &model.Query{
+			Filter: &model.FilterExpr{
+				Field:    ".invalid_toggle_field",
+				Operator: model.OpEq,
+				Value:    "test",
+			},
+		}
+
+		// Should fail with validation enabled
+		err := vToggle.Validate(query)
+		if err == nil {
+			t.Error("Should fail with field mapping validation enabled")
+		}
+
+		// Disable validation
+		vToggle.SetFieldMappingValidation(false)
+
+		// Should pass with validation disabled
+		if err := vToggle.Validate(query); err != nil {
+			t.Errorf("Should pass with field mapping validation disabled: %v", err)
+		}
+	})
+}
+
+// TestCollectFields tests the field collection helper function.
+func TestCollectFields(t *testing.T) {
+	v := NewQueryValidatorWithoutFieldMapping()
+
+	t.Run("Collects fields from all query parts", func(t *testing.T) {
+		query := &model.Query{
+			Select: []string{".select_field"},
+			Filter: &model.FilterExpr{
+				Type: model.FilterTypeAnd,
+				Conditions: []model.FilterExpr{
+					{Field: ".filter_field_1", Operator: model.OpEq, Value: "val"},
+					{
+						Type: model.FilterTypeNot,
+						Condition: &model.FilterExpr{
+							Field:    ".filter_field_2",
+							Operator: model.OpEq,
+							Value:    "val",
+						},
+					},
+				},
+			},
+			Aggregations: []model.Aggregation{
+				{
+					Type:  model.AggTypeTerms,
+					Field: ".agg_field",
+					Name:  "agg",
+					Size:  10,
+				},
+			},
+			Sort: []model.SortSpec{
+				{Field: ".sort_field", Order: "desc"},
+			},
+		}
+
+		fields := v.collectFields(query)
+
+		// Check all expected fields are collected
+		expectedFields := map[string]bool{
+			".select_field":   false,
+			".filter_field_1": false,
+			".filter_field_2": false,
+			".agg_field":      false,
+			".sort_field":     false,
+		}
+
+		for _, f := range fields {
+			if _, exists := expectedFields[f]; exists {
+				expectedFields[f] = true
+			}
+		}
+
+		for field, found := range expectedFields {
+			if !found {
+				t.Errorf("Expected field %s to be collected", field)
+			}
+		}
+	})
+
+	t.Run("Deduplicates repeated fields", func(t *testing.T) {
+		query := &model.Query{
+			Select: []string{".class_uid", ".severity"},
+			Filter: &model.FilterExpr{
+				Field:    ".class_uid", // Same as in Select
+				Operator: model.OpEq,
+				Value:    3002,
+			},
+			Sort: []model.SortSpec{
+				{Field: ".severity", Order: "desc"}, // Same as in Select
+			},
+		}
+
+		fields := v.collectFields(query)
+
+		// Count occurrences
+		counts := make(map[string]int)
+		for _, f := range fields {
+			counts[f]++
+		}
+
+		for field, count := range counts {
+			if count > 1 {
+				t.Errorf("Field %s should appear only once, but appeared %d times", field, count)
+			}
+		}
+	})
+
+	t.Run("Ignores special root field", func(t *testing.T) {
+		query := &model.Query{
+			Select: []string{"."},
+		}
+
+		fields := v.collectFields(query)
+
+		for _, f := range fields {
+			if f == "." {
+				t.Error("Root field '.' should not be collected")
+			}
+		}
+	})
 }

@@ -6,7 +6,9 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 
+	"github.com/telhawk-systems/telhawk-stack/common/fields"
 	"github.com/telhawk-systems/telhawk-stack/common/httputil"
 
 	"github.com/telhawk-systems/telhawk-stack/rules/internal/models"
@@ -323,6 +325,13 @@ func (h *Handler) CreateSchema(w http.ResponseWriter, r *http.Request) {
 
 	schema, err := h.service.CreateSchema(r.Context(), &req, userID)
 	if err != nil {
+		// Check for field validation errors
+		var validationErr *fields.ValidationError
+		if errors.As(err, &validationErr) || strings.Contains(err.Error(), "field validation failed") {
+			log.Printf("Validation error creating schema: %v", err)
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
 		log.Printf("Error creating schema: %v", err)
 		http.Error(w, "Failed to create schema", http.StatusInternalServerError)
 		return
@@ -361,6 +370,13 @@ func (h *Handler) UpdateSchema(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		if errors.Is(err, service.ErrBuiltinRuleProtected) {
 			http.Error(w, "Builtin rules cannot be modified", http.StatusForbidden)
+			return
+		}
+		// Check for field validation errors
+		var validationErr *fields.ValidationError
+		if errors.As(err, &validationErr) || strings.Contains(err.Error(), "field validation failed") {
+			log.Printf("Validation error updating schema: %v", err)
+			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 		log.Printf("Error updating schema: %v", err)

@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/telhawk-systems/telhawk-stack/common/fields"
 	"github.com/telhawk-systems/telhawk-stack/rules/internal/models"
 	"github.com/telhawk-systems/telhawk-stack/rules/internal/repository"
 )
@@ -25,6 +26,11 @@ func NewService(repo repository.Repository) *Service {
 
 // CreateSchema creates a new detection schema (generates new id and version_id)
 func (s *Service) CreateSchema(ctx context.Context, req *models.CreateSchemaRequest, userID string) (*models.DetectionSchema, error) {
+	// Validate field references before creating
+	if err := fields.ValidateRule(req.Model, req.View, req.Controller); err != nil {
+		return nil, fmt.Errorf("field validation failed: %w", err)
+	}
+
 	// Use provided ID (for builtin rules) or generate new UUID v7
 	var ruleID string
 	if req.ID != "" {
@@ -54,6 +60,11 @@ func (s *Service) CreateSchema(ctx context.Context, req *models.CreateSchemaRequ
 
 // UpdateSchema creates a new version of an existing detection schema
 func (s *Service) UpdateSchema(ctx context.Context, id string, req *models.UpdateSchemaRequest, userID string) (*models.DetectionSchema, error) {
+	// Validate field references before updating
+	if err := fields.ValidateRule(req.Model, req.View, req.Controller); err != nil {
+		return nil, fmt.Errorf("field validation failed: %w", err)
+	}
+
 	// Verify the rule exists
 	existingSchema, err := s.repo.GetLatestSchemaByID(ctx, id)
 	if err != nil {

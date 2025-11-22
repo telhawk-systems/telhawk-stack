@@ -5,33 +5,60 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/telhawk-systems/telhawk-stack/common/fields"
 	"github.com/telhawk-systems/telhawk-stack/query/pkg/model"
 )
 
 // QueryValidator validates canonical Query structures before execution.
 type QueryValidator struct {
-	maxAggregations int
-	maxResultSize   int
-	maxFilterDepth  int
-	maxSelectFields int
-	maxSortFields   int
+	maxAggregations       int
+	maxResultSize         int
+	maxFilterDepth        int
+	maxSelectFields       int
+	maxSortFields         int
+	validateFieldMappings bool // If true, validates fields against OpenSearch mapping
 }
 
 // NewQueryValidator creates a new query validator with default limits.
+// Field mapping validation is enabled by default.
 func NewQueryValidator() *QueryValidator {
 	return &QueryValidator{
-		maxAggregations: 10,    // Maximum number of aggregations per query
-		maxResultSize:   10000, // Maximum number of results without cursor
-		maxFilterDepth:  10,    // Maximum nesting depth for compound filters
-		maxSelectFields: 100,   // Maximum number of fields in select clause
-		maxSortFields:   10,    // Maximum number of sort fields
+		maxAggregations:       10,    // Maximum number of aggregations per query
+		maxResultSize:         10000, // Maximum number of results without cursor
+		maxFilterDepth:        10,    // Maximum nesting depth for compound filters
+		maxSelectFields:       100,   // Maximum number of fields in select clause
+		maxSortFields:         10,    // Maximum number of sort fields
+		validateFieldMappings: true,  // Validate fields against OpenSearch mapping by default
 	}
+}
+
+// NewQueryValidatorWithoutFieldMapping creates a validator without OpenSearch field mapping validation.
+// This is useful for testing or when field validation should be handled elsewhere.
+func NewQueryValidatorWithoutFieldMapping() *QueryValidator {
+	v := NewQueryValidator()
+	v.validateFieldMappings = false
+	return v
+}
+
+// SetFieldMappingValidation enables or disables OpenSearch field mapping validation.
+func (v *QueryValidator) SetFieldMappingValidation(enabled bool) {
+	v.validateFieldMappings = enabled
 }
 
 // Validate checks if a query is valid and safe to execute.
 func (v *QueryValidator) Validate(q *model.Query) error {
 	if q == nil {
 		return fmt.Errorf("query cannot be nil")
+	}
+
+	// Validate that all field paths exist in the OpenSearch mapping.
+	// This must be done early to provide clear error messages about invalid fields.
+	if v.validateFieldMappings {
+		allFields := v.collectFields(q)
+		invalidFields := fields.ValidateFields(allFields)
+		if len(invalidFields) > 0 {
+			return fmt.Errorf("query contains fields not supported by OpenSearch mapping: %v", invalidFields)
+		}
 	}
 
 	// Validate field projections
@@ -338,7 +365,7 @@ func (v *QueryValidator) validatePagination(q *model.Query) error {
 	return nil
 }
 
-// validateFieldPath validates an OCSF field path.
+// validateFieldPath validates an OCSF field path syntax.
 func (v *QueryValidator) validateFieldPath(field string) error {
 	if field == "" {
 		return fmt.Errorf("field path cannot be empty")
@@ -359,6 +386,79 @@ func (v *QueryValidator) validateFieldPath(field string) error {
 	}
 
 	return nil
+}
+
+// collectFields extracts all field paths from a query for validation.
+func (v *QueryValidator) collectFields(q *model.Query) []string {
+	fieldSet := make(map[string]struct{})
+
+	// Collect from select clause
+	for _, field := range q.Select {
+		if field != "" && field != "." {
+			fieldSet[field] = struct{}{}
+		}
+	}
+
+	// Collect from filter
+	if q.Filter != nil {
+		v.collectFilterFields(q.Filter, fieldSet)
+	}
+
+	// Collect from aggregations
+	for _, agg := range q.Aggregations {
+		v.collectAggregationFields(&agg, fieldSet)
+	}
+
+	// Collect from sort
+	for _, sort := range q.Sort {
+		if sort.Field != "" && sort.Field != "." {
+			fieldSet[sort.Field] = struct{}{}
+		}
+	}
+
+	// Convert set to slice
+	result := make([]string, 0, len(fieldSet))
+	for field := range fieldSet {
+		result = append(result, field)
+	}
+	return result
+}
+
+// collectFilterFields recursively collects field paths from filter expressions.
+func (v *QueryValidator) collectFilterFields(filter *model.FilterExpr, fieldSet map[string]struct{}) {
+	if filter == nil {
+		return
+	}
+
+	// Simple condition: collect the field
+	if filter.IsSimpleCondition() {
+		if filter.Field != "" && filter.Field != "." {
+			fieldSet[filter.Field] = struct{}{}
+		}
+		return
+	}
+
+	// Compound condition: recurse into conditions
+	if filter.IsCompoundCondition() {
+		for i := range filter.Conditions {
+			v.collectFilterFields(&filter.Conditions[i], fieldSet)
+		}
+		if filter.Condition != nil {
+			v.collectFilterFields(filter.Condition, fieldSet)
+		}
+	}
+}
+
+// collectAggregationFields recursively collects field paths from aggregations.
+func (v *QueryValidator) collectAggregationFields(agg *model.Aggregation, fieldSet map[string]struct{}) {
+	if agg.Field != "" && agg.Field != "." {
+		fieldSet[agg.Field] = struct{}{}
+	}
+
+	// Recurse into nested aggregations
+	for i := range agg.Aggregations {
+		v.collectAggregationFields(&agg.Aggregations[i], fieldSet)
+	}
 }
 
 // isValidOperator checks if an operator is supported.
