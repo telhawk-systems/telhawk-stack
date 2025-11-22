@@ -429,7 +429,13 @@ To create realistic events that match production data, the seeder automatically 
 </details>
 
 ## Architecture
-See `docs/SERVICES.md` for service flow and summaries.
+See `docs/SERVICES.md` for current service flow and summaries.
+
+See `docs/ARCHITECTURE_V2.md` for the proposed architecture evolution including:
+- Service consolidation (7 → 5 services)
+- NATS message broker integration
+- Storage and auth boundaries
+- Migration path
 
 ### Supporting Services
 

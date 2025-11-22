@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -236,7 +235,7 @@ func (s *IngestService) normalizeEvent(event *models.Event) (map[string]interfac
 		Source:     event.Source,
 		SourceType: event.SourceType,
 		Format:     "json",
-		Payload:    []byte(base64.StdEncoding.EncodeToString(event.Raw)),
+		Payload:    event.Raw, // Raw JSON bytes, not base64 encoded
 		Attributes: map[string]string{
 			"host":      event.Host,
 			"index":     event.Index,

@@ -1,0 +1,40 @@
+server:
+  port: 8086
+  read_timeout: 15s
+  write_timeout: 15s
+  idle_timeout: 60s
+
+database:
+  postgres:
+    host: respond-db
+    port: 5432
+    user: telhawk
+    password: telhawk-respond-dev
+    database: telhawk_respond
+    sslmode: disable
+
+redis:
+  url: redis://redis:6379/0
+  enabled: true
+  max_retries: 3
+  pool_size: 10
+
+storage:
+  url: https://opensearch:9200
+  username: admin
+  password: TelHawk123!
+  insecure: true
+
+validation:
+  max_time_window: 24h
+  max_threshold: 100000
+  allowed_aggregations:
+    - count
+    - sum
+    - avg
+    - max
+    - min
+
+logging:
+  level: info
+  format: json

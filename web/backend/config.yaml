@@ -5,8 +5,8 @@ tls_cert_file: /certs/web.pem
 tls_key_file: /certs/web-key.pem
 auth_service_url: http://auth:8080
 auth_tls_skip_verify: false  # Skip TLS certificate verification (dev only)
-query_service_url: http://query:8082
-query_tls_skip_verify: false  # Skip TLS certificate verification (dev only)
+search_service_url: http://search:8082
+search_tls_skip_verify: false  # Skip TLS certificate verification (dev only)
 core_service_url: http://core:8090
 core_tls_skip_verify: false  # Skip TLS certificate verification (dev only)
 cookie_domain: ""

@@ -7,25 +7,16 @@ server:
   tls_cert_file: /certs/ingest.pem
   tls_key_file: /certs/ingest-key.pem
 
-auth:
-  url: http://auth:8080
+authenticate:
+  url: http://authenticate:8080
   token_validation_cache_ttl: 5m
-  tls_skip_verify: false  # Skip TLS certificate verification (dev only)
-
-core:
-  url: http://core:8090
-  tls_skip_verify: false  # Skip TLS certificate verification (dev only)
-
-storage:
-  url: http://storage:8083
-  tls_skip_verify: false  # Skip TLS certificate verification (dev only)
 
 opensearch:
   url: https://opensearch:9200
   username: admin
-  password: ""
+  password: ""  # Set via INGEST_OPENSEARCH_PASSWORD env var
   tls_skip_verify: true
-  index_prefix: telhawk
+  index_prefix: telhawk-events
   bulk_batch_size: 1000
   bulk_flush_interval: 5s
 

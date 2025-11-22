@@ -31,7 +31,7 @@ func TestNewAuthClient(t *testing.T) {
 
 func TestLogin_Success(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "/api/v1/auth/login", r.URL.Path)
+		assert.Equal(t, "/api/auth/login", r.URL.Path)
 		assert.Equal(t, "POST", r.Method)
 		assert.Equal(t, "application/json", r.Header.Get("Content-Type"))
 
@@ -103,7 +103,7 @@ func TestLogin_InvalidJSON(t *testing.T) {
 
 func TestValidateToken_Valid(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "/api/v1/auth/validate", r.URL.Path)
+		assert.Equal(t, "/api/auth/validate", r.URL.Path)
 		assert.Equal(t, "POST", r.Method)
 
 		var payload map[string]string
@@ -150,7 +150,7 @@ func TestCreateHECToken_Success(t *testing.T) {
 	testToken := createTestJWT("user-123")
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "/api/v1/hec/tokens", r.URL.Path)
+		assert.Equal(t, "/api/auth/api/v1/hec/tokens", r.URL.Path)
 		assert.Equal(t, "POST", r.Method)
 		assert.Equal(t, "Bearer "+testToken, r.Header.Get("Authorization"))
 		assert.Equal(t, "user-123", r.Header.Get("X-User-ID"))
@@ -228,7 +228,7 @@ func TestListHECTokens_Success(t *testing.T) {
 	testToken := createTestJWT("user-123")
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "/api/v1/hec/tokens", r.URL.Path)
+		assert.Equal(t, "/api/auth/api/v1/hec/tokens", r.URL.Path)
 		assert.Equal(t, "GET", r.Method)
 		assert.Equal(t, "Bearer "+testToken, r.Header.Get("Authorization"))
 		assert.Equal(t, "user-123", r.Header.Get("X-User-ID"))
@@ -296,7 +296,7 @@ func TestRevokeHECToken_Success(t *testing.T) {
 	testToken := createTestJWT("user-123")
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "/api/v1/hec/tokens/revoke", r.URL.Path)
+		assert.Equal(t, "/api/auth/api/v1/hec/tokens/revoke", r.URL.Path)
 		assert.Equal(t, "POST", r.Method)
 		assert.Equal(t, "Bearer "+testToken, r.Header.Get("Authorization"))
 		assert.Equal(t, "user-123", r.Header.Get("X-User-ID"))
@@ -377,7 +377,7 @@ func TestListUsers_Success(t *testing.T) {
 	testToken := createTestJWT("admin-123")
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "/api/v1/users", r.URL.Path)
+		assert.Equal(t, "/api/auth/api/v1/users", r.URL.Path)
 		assert.Equal(t, "GET", r.Method)
 		assert.Equal(t, "Bearer "+testToken, r.Header.Get("Authorization"))
 
@@ -429,7 +429,7 @@ func TestGetUser_Success(t *testing.T) {
 	testToken := createTestJWT("admin-123")
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "/api/v1/users/get", r.URL.Path)
+		assert.Equal(t, "/api/auth/api/v1/users/get", r.URL.Path)
 		assert.Equal(t, "user-456", r.URL.Query().Get("id"))
 
 		w.Header().Set("Content-Type", "application/json")
@@ -472,7 +472,7 @@ func TestCreateUser_Success(t *testing.T) {
 	testToken := createTestJWT("admin-123")
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "/api/v1/auth/register", r.URL.Path)
+		assert.Equal(t, "/api/auth/api/v1/auth/register", r.URL.Path)
 		assert.Equal(t, "POST", r.Method)
 
 		var payload map[string]interface{}
@@ -522,7 +522,7 @@ func TestUpdateUser_Success(t *testing.T) {
 	enabled := false
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "/api/v1/users/update", r.URL.Path)
+		assert.Equal(t, "/api/auth/api/v1/users/update", r.URL.Path)
 		assert.Equal(t, "PUT", r.Method)
 		assert.Equal(t, "user-789", r.URL.Query().Get("id"))
 
@@ -579,7 +579,7 @@ func TestDeleteUser_Success(t *testing.T) {
 	testToken := createTestJWT("admin-123")
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "/api/v1/users/delete", r.URL.Path)
+		assert.Equal(t, "/api/auth/api/v1/users/delete", r.URL.Path)
 		assert.Equal(t, "DELETE", r.Method)
 		assert.Equal(t, "user-to-delete", r.URL.Query().Get("id"))
 
@@ -613,7 +613,7 @@ func TestResetPassword_Success(t *testing.T) {
 	testToken := createTestJWT("admin-123")
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "/api/v1/users/reset-password", r.URL.Path)
+		assert.Equal(t, "/api/auth/api/v1/users/reset-password", r.URL.Path)
 		assert.Equal(t, "POST", r.Method)
 		assert.Equal(t, "user-reset", r.URL.Query().Get("id"))
 

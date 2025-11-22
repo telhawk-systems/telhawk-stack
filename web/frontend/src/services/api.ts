@@ -83,7 +83,7 @@ class ApiClient {
       await this.getCSRFToken();
     }
 
-    const response = await fetch(`${this.baseUrl}/query/api/v1/search`, {
+    const response = await fetch(`${this.baseUrl}/search/api/v1/search`, {
       method: 'POST',
       headers: {
         'Accept': 'application/vnd.api+json',
@@ -124,7 +124,7 @@ class ApiClient {
       await this.getCSRFToken();
     }
 
-    const response = await fetch(`${this.baseUrl}/query/api/v1/events/query`, {
+    const response = await fetch(`${this.baseUrl}/search/api/v1/events/query`, {
       method: 'POST',
       headers: {
         'Accept': 'application/vnd.api+json',
@@ -163,7 +163,7 @@ class ApiClient {
       params.set('page[number]', String(pageNumber));
       params.set('page[size]', String(pageSize));
     }
-    const response = await fetch(`${this.baseUrl}/query/api/v1/saved-searches?${params.toString()}`, {
+    const response = await fetch(`${this.baseUrl}/search/api/v1/saved-searches?${params.toString()}`, {
       credentials: 'include',
       headers: { 'Accept': 'application/vnd.api+json' },
     });
@@ -174,7 +174,7 @@ class ApiClient {
   async createSavedSearch(name: string, query: any, filters: any = {}, isGlobal = false): Promise<any> {
     if (!this.csrfToken) { await this.getCSRFToken(); }
     const body = { data: { type: 'saved-search', attributes: { name, query, filters, is_global: isGlobal }}};
-    const response = await fetch(`${this.baseUrl}/query/api/v1/saved-searches`, {
+    const response = await fetch(`${this.baseUrl}/search/api/v1/saved-searches`, {
       method: 'POST',
       headers: {
         'Accept': 'application/vnd.api+json',
@@ -191,7 +191,7 @@ class ApiClient {
   async updateSavedSearch(id: string, attrs: any): Promise<any> {
     if (!this.csrfToken) { await this.getCSRFToken(); }
     const body = { data: { id, type: 'saved-search', attributes: attrs }};
-    const response = await fetch(`${this.baseUrl}/query/api/v1/saved-searches/${id}`, {
+    const response = await fetch(`${this.baseUrl}/search/api/v1/saved-searches/${id}`, {
       method: 'PATCH',
       headers: {
         'Accept': 'application/vnd.api+json',
@@ -207,7 +207,7 @@ class ApiClient {
 
   async savedSearchAction(id: string, action: 'disable'|'enable'|'hide'|'unhide'|'run'): Promise<any> {
     if (!this.csrfToken) { await this.getCSRFToken(); }
-    const response = await fetch(`${this.baseUrl}/query/api/v1/saved-searches/${id}/${action}`, {
+    const response = await fetch(`${this.baseUrl}/search/api/v1/saved-searches/${id}/${action}`, {
       method: 'POST',
       headers: { 'X-CSRF-Token': this.csrfToken!, 'Accept': 'application/vnd.api+json' },
       credentials: 'include',
@@ -274,7 +274,7 @@ class ApiClient {
       if (params?.page) search.set('page[number]', String(params.page));
       if (params?.size) search.set('page[size]', String(params.size));
     }
-    const response = await fetch(`${this.baseUrl}/query/api/v1/events?${search.toString()}`, {
+    const response = await fetch(`${this.baseUrl}/search/api/v1/events?${search.toString()}`, {
       method: 'GET',
       headers: { 'Accept': 'application/vnd.api+json' },
       credentials: 'include',

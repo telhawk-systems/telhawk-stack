@@ -1,0 +1,57 @@
+server:
+  port: 8088
+  read_timeout: 30s
+  write_timeout: 30s
+  idle_timeout: 120s
+  tls_enabled: false  # Enable HTTPS with TLS certificates
+  tls_cert_file: /certs/ingest.pem
+  tls_key_file: /certs/ingest-key.pem
+
+auth:
+  url: http://auth:8080
+  token_validation_cache_ttl: 5m
+  tls_skip_verify: false  # Skip TLS certificate verification (dev only)
+
+core:
+  url: http://core:8090
+  tls_skip_verify: false  # Skip TLS certificate verification (dev only)
+
+storage:
+  url: http://storage:8083
+  tls_skip_verify: false  # Skip TLS certificate verification (dev only)
+
+opensearch:
+  url: https://opensearch:9200
+  username: admin
+  password: ""
+  tls_skip_verify: true
+  index_prefix: telhawk
+  bulk_batch_size: 1000
+  bulk_flush_interval: 5s
+
+ingestion:
+  max_event_size: 1048576  # 1MB
+  rate_limit_enabled: true
+  rate_limit_requests: 10000
+  rate_limit_window: 1m
+
+logging:
+  level: info  # debug, info, warn, error
+  format: json  # json or text
+
+# Dead Letter Queue for failed events
+dlq:
+  enabled: false
+  base_path: /var/lib/telhawk/dlq
+
+# HEC Acknowledgement channel
+ack:
+  enabled: true
+  ttl: 10m
+
+# Redis configuration
+redis:
+  enabled: true
+  url: redis://redis:6379/0
+  max_retries: 3
+  pool_size: 10

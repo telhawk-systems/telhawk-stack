@@ -1,0 +1,34 @@
+server:
+  port: 8080
+  read_timeout: 15s
+  write_timeout: 15s
+  idle_timeout: 60s
+  tls_enabled: false  # Enable HTTPS with TLS certificates
+  tls_cert_file: /certs/auth.pem
+  tls_key_file: /certs/auth-key.pem
+
+auth:
+  jwt_secret: "change-this-in-production"
+  jwt_refresh_secret: "change-this-in-production"
+  audit_secret: "change-this-in-production"
+  access_token_ttl: 15m
+  refresh_token_ttl: 168h  # 7 days
+
+database:
+  type: memory  # memory or postgres
+  postgres:
+    host: localhost
+    port: 5432
+    database: telhawk_auth
+    user: telhawk
+    password: ""
+    sslmode: disable
+
+logging:
+  level: info  # debug, info, warn, error
+  format: json  # json or text
+
+ingest:
+  enabled: false
+  url: "http://ingest:8088"
+  hec_token: ""

@@ -13,15 +13,16 @@ import (
 
 // RouterConfig holds dependencies needed to configure routes
 type RouterConfig struct {
-	AuthHandler      *handlers.AuthHandler
-	DashboardHandler *handlers.DashboardHandler
-	AuthMiddleware   *auth.Middleware
-	AuthProxy        *proxy.Proxy
-	QueryProxy       *proxy.Proxy
-	CoreProxy        *proxy.Proxy
-	RulesProxy       *proxy.Proxy
-	AlertingProxy    *proxy.Proxy
-	StaticDir        string
+	AuthHandler       *handlers.AuthHandler
+	DashboardHandler  *handlers.DashboardHandler
+	AsyncQueryHandler *handlers.AsyncQueryHandler // Optional: nil if NATS unavailable
+	AuthMiddleware    *auth.Middleware
+	AuthenticateProxy *proxy.Proxy
+	SearchProxy       *proxy.Proxy
+	CoreProxy         *proxy.Proxy
+	RulesProxy        *proxy.Proxy
+	AlertingProxy     *proxy.Proxy
+	StaticDir         string
 }
 
 // NewRouter constructs a ServeMux with web backend routes registered.
@@ -37,14 +38,20 @@ func NewRouter(cfg RouterConfig) http.Handler {
 	// Dashboard metrics endpoint with caching (protected)
 	mux.Handle("GET /api/dashboard/metrics", cfg.AuthMiddleware.Protect(http.HandlerFunc(cfg.DashboardHandler.GetMetrics)))
 
+	// Async query endpoints (protected, only if NATS is available)
+	if cfg.AsyncQueryHandler != nil {
+		mux.Handle("POST /api/async-query/submit", cfg.AuthMiddleware.Protect(http.HandlerFunc(cfg.AsyncQueryHandler.SubmitQuery)))
+		mux.Handle("GET /api/async-query/status/{id}", cfg.AuthMiddleware.Protect(http.HandlerFunc(cfg.AsyncQueryHandler.GetQueryStatus)))
+	}
+
 	// User management endpoints (protected)
 	mux.Handle("/api/auth/", cfg.AuthMiddleware.Protect(
-		http.StripPrefix("/api/auth", cfg.AuthProxy.Handler()),
+		http.StripPrefix("/api/auth", cfg.AuthenticateProxy.Handler()),
 	))
 
-	// Query service proxy (protected)
-	mux.Handle("/api/query/", cfg.AuthMiddleware.Protect(
-		http.StripPrefix("/api/query", cfg.QueryProxy.Handler()),
+	// Search service proxy (protected)
+	mux.Handle("/api/search/", cfg.AuthMiddleware.Protect(
+		http.StripPrefix("/api/search", cfg.SearchProxy.Handler()),
 	))
 
 	// Core service proxy (protected)

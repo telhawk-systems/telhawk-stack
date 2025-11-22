@@ -24,7 +24,7 @@ import (
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/ratelimit"
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/server"
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/service"
-	"github.com/telhawk-systems/telhawk-stack/ingest/internal/storageclient"
+	"github.com/telhawk-systems/telhawk-stack/ingest/internal/storage"
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/validator"
 )
 
@@ -55,8 +55,7 @@ func main() {
 		slog.Info("Loaded configuration", slog.String("config_path", *configPath))
 	}
 	slog.Info("Service URLs configured",
-		slog.String("auth_url", cfg.Auth.URL),
-		slog.String("storage_url", cfg.Storage.URL),
+		slog.String("authenticate_url", cfg.Authenticate.URL),
 		slog.String("opensearch_url", cfg.OpenSearch.URL),
 	)
 
@@ -141,8 +140,35 @@ func main() {
 	log.Printf("Normalization pipeline initialized with %d normalizers and %d validators", len(normalizers), len(validators))
 
 	// Initialize clients
-	authClient := authclient.New(cfg.Auth.URL, 5*time.Second, cfg.Auth.TokenValidationCacheTTL)
-	storageClient := storageclient.New(cfg.Storage.URL, 30*time.Second)
+	authClient := authclient.New(cfg.Authenticate.URL, 5*time.Second, cfg.Authenticate.TokenValidationCacheTTL)
+
+	// Initialize direct OpenSearch client (replaces storage service)
+	openSearchConfig := storage.Config{
+		URL:             cfg.OpenSearch.URL,
+		Username:        cfg.OpenSearch.Username,
+		Password:        cfg.OpenSearch.Password,
+		TLSSkipVerify:   cfg.OpenSearch.TLSSkipVerify,
+		IndexPrefix:     cfg.OpenSearch.IndexPrefix,
+		ShardCount:      cfg.OpenSearch.ShardCount,
+		ReplicaCount:    cfg.OpenSearch.ReplicaCount,
+		RefreshInterval: cfg.OpenSearch.RefreshInterval,
+		RetentionDays:   cfg.OpenSearch.RetentionDays,
+		RolloverSizeGB:  cfg.OpenSearch.RolloverSizeGB,
+		RolloverAge:     cfg.OpenSearch.RolloverAge,
+	}
+
+	storageClient, err := storage.NewClient(openSearchConfig)
+	if err != nil {
+		log.Fatalf("Failed to create OpenSearch client: %v", err)
+	}
+
+	// Initialize OpenSearch indices, templates, and policies
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	if err := storageClient.Initialize(ctx); err != nil {
+		log.Printf("WARNING: Failed to initialize OpenSearch: %v", err)
+		log.Println("Events may fail to index until OpenSearch is properly configured")
+	}
+	cancel()
 
 	// Initialize ingestion service with pipeline
 	ingestService := service.NewIngestService(normalizationPipeline, dlqWriter, storageClient, authClient)
@@ -179,10 +205,10 @@ func main() {
 	<-quit
 
 	log.Println("Shutting down server...")
-	ctx, cancel := context.WithTimeout(context.Background(), cfg.Server.WriteTimeout)
-	defer cancel()
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), cfg.Server.WriteTimeout)
+	defer shutdownCancel()
 
-	if err := srv.Shutdown(ctx); err != nil {
+	if err := srv.Shutdown(shutdownCtx); err != nil {
 		log.Fatalf("Server forced to shutdown: %v", err)
 	}
 

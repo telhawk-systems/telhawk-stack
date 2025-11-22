@@ -18,7 +18,7 @@ export function SavedSearchDetailPage() {
     if (!id) return;
     setLoading(true);
     try {
-      const res = await fetch(`/api/query/api/v1/saved-searches/${id}`, { headers: { 'Accept': 'application/vnd.api+json' }, credentials: 'include' });
+      const res = await fetch(`/api/search/api/v1/saved-searches/${id}`, { headers: { 'Accept': 'application/vnd.api+json' }, credentials: 'include' });
       if (res.ok) {
         const data = await res.json();
         setItem(data.data);

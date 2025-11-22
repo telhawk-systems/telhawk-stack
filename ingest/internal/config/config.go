@@ -3,21 +3,21 @@ package config
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/spf13/viper"
 )
 
 type Config struct {
-	Server     ServerConfig     `mapstructure:"server"`
-	Auth       AuthConfig       `mapstructure:"auth"`
-	Storage    StorageConfig    `mapstructure:"storage"`
-	OpenSearch OpenSearchConfig `mapstructure:"opensearch"`
-	Ingestion  IngestionConfig  `mapstructure:"ingestion"`
-	Logging    LoggingConfig    `mapstructure:"logging"`
-	Redis      RedisConfig      `mapstructure:"redis"`
-	Ack        AckConfig        `mapstructure:"ack"`
-	DLQ        DLQConfig        `mapstructure:"dlq"`
+	Server       ServerConfig       `mapstructure:"server"`
+	Authenticate AuthenticateConfig `mapstructure:"authenticate"`
+	OpenSearch   OpenSearchConfig   `mapstructure:"opensearch"`
+	Ingestion    IngestionConfig    `mapstructure:"ingestion"`
+	Logging      LoggingConfig      `mapstructure:"logging"`
+	Redis        RedisConfig        `mapstructure:"redis"`
+	Ack          AckConfig          `mapstructure:"ack"`
+	DLQ          DLQConfig          `mapstructure:"dlq"`
 }
 
 type ServerConfig struct {
@@ -27,23 +27,23 @@ type ServerConfig struct {
 	IdleTimeout  time.Duration `mapstructure:"idle_timeout"`
 }
 
-type AuthConfig struct {
+type AuthenticateConfig struct {
 	URL                     string        `mapstructure:"url"`
 	TokenValidationCacheTTL time.Duration `mapstructure:"token_validation_cache_ttl"`
 }
 
-type StorageConfig struct {
-	URL string `mapstructure:"url"`
-}
-
 type OpenSearchConfig struct {
-	URL               string        `mapstructure:"url"`
-	Username          string        `mapstructure:"username"`
-	Password          string        `mapstructure:"password"`
-	TLSSkipVerify     bool          `mapstructure:"tls_skip_verify"`
-	IndexPrefix       string        `mapstructure:"index_prefix"`
-	BulkBatchSize     int           `mapstructure:"bulk_batch_size"`
-	BulkFlushInterval time.Duration `mapstructure:"bulk_flush_interval"`
+	URL             string        `mapstructure:"url"`
+	Username        string        `mapstructure:"username"`
+	Password        string        `mapstructure:"password"`
+	TLSSkipVerify   bool          `mapstructure:"tls_skip_verify"`
+	IndexPrefix     string        `mapstructure:"index_prefix"`
+	ShardCount      int           `mapstructure:"shard_count"`
+	ReplicaCount    int           `mapstructure:"replica_count"`
+	RefreshInterval string        `mapstructure:"refresh_interval"`
+	RetentionDays   int           `mapstructure:"retention_days"`
+	RolloverSizeGB  int           `mapstructure:"rollover_size_gb"`
+	RolloverAge     time.Duration `mapstructure:"rollover_age"`
 }
 
 type IngestionConfig struct {
@@ -81,15 +81,18 @@ func Load(configPath string) (*Config, error) {
 	v.SetDefault("server.read_timeout", "30s")
 	v.SetDefault("server.write_timeout", "30s")
 	v.SetDefault("server.idle_timeout", "120s")
-	v.SetDefault("auth.url", "http://localhost:8080")
-	v.SetDefault("auth.token_validation_cache_ttl", "5m")
-	v.SetDefault("storage.url", "http://localhost:8083")
+	v.SetDefault("authenticate.url", "http://localhost:8080")
+	v.SetDefault("authenticate.token_validation_cache_ttl", "5m")
 	v.SetDefault("opensearch.url", "https://localhost:9200")
 	v.SetDefault("opensearch.username", "admin")
 	v.SetDefault("opensearch.tls_skip_verify", true)
-	v.SetDefault("opensearch.index_prefix", "telhawk")
-	v.SetDefault("opensearch.bulk_batch_size", 1000)
-	v.SetDefault("opensearch.bulk_flush_interval", "5s")
+	v.SetDefault("opensearch.index_prefix", "telhawk-events")
+	v.SetDefault("opensearch.shard_count", 1)
+	v.SetDefault("opensearch.replica_count", 0)
+	v.SetDefault("opensearch.refresh_interval", "5s")
+	v.SetDefault("opensearch.retention_days", 30)
+	v.SetDefault("opensearch.rollover_size_gb", 50)
+	v.SetDefault("opensearch.rollover_age", "24h")
 	v.SetDefault("ingestion.max_event_size", 1048576)
 	v.SetDefault("ingestion.rate_limit_enabled", true)
 	v.SetDefault("ingestion.rate_limit_requests", 10000)
@@ -115,6 +118,7 @@ func Load(configPath string) (*Config, error) {
 
 	// Environment variables override
 	v.SetEnvPrefix("INGEST")
+	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	v.AutomaticEnv()
 
 	// Read config

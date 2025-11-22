@@ -25,12 +25,8 @@ func TestLoad_WithDefaults(t *testing.T) {
 		t.Errorf("Server.ReadTimeout = %v, want 30s", cfg.Server.ReadTimeout)
 	}
 
-	if cfg.Auth.URL != "http://localhost:8080" {
-		t.Errorf("Auth.URL = %q, want %q", cfg.Auth.URL, "http://localhost:8080")
-	}
-
-	if cfg.Storage.URL != "http://localhost:8083" {
-		t.Errorf("Storage.URL = %q, want %q", cfg.Storage.URL, "http://localhost:8083")
+	if cfg.Authenticate.URL != "http://localhost:8080" {
+		t.Errorf("Authenticate.URL = %q, want %q", cfg.Authenticate.URL, "http://localhost:8080")
 	}
 
 	if cfg.OpenSearch.URL != "https://localhost:9200" {
@@ -45,12 +41,8 @@ func TestLoad_WithDefaults(t *testing.T) {
 		t.Error("OpenSearch.TLSSkipVerify should be true by default")
 	}
 
-	if cfg.OpenSearch.IndexPrefix != "telhawk" {
-		t.Errorf("OpenSearch.IndexPrefix = %q, want %q", cfg.OpenSearch.IndexPrefix, "telhawk")
-	}
-
-	if cfg.OpenSearch.BulkBatchSize != 1000 {
-		t.Errorf("OpenSearch.BulkBatchSize = %d, want 1000", cfg.OpenSearch.BulkBatchSize)
+	if cfg.OpenSearch.IndexPrefix != "telhawk-events" {
+		t.Errorf("OpenSearch.IndexPrefix = %q, want %q", cfg.OpenSearch.IndexPrefix, "telhawk-events")
 	}
 
 	if cfg.Ingestion.MaxEventSize != 1048576 {

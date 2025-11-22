@@ -24,7 +24,7 @@ func TestListSchemas_Success(t *testing.T) {
 	testToken := createTestJWT("user-123")
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "/schemas", r.URL.Path)
+		assert.Equal(t, "/api/rules/schemas", r.URL.Path)
 		assert.Equal(t, "GET", r.Method)
 		assert.Equal(t, "1", r.URL.Query().Get("page[number]"))
 		assert.Equal(t, "10", r.URL.Query().Get("page[size]"))
@@ -106,7 +106,7 @@ func TestGetSchema_Success(t *testing.T) {
 	testToken := createTestJWT("user-123")
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "/schemas/rule-123", r.URL.Path)
+		assert.Equal(t, "/api/rules/schemas/rule-123", r.URL.Path)
 		assert.Equal(t, "GET", r.Method)
 
 		w.Header().Set("Content-Type", "application/vnd.api+json")
@@ -181,7 +181,7 @@ func TestCreateSchema_Success(t *testing.T) {
 	testToken := createTestJWT("user-123")
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "/schemas", r.URL.Path)
+		assert.Equal(t, "/api/rules/schemas", r.URL.Path)
 		assert.Equal(t, "POST", r.Method)
 
 		var payload map[string]interface{}
@@ -270,7 +270,7 @@ func TestDisableSchema_Success(t *testing.T) {
 	testToken := createTestJWT("user-123")
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "/schemas/rule-456/disable", r.URL.Path)
+		assert.Equal(t, "/api/rules/schemas/rule-456/disable", r.URL.Path)
 		assert.Equal(t, "POST", r.Method)
 
 		w.WriteHeader(http.StatusOK)
@@ -317,7 +317,7 @@ func TestEnableSchema_Success(t *testing.T) {
 	testToken := createTestJWT("user-123")
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "/schemas/rule-789/enable", r.URL.Path)
+		assert.Equal(t, "/api/rules/schemas/rule-789/enable", r.URL.Path)
 		assert.Equal(t, "POST", r.Method)
 
 		w.WriteHeader(http.StatusOK)
@@ -364,7 +364,7 @@ func TestGetVersionHistory_Success(t *testing.T) {
 	testToken := createTestJWT("user-123")
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "/schemas/rule-abc/versions", r.URL.Path)
+		assert.Equal(t, "/api/rules/schemas/rule-abc/versions", r.URL.Path)
 		assert.Equal(t, "GET", r.Method)
 
 		w.Header().Set("Content-Type", "application/vnd.api+json")

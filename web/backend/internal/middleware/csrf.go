@@ -15,7 +15,7 @@ func CSRF(cookieSecure bool) func(http.Handler) http.Handler {
 
 	// Prefixes for authenticated endpoints that don't need CSRF (already have JWT auth)
 	exemptPrefixes := []string{
-		"/api/query/",   // Query service - JWT protected
+		"/api/search/",  // Search service - JWT protected
 		"/api/core/",    // Core service - JWT protected
 		"/api/auth/me",  // Current user endpoint - JWT protected
 		"/api/auth/api", // Auth service API endpoints - JWT protected

@@ -57,11 +57,11 @@ func TestCSRF_ExemptPrefixes(t *testing.T) {
 	}{
 		{
 			name: "Query service prefix",
-			path: "/api/query/v1/search",
+			path: "/api/search/v1/search",
 		},
 		{
 			name: "Query service root",
-			path: "/api/query/",
+			path: "/api/search/",
 		},
 		{
 			name: "Core service prefix",
@@ -310,12 +310,12 @@ func TestCSRF_PrefixMatchingEdgeCases(t *testing.T) {
 	}{
 		{
 			name:        "Exact prefix match",
-			path:        "/api/query/",
+			path:        "/api/search/",
 			shouldBlock: false,
 		},
 		{
 			name:        "Prefix with path",
-			path:        "/api/query/v1/search",
+			path:        "/api/search/v1/search",
 			shouldBlock: false,
 		},
 		{
@@ -325,7 +325,7 @@ func TestCSRF_PrefixMatchingEdgeCases(t *testing.T) {
 		},
 		{
 			name:        "Substring but not prefix",
-			path:        "/other/api/query/",
+			path:        "/other/api/search/",
 			shouldBlock: true,
 		},
 		{

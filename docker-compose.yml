@@ -84,46 +84,71 @@ services:
       start_period: 10s
     restart: unless-stopped
 
-  rules-db:
-    build:
-      context: ./auth-db
-      dockerfile: Dockerfile
-    container_name: telhawk-rules-db
-    command: postgres -c ssl=on -c ssl_cert_file=/var/lib/postgresql/server.crt -c ssl_key_file=/var/lib/postgresql/server.key
-    environment:
-      - POSTGRES_DB=telhawk_rules
-      - POSTGRES_USER=telhawk
-      - POSTGRES_PASSWORD=${RULES_DB_PASSWORD:-telhawk-rules-dev}
-    volumes:
-      - rules-db-data:/var/lib/postgresql/data
-    networks:
-      - telhawk-db
-      - telhawk
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U telhawk -d telhawk_rules"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-    restart: unless-stopped
+  # DEPRECATED: Merged into respond
+  # rules-db:
+  #   build:
+  #     context: ./auth-db
+  #     dockerfile: Dockerfile
+  #   container_name: telhawk-rules-db
+  #   command: postgres -c ssl=on -c ssl_cert_file=/var/lib/postgresql/server.crt -c ssl_key_file=/var/lib/postgresql/server.key
+  #   environment:
+  #     - POSTGRES_DB=telhawk_rules
+  #     - POSTGRES_USER=telhawk
+  #     - POSTGRES_PASSWORD=${RULES_DB_PASSWORD:-telhawk-rules-dev}
+  #   volumes:
+  #     - rules-db-data:/var/lib/postgresql/data
+  #   networks:
+  #     - telhawk-db
+  #     - telhawk
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U telhawk -d telhawk_rules"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+  #     start_period: 10s
+  #   restart: unless-stopped
 
-  alerting-db:
+  # DEPRECATED: Merged into respond
+  # alerting-db:
+  #   build:
+  #     context: ./auth-db
+  #     dockerfile: Dockerfile
+  #   container_name: telhawk-alerting-db
+  #   command: postgres -c ssl=on -c ssl_cert_file=/var/lib/postgresql/server.crt -c ssl_key_file=/var/lib/postgresql/server.key
+  #   environment:
+  #     - POSTGRES_DB=telhawk_alerting
+  #     - POSTGRES_USER=telhawk
+  #     - POSTGRES_PASSWORD=${ALERTING_DB_PASSWORD:-telhawk-alerting-dev}
+  #   volumes:
+  #     - alerting-db-data:/var/lib/postgresql/data
+  #   networks:
+  #     - telhawk-db
+  #     - telhawk
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U telhawk -d telhawk_alerting"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+  #     start_period: 10s
+  #   restart: unless-stopped
+
+  respond-db:
     build:
       context: ./auth-db
       dockerfile: Dockerfile
-    container_name: telhawk-alerting-db
+    container_name: telhawk-respond-db
     command: postgres -c ssl=on -c ssl_cert_file=/var/lib/postgresql/server.crt -c ssl_key_file=/var/lib/postgresql/server.key
     environment:
-      - POSTGRES_DB=telhawk_alerting
+      - POSTGRES_DB=telhawk_respond
       - POSTGRES_USER=telhawk
-      - POSTGRES_PASSWORD=${ALERTING_DB_PASSWORD:-telhawk-alerting-dev}
+      - POSTGRES_PASSWORD=${RESPOND_DB_PASSWORD:-telhawk-respond-dev}
     volumes:
-      - alerting-db-data:/var/lib/postgresql/data
+      - respond-db-data:/var/lib/postgresql/data
     networks:
       - telhawk-db
       - telhawk
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U telhawk -d telhawk_alerting"]
+      test: ["CMD-SHELL", "pg_isready -U telhawk -d telhawk_respond"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -148,36 +173,105 @@ services:
       start_period: 5s
     restart: unless-stopped
 
-  auth:
+  nats:
+    image: nats:latest
+    container_name: telhawk-nats
+    command: ["--jetstream", "--store_dir=/data"]
+    expose:
+      - "4222"
+    ports:
+      - "127.0.0.1:8222:8222"
+    volumes:
+      - nats-data:/data
+    networks:
+      - telhawk
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:8222/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    restart: unless-stopped
+
+  # DEPRECATED: Renamed to authenticate
+  # auth:
+  #   build:
+  #     context: .
+  #     dockerfile: auth/Dockerfile
+  #   container_name: telhawk-auth
+  #   # SECURITY: Internal service only - no external exposure
+  #   # Access via web UI or thawk CLI
+  #   expose:
+  #     - "8080"
+  #   environment:
+  #     # Environment variables override config.yaml settings
+  #     - AUTH_SERVER_PORT=8080
+  #     - AUTH_SERVER_TLS_ENABLED=${AUTH_TLS_ENABLED:-false}
+  #     - AUTH_SERVER_TLS_CERT_FILE=/certs/auth.pem
+  #     - AUTH_SERVER_TLS_KEY_FILE=/certs/auth-key.pem
+  #     - AUTH_LOGGING_LEVEL=info
+  #     - AUTH_AUTH_JWT_SECRET=${AUTH_JWT_SECRET:-change-this-in-production}
+  #     - AUTH_AUTH_JWT_REFRESH_SECRET=${AUTH_JWT_REFRESH_SECRET:-change-this-in-production}
+  #     - AUTH_AUTH_AUDIT_SECRET=${AUTH_AUDIT_SECRET:-change-this-in-production}
+  #     - AUTH_DATABASE_TYPE=postgres
+  #     - AUTH_DATABASE_POSTGRES_HOST=auth-db
+  #     - AUTH_DATABASE_POSTGRES_PORT=5432
+  #     - AUTH_DATABASE_POSTGRES_DATABASE=telhawk_auth
+  #     - AUTH_DATABASE_POSTGRES_USER=telhawk
+  #     - AUTH_DATABASE_POSTGRES_PASSWORD=${AUTH_DB_PASSWORD:-telhawk-auth-dev}
+  #     - AUTH_DATABASE_POSTGRES_SSLMODE=require
+  #     # Ingest forwarding (enabled with HEC token)
+  #     - AUTH_INGEST_ENABLED=true
+  #     - AUTH_INGEST_URL=http://ingest:8088
+  #     - AUTH_INGEST_HEC_TOKEN=test-hec-abc123xyz
+  #   volumes:
+  #     - telhawk-certs:/certs:ro
+  #   networks:
+  #     - telhawk-db
+  #     - telhawk
+  #   depends_on:
+  #     telhawk-certs:
+  #       condition: service_completed_successfully
+  #     auth-db:
+  #       condition: service_healthy
+  #   healthcheck:
+  #     test: ["CMD", "/busybox/wget", "-q", "-O", "-", "http://localhost:8080/healthz"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
+  #     start_period: 10s
+  #   restart: unless-stopped
+
+  authenticate:
     build:
       context: .
-      dockerfile: auth/Dockerfile
-    container_name: telhawk-auth
+      dockerfile: authenticate/Dockerfile
+    container_name: telhawk-authenticate
     # SECURITY: Internal service only - no external exposure
     # Access via web UI or thawk CLI
     expose:
       - "8080"
     environment:
       # Environment variables override config.yaml settings
-      - AUTH_SERVER_PORT=8080
-      - AUTH_SERVER_TLS_ENABLED=${AUTH_TLS_ENABLED:-false}
-      - AUTH_SERVER_TLS_CERT_FILE=/certs/auth.pem
-      - AUTH_SERVER_TLS_KEY_FILE=/certs/auth-key.pem
-      - AUTH_LOGGING_LEVEL=info
-      - AUTH_AUTH_JWT_SECRET=${AUTH_JWT_SECRET:-change-this-in-production}
-      - AUTH_AUTH_JWT_REFRESH_SECRET=${AUTH_JWT_REFRESH_SECRET:-change-this-in-production}
-      - AUTH_AUTH_AUDIT_SECRET=${AUTH_AUDIT_SECRET:-change-this-in-production}
-      - AUTH_DATABASE_TYPE=postgres
-      - AUTH_DATABASE_POSTGRES_HOST=auth-db
-      - AUTH_DATABASE_POSTGRES_PORT=5432
-      - AUTH_DATABASE_POSTGRES_DATABASE=telhawk_auth
-      - AUTH_DATABASE_POSTGRES_USER=telhawk
-      - AUTH_DATABASE_POSTGRES_PASSWORD=${AUTH_DB_PASSWORD:-telhawk-auth-dev}
-      - AUTH_DATABASE_POSTGRES_SSLMODE=require
+      - AUTHENTICATE_SERVER_PORT=8080
+      - AUTHENTICATE_SERVER_TLS_ENABLED=${AUTHENTICATE_TLS_ENABLED:-false}
+      - AUTHENTICATE_SERVER_TLS_CERT_FILE=/certs/authenticate.pem
+      - AUTHENTICATE_SERVER_TLS_KEY_FILE=/certs/authenticate-key.pem
+      - AUTHENTICATE_LOGGING_LEVEL=info
+      - AUTHENTICATE_AUTH_JWT_SECRET=${AUTHENTICATE_JWT_SECRET:-change-this-in-production}
+      - AUTHENTICATE_AUTH_JWT_REFRESH_SECRET=${AUTHENTICATE_JWT_REFRESH_SECRET:-change-this-in-production}
+      - AUTHENTICATE_AUTH_AUDIT_SECRET=${AUTHENTICATE_AUDIT_SECRET:-change-this-in-production}
+      - AUTHENTICATE_DATABASE_TYPE=postgres
+      - AUTHENTICATE_DATABASE_POSTGRES_HOST=auth-db
+      - AUTHENTICATE_DATABASE_POSTGRES_PORT=5432
+      - AUTHENTICATE_DATABASE_POSTGRES_DATABASE=telhawk_auth
+      - AUTHENTICATE_DATABASE_POSTGRES_USER=telhawk
+      - AUTHENTICATE_DATABASE_POSTGRES_PASSWORD=${AUTH_DB_PASSWORD:-telhawk-auth-dev}
+      - AUTHENTICATE_DATABASE_POSTGRES_SSLMODE=require
       # Ingest forwarding (enabled with HEC token)
-      - AUTH_INGEST_ENABLED=true
-      - AUTH_INGEST_URL=http://ingest:8088
-      - AUTH_INGEST_HEC_TOKEN=test-hec-abc123xyz
+      - AUTHENTICATE_INGEST_ENABLED=true
+      - AUTHENTICATE_INGEST_URL=http://ingest:8088
+      - AUTHENTICATE_INGEST_HEC_TOKEN=test-hec-abc123xyz
     volumes:
       - telhawk-certs:/certs:ro
     networks:
@@ -196,73 +290,127 @@ services:
       start_period: 10s
     restart: unless-stopped
 
-  rules:
-    build:
-      context: .
-      dockerfile: rules/Dockerfile
-    container_name: telhawk-rules
-    # SECURITY: Internal service only - no external exposure
-    # Access via web UI
-    expose:
-      - "8084"
-    environment:
-      - RULES_SERVER_PORT=8084
-      - RULES_SERVER_READ_TIMEOUT=15s
-      - RULES_SERVER_WRITE_TIMEOUT=15s
-      - RULES_SERVER_IDLE_TIMEOUT=60s
-      - RULES_DATABASE_POSTGRES_HOST=rules-db
-      - RULES_DATABASE_POSTGRES_PORT=5432
-      - RULES_DATABASE_POSTGRES_USER=telhawk
-      - RULES_DATABASE_POSTGRES_PASSWORD=${RULES_DB_PASSWORD:-telhawk-rules-dev}
-      - RULES_DATABASE_POSTGRES_DATABASE=telhawk_rules
-      - RULES_DATABASE_POSTGRES_SSLMODE=require
-    volumes:
-      - telhawk-certs:/certs:ro
-    networks:
-      - telhawk-db
-      - telhawk
-    depends_on:
-      telhawk-certs:
-        condition: service_completed_successfully
-      rules-db:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "/busybox/wget", "-q", "-O", "-", "http://localhost:8084/healthz"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
-    restart: unless-stopped
+  # DEPRECATED: Merged into respond
+  # rules:
+  #   build:
+  #     context: .
+  #     dockerfile: rules/Dockerfile
+  #   container_name: telhawk-rules
+  #   # SECURITY: Internal service only - no external exposure
+  #   # Access via web UI
+  #   expose:
+  #     - "8084"
+  #   environment:
+  #     - RULES_SERVER_PORT=8084
+  #     - RULES_SERVER_READ_TIMEOUT=15s
+  #     - RULES_SERVER_WRITE_TIMEOUT=15s
+  #     - RULES_SERVER_IDLE_TIMEOUT=60s
+  #     - RULES_DATABASE_POSTGRES_HOST=rules-db
+  #     - RULES_DATABASE_POSTGRES_PORT=5432
+  #     - RULES_DATABASE_POSTGRES_USER=telhawk
+  #     - RULES_DATABASE_POSTGRES_PASSWORD=${RULES_DB_PASSWORD:-telhawk-rules-dev}
+  #     - RULES_DATABASE_POSTGRES_DATABASE=telhawk_rules
+  #     - RULES_DATABASE_POSTGRES_SSLMODE=require
+  #   volumes:
+  #     - telhawk-certs:/certs:ro
+  #   networks:
+  #     - telhawk-db
+  #     - telhawk
+  #   depends_on:
+  #     telhawk-certs:
+  #       condition: service_completed_successfully
+  #     rules-db:
+  #       condition: service_healthy
+  #   healthcheck:
+  #     test: ["CMD", "/busybox/wget", "-q", "-O", "-", "http://localhost:8084/healthz"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
+  #     start_period: 10s
+  #   restart: unless-stopped
 
-  alerting:
+  # DEPRECATED: Merged into respond
+  # alerting:
+  #   build:
+  #     context: .
+  #     dockerfile: alerting/Dockerfile
+  #   container_name: telhawk-alerting
+  #   # SECURITY: Internal service only - no external exposure
+  #   # Access via web UI
+  #   expose:
+  #     - "8085"
+  #   environment:
+  #     - ALERTING_SERVER_PORT=8085
+  #     - ALERTING_SERVER_READ_TIMEOUT=15s
+  #     - ALERTING_SERVER_WRITE_TIMEOUT=15s
+  #     - ALERTING_SERVER_IDLE_TIMEOUT=60s
+  #     - ALERTING_DATABASE_POSTGRES_HOST=alerting-db
+  #     - ALERTING_DATABASE_POSTGRES_PORT=5432
+  #     - ALERTING_DATABASE_POSTGRES_USER=telhawk
+  #     - ALERTING_DATABASE_POSTGRES_PASSWORD=${ALERTING_DB_PASSWORD:-telhawk-alerting-dev}
+  #     - ALERTING_DATABASE_POSTGRES_DATABASE=telhawk_alerting
+  #     - ALERTING_DATABASE_POSTGRES_SSLMODE=require
+  #     - ALERTING_REDIS_URL=redis://redis:6379/0
+  #     - ALERTING_REDIS_ENABLED=${ALERTING_REDIS_ENABLED:-true}
+  #     - ALERTING_REDIS_MAX_RETRIES=3
+  #     - ALERTING_REDIS_POOL_SIZE=10
+  #     - ALERTING_STORAGE_URL=https://opensearch:9200
+  #     - ALERTING_STORAGE_USERNAME=${OPENSEARCH_ADMIN_USER:-admin}
+  #     - ALERTING_STORAGE_PASSWORD=${OPENSEARCH_PASSWORD:-TelHawk123!}
+  #     - ALERTING_STORAGE_INSECURE=true
+  #     - ALERTING_RULES_URL=http://rules:8084
+  #   volumes:
+  #     - telhawk-certs:/certs:ro
+  #   networks:
+  #     - telhawk-db
+  #     - telhawk
+  #   depends_on:
+  #     telhawk-certs:
+  #       condition: service_completed_successfully
+  #     alerting-db:
+  #       condition: service_healthy
+  #     opensearch:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_started
+  #     rules:
+  #       condition: service_healthy
+  #   healthcheck:
+  #     test: ["CMD", "/busybox/wget", "-q", "-O", "-", "http://localhost:8085/healthz"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
+  #     start_period: 10s
+  #   restart: unless-stopped
+
+  respond:
     build:
       context: .
-      dockerfile: alerting/Dockerfile
-    container_name: telhawk-alerting
+      dockerfile: respond/Dockerfile
+    container_name: telhawk-respond
     # SECURITY: Internal service only - no external exposure
     # Access via web UI
     expose:
-      - "8085"
+      - "8086"
     environment:
-      - ALERTING_SERVER_PORT=8085
-      - ALERTING_SERVER_READ_TIMEOUT=15s
-      - ALERTING_SERVER_WRITE_TIMEOUT=15s
-      - ALERTING_SERVER_IDLE_TIMEOUT=60s
-      - ALERTING_DATABASE_POSTGRES_HOST=alerting-db
-      - ALERTING_DATABASE_POSTGRES_PORT=5432
-      - ALERTING_DATABASE_POSTGRES_USER=telhawk
-      - ALERTING_DATABASE_POSTGRES_PASSWORD=${ALERTING_DB_PASSWORD:-telhawk-alerting-dev}
-      - ALERTING_DATABASE_POSTGRES_DATABASE=telhawk_alerting
-      - ALERTING_DATABASE_POSTGRES_SSLMODE=require
-      - ALERTING_REDIS_URL=redis://redis:6379/0
-      - ALERTING_REDIS_ENABLED=${ALERTING_REDIS_ENABLED:-true}
-      - ALERTING_REDIS_MAX_RETRIES=3
-      - ALERTING_REDIS_POOL_SIZE=10
-      - ALERTING_STORAGE_URL=https://opensearch:9200
-      - ALERTING_STORAGE_USERNAME=${OPENSEARCH_ADMIN_USER:-admin}
-      - ALERTING_STORAGE_PASSWORD=${OPENSEARCH_PASSWORD:-TelHawk123!}
-      - ALERTING_STORAGE_INSECURE=true
-      - ALERTING_RULES_URL=http://rules:8084
+      - RESPOND_SERVER_PORT=8086
+      - RESPOND_SERVER_READ_TIMEOUT=15s
+      - RESPOND_SERVER_WRITE_TIMEOUT=15s
+      - RESPOND_SERVER_IDLE_TIMEOUT=60s
+      - RESPOND_DATABASE_POSTGRES_HOST=respond-db
+      - RESPOND_DATABASE_POSTGRES_PORT=5432
+      - RESPOND_DATABASE_POSTGRES_USER=telhawk
+      - RESPOND_DATABASE_POSTGRES_PASSWORD=${RESPOND_DB_PASSWORD:-telhawk-respond-dev}
+      - RESPOND_DATABASE_POSTGRES_DATABASE=telhawk_respond
+      - RESPOND_DATABASE_POSTGRES_SSLMODE=require
+      - RESPOND_REDIS_URL=redis://redis:6379/0
+      - RESPOND_REDIS_ENABLED=${RESPOND_REDIS_ENABLED:-true}
+      - RESPOND_REDIS_MAX_RETRIES=3
+      - RESPOND_REDIS_POOL_SIZE=10
+      - RESPOND_STORAGE_URL=https://opensearch:9200
+      - RESPOND_STORAGE_USERNAME=${OPENSEARCH_ADMIN_USER:-admin}
+      - RESPOND_STORAGE_PASSWORD=${OPENSEARCH_PASSWORD:-TelHawk123!}
+      - RESPOND_STORAGE_INSECURE=true
     volumes:
       - telhawk-certs:/certs:ro
     networks:
@@ -271,75 +419,115 @@ services:
     depends_on:
       telhawk-certs:
         condition: service_completed_successfully
-      alerting-db:
+      respond-db:
         condition: service_healthy
       opensearch:
         condition: service_healthy
       redis:
         condition: service_started
-      rules:
-        condition: service_healthy
     healthcheck:
-      test: ["CMD", "/busybox/wget", "-q", "-O", "-", "http://localhost:8085/healthz"]
+      test: ["CMD", "/busybox/wget", "-q", "-O", "-", "http://localhost:8086/healthz"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 10s
     restart: unless-stopped
 
-  storage:
-    build:
-      context: .
-      dockerfile: storage/Dockerfile
-    container_name: telhawk-storage
-    # SECURITY: Internal service only - no external exposure
-    expose:
-      - "8083"
-    environment:
-      - DEBUG_DUMP_JSON=${DEBUG_DUMP_JSON:-false}
-      - STORAGE_SERVER_TLS_ENABLED=${STORAGE_TLS_ENABLED:-false}
-      - STORAGE_SERVER_TLS_CERT_FILE=/certs/storage.pem
-      - STORAGE_SERVER_TLS_KEY_FILE=/certs/storage-key.pem
-      - OPENSEARCH_URL=https://opensearch:9200
-      - OPENSEARCH_USERNAME=${OPENSEARCH_ADMIN_USER:-admin}
-      - OPENSEARCH_PASSWORD=${OPENSEARCH_PASSWORD:-TelHawk123!}
-    volumes:
-      - telhawk-certs:/certs:ro
-    networks:
-      - telhawk
-    depends_on:
-      telhawk-certs:
-        condition: service_completed_successfully
-      opensearch:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:8083/readyz"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
-    restart: unless-stopped
+  # DEPRECATED: Merged into ingest
+  # storage:
+  #   build:
+  #     context: .
+  #     dockerfile: storage/Dockerfile
+  #   container_name: telhawk-storage
+  #   # SECURITY: Internal service only - no external exposure
+  #   expose:
+  #     - "8083"
+  #   environment:
+  #     - DEBUG_DUMP_JSON=${DEBUG_DUMP_JSON:-false}
+  #     - STORAGE_SERVER_TLS_ENABLED=${STORAGE_TLS_ENABLED:-false}
+  #     - STORAGE_SERVER_TLS_CERT_FILE=/certs/storage.pem
+  #     - STORAGE_SERVER_TLS_KEY_FILE=/certs/storage-key.pem
+  #     - OPENSEARCH_URL=https://opensearch:9200
+  #     - OPENSEARCH_USERNAME=${OPENSEARCH_ADMIN_USER:-admin}
+  #     - OPENSEARCH_PASSWORD=${OPENSEARCH_PASSWORD:-TelHawk123!}
+  #   volumes:
+  #     - telhawk-certs:/certs:ro
+  #   networks:
+  #     - telhawk
+  #   depends_on:
+  #     telhawk-certs:
+  #       condition: service_completed_successfully
+  #     opensearch:
+  #       condition: service_healthy
+  #   healthcheck:
+  #     test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:8083/readyz"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
+  #     start_period: 10s
+  #   restart: unless-stopped
 
-  query:
+  # DEPRECATED: Renamed to search
+  # query:
+  #   build:
+  #     context: .
+  #     dockerfile: query/Dockerfile
+  #   container_name: telhawk-query
+  #   # SECURITY: Internal service only - no external exposure
+  #   # Access via web UI
+  #   expose:
+  #     - "8082"
+  #   environment:
+  #     - QUERY_SERVER_TLS_ENABLED=${QUERY_TLS_ENABLED:-false}
+  #     - QUERY_SERVER_TLS_CERT_FILE=/certs/query.pem
+  #     - QUERY_SERVER_TLS_KEY_FILE=/certs/query-key.pem
+  #     - QUERY_OPENSEARCH_URL=https://opensearch:9200
+  #     - QUERY_OPENSEARCH_USERNAME=${OPENSEARCH_ADMIN_USER:-admin}
+  #     - QUERY_OPENSEARCH_PASSWORD=${OPENSEARCH_PASSWORD:-TelHawk123!}
+  #     - QUERY_OPENSEARCH_INSECURE=true
+  #     - QUERY_OPENSEARCH_INDEX=telhawk-events-*
+  #     - QUERY_DATABASE_URL=postgres://telhawk:${AUTH_DB_PASSWORD:-telhawk-auth-dev}@auth-db:5432/telhawk_query?sslmode=require
+  #     - QUERY_AUTHENTICATE_URL=http://authenticate:8080
+  #   volumes:
+  #     - telhawk-certs:/certs:ro
+  #   networks:
+  #     - telhawk
+  #     - telhawk-db
+  #   depends_on:
+  #     telhawk-certs:
+  #       condition: service_completed_successfully
+  #     opensearch:
+  #       condition: service_healthy
+  #     auth-db:
+  #       condition: service_healthy
+  #   healthcheck:
+  #     test: ["CMD", "/busybox/wget", "-q", "-O", "-", "http://localhost:8082/api/v1/health"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
+  #     start_period: 10s
+  #   restart: unless-stopped
+
+  search:
     build:
       context: .
-      dockerfile: query/Dockerfile
-    container_name: telhawk-query
+      dockerfile: search/Dockerfile
+    container_name: telhawk-search
     # SECURITY: Internal service only - no external exposure
     # Access via web UI
     expose:
       - "8082"
     environment:
-      - QUERY_SERVER_TLS_ENABLED=${QUERY_TLS_ENABLED:-false}
-      - QUERY_SERVER_TLS_CERT_FILE=/certs/query.pem
-      - QUERY_SERVER_TLS_KEY_FILE=/certs/query-key.pem
-      - QUERY_OPENSEARCH_URL=https://opensearch:9200
-      - QUERY_OPENSEARCH_USERNAME=${OPENSEARCH_ADMIN_USER:-admin}
-      - QUERY_OPENSEARCH_PASSWORD=${OPENSEARCH_PASSWORD:-TelHawk123!}
-      - QUERY_OPENSEARCH_INSECURE=true
-      - QUERY_OPENSEARCH_INDEX=telhawk-events-*
-      - QUERY_DATABASE_URL=postgres://telhawk:${AUTH_DB_PASSWORD:-telhawk-auth-dev}@auth-db:5432/telhawk_query?sslmode=require
-      - QUERY_AUTH_URL=http://auth:8080
+      - SEARCH_SERVER_TLS_ENABLED=${SEARCH_TLS_ENABLED:-false}
+      - SEARCH_SERVER_TLS_CERT_FILE=/certs/search.pem
+      - SEARCH_SERVER_TLS_KEY_FILE=/certs/search-key.pem
+      - SEARCH_OPENSEARCH_URL=https://opensearch:9200
+      - SEARCH_OPENSEARCH_USERNAME=${OPENSEARCH_ADMIN_USER:-admin}
+      - SEARCH_OPENSEARCH_PASSWORD=${OPENSEARCH_PASSWORD:-TelHawk123!}
+      - SEARCH_OPENSEARCH_INSECURE=true
+      - SEARCH_OPENSEARCH_INDEX=telhawk-events-*
+      - SEARCH_DATABASE_URL=postgres://telhawk:${AUTH_DB_PASSWORD:-telhawk-auth-dev}@auth-db:5432/telhawk_query?sslmode=require
+      - SEARCH_AUTH_URL=http://authenticate:8080
     volumes:
       - telhawk-certs:/certs:ro
     networks:
@@ -374,10 +562,9 @@ services:
       - INGEST_SERVER_TLS_CERT_FILE=/certs/ingest.pem
       - INGEST_SERVER_TLS_KEY_FILE=/certs/ingest-key.pem
       - INGEST_LOGGING_LEVEL=info
-      - INGEST_AUTH_URL=http://auth:8080
-      - INGEST_AUTH_TLS_SKIP_VERIFY=${AUTH_TLS_SKIP_VERIFY:-false}
-      - INGEST_STORAGE_URL=http://storage:8083
-      - INGEST_STORAGE_TLS_SKIP_VERIFY=${STORAGE_TLS_SKIP_VERIFY:-false}
+      - INGEST_AUTHENTICATE_URL=http://authenticate:8080
+      - INGEST_AUTHENTICATE_TLS_SKIP_VERIFY=${AUTHENTICATE_TLS_SKIP_VERIFY:-false}
+      # OpenSearch connection (storage merged into ingest)
       - INGEST_OPENSEARCH_URL=https://opensearch:9200
       - INGEST_OPENSEARCH_USERNAME=${OPENSEARCH_ADMIN_USER:-admin}
       - INGEST_OPENSEARCH_PASSWORD=${OPENSEARCH_PASSWORD:-TelHawk123!}
@@ -397,9 +584,8 @@ services:
       - telhawk
     depends_on:
       - telhawk-certs
-      - auth
+      - authenticate
       - opensearch
-      - storage
       - redis
     healthcheck:
       test: ["CMD", "/busybox/wget", "-q", "-O", "-", "http://localhost:8088/readyz"]
@@ -422,23 +608,24 @@ services:
       - WEB_TLS_CERT_FILE=/certs/web.pem
       - WEB_TLS_KEY_FILE=/certs/web-key.pem
       - STATIC_DIR=/app/static
-      - AUTH_SERVICE_URL=http://auth:8080
-      - AUTH_TLS_SKIP_VERIFY=${AUTH_TLS_SKIP_VERIFY:-false}
-      - QUERY_SERVICE_URL=http://query:8082
-      - QUERY_TLS_SKIP_VERIFY=${QUERY_TLS_SKIP_VERIFY:-false}
+      - AUTHENTICATE_SERVICE_URL=http://authenticate:8080
+      - AUTHENTICATE_TLS_SKIP_VERIFY=${AUTHENTICATE_TLS_SKIP_VERIFY:-false}
+      - SEARCH_SERVICE_URL=http://search:8082
+      - SEARCH_TLS_SKIP_VERIFY=${SEARCH_TLS_SKIP_VERIFY:-false}
       - COOKIE_DOMAIN=
       - COOKIE_SECURE=false
       - DASHBOARD_CACHE_SECONDS=${DASHBOARD_CACHE_SECONDS:-300}
       - DEV_MODE=false
+      - NATS_URL=nats://nats:4222
     volumes:
       - telhawk-certs:/certs:ro
     networks:
       - telhawk
     depends_on:
       - telhawk-certs
-      - auth
-      - query
-      - storage
+      - authenticate
+      - search
+      - nats
     healthcheck:
       test: ["CMD", "/busybox/wget", "-q", "-O", "-", "http://localhost:3000/api/health"]
       interval: 30s
@@ -482,8 +669,12 @@ volumes:
   ingest-dlq:
   auth-db-data:
     driver: local
-  rules-db-data:
-    driver: local
-  alerting-db-data:
+  # DEPRECATED: Merged into respond-db-data
+  # rules-db-data:
+  #   driver: local
+  # alerting-db-data:
+  #   driver: local
+  respond-db-data:
     driver: local
   redis-data:
+  nats-data:

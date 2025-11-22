@@ -63,15 +63,15 @@ func TestNewRouter_HealthCheck(t *testing.T) {
 	defer queryServer.Close()
 
 	cfg := RouterConfig{
-		AuthHandler:      handlers.NewAuthHandler(authClient, "localhost", false),
-		DashboardHandler: handlers.NewDashboardHandler(queryServer.URL),
-		AuthMiddleware:   auth.NewMiddleware(authClient, "localhost", false),
-		AuthProxy:        proxy.NewProxy(authServer.URL, authClient),
-		QueryProxy:       proxy.NewProxy(queryServer.URL, authClient),
-		CoreProxy:        proxy.NewProxy(queryServer.URL, authClient),
-		RulesProxy:       proxy.NewProxy(queryServer.URL, authClient),
-		AlertingProxy:    proxy.NewProxy(queryServer.URL, authClient),
-		StaticDir:        staticDir,
+		AuthHandler:       handlers.NewAuthHandler(authClient, "localhost", false),
+		DashboardHandler:  handlers.NewDashboardHandler(queryServer.URL),
+		AuthMiddleware:    auth.NewMiddleware(authClient, "localhost", false),
+		AuthenticateProxy: proxy.NewProxy(authServer.URL, authClient),
+		SearchProxy:       proxy.NewProxy(queryServer.URL, authClient),
+		CoreProxy:         proxy.NewProxy(queryServer.URL, authClient),
+		RulesProxy:        proxy.NewProxy(queryServer.URL, authClient),
+		AlertingProxy:     proxy.NewProxy(queryServer.URL, authClient),
+		StaticDir:         staticDir,
 	}
 
 	router := NewRouter(cfg)
@@ -106,15 +106,15 @@ func TestNewRouter_AuthEndpoints_GetCSRFToken(t *testing.T) {
 	defer queryServer.Close()
 
 	cfg := RouterConfig{
-		AuthHandler:      handlers.NewAuthHandler(authClient, "localhost", false),
-		DashboardHandler: handlers.NewDashboardHandler(queryServer.URL),
-		AuthMiddleware:   auth.NewMiddleware(authClient, "localhost", false),
-		AuthProxy:        proxy.NewProxy(authServer.URL, authClient),
-		QueryProxy:       proxy.NewProxy(queryServer.URL, authClient),
-		CoreProxy:        proxy.NewProxy(queryServer.URL, authClient),
-		RulesProxy:       proxy.NewProxy(queryServer.URL, authClient),
-		AlertingProxy:    proxy.NewProxy(queryServer.URL, authClient),
-		StaticDir:        staticDir,
+		AuthHandler:       handlers.NewAuthHandler(authClient, "localhost", false),
+		DashboardHandler:  handlers.NewDashboardHandler(queryServer.URL),
+		AuthMiddleware:    auth.NewMiddleware(authClient, "localhost", false),
+		AuthenticateProxy: proxy.NewProxy(authServer.URL, authClient),
+		SearchProxy:       proxy.NewProxy(queryServer.URL, authClient),
+		CoreProxy:         proxy.NewProxy(queryServer.URL, authClient),
+		RulesProxy:        proxy.NewProxy(queryServer.URL, authClient),
+		AlertingProxy:     proxy.NewProxy(queryServer.URL, authClient),
+		StaticDir:         staticDir,
 	}
 
 	router := NewRouter(cfg)
@@ -144,15 +144,15 @@ func TestNewRouter_ProtectedRoute_RequiresAuth(t *testing.T) {
 	defer queryServer.Close()
 
 	cfg := RouterConfig{
-		AuthHandler:      handlers.NewAuthHandler(authClient, "localhost", false),
-		DashboardHandler: handlers.NewDashboardHandler(queryServer.URL),
-		AuthMiddleware:   auth.NewMiddleware(authClient, "localhost", false),
-		AuthProxy:        proxy.NewProxy(authServer.URL, authClient),
-		QueryProxy:       proxy.NewProxy(queryServer.URL, authClient),
-		CoreProxy:        proxy.NewProxy(queryServer.URL, authClient),
-		RulesProxy:       proxy.NewProxy(queryServer.URL, authClient),
-		AlertingProxy:    proxy.NewProxy(queryServer.URL, authClient),
-		StaticDir:        staticDir,
+		AuthHandler:       handlers.NewAuthHandler(authClient, "localhost", false),
+		DashboardHandler:  handlers.NewDashboardHandler(queryServer.URL),
+		AuthMiddleware:    auth.NewMiddleware(authClient, "localhost", false),
+		AuthenticateProxy: proxy.NewProxy(authServer.URL, authClient),
+		SearchProxy:       proxy.NewProxy(queryServer.URL, authClient),
+		CoreProxy:         proxy.NewProxy(queryServer.URL, authClient),
+		RulesProxy:        proxy.NewProxy(queryServer.URL, authClient),
+		AlertingProxy:     proxy.NewProxy(queryServer.URL, authClient),
+		StaticDir:         staticDir,
 	}
 
 	router := NewRouter(cfg)
@@ -160,7 +160,7 @@ func TestNewRouter_ProtectedRoute_RequiresAuth(t *testing.T) {
 	protectedRoutes := []string{
 		"/api/auth/me",
 		"/api/dashboard/metrics",
-		"/api/query/v1/search",
+		"/api/search/v1/search",
 		"/api/core/v1/events",
 		"/api/rules/v1/schemas",
 		"/api/alerting/v1/cases",
@@ -192,15 +192,15 @@ func TestNewRouter_StaticFileServing(t *testing.T) {
 	defer queryServer.Close()
 
 	cfg := RouterConfig{
-		AuthHandler:      handlers.NewAuthHandler(authClient, "localhost", false),
-		DashboardHandler: handlers.NewDashboardHandler(queryServer.URL),
-		AuthMiddleware:   auth.NewMiddleware(authClient, "localhost", false),
-		AuthProxy:        proxy.NewProxy(authServer.URL, authClient),
-		QueryProxy:       proxy.NewProxy(queryServer.URL, authClient),
-		CoreProxy:        proxy.NewProxy(queryServer.URL, authClient),
-		RulesProxy:       proxy.NewProxy(queryServer.URL, authClient),
-		AlertingProxy:    proxy.NewProxy(queryServer.URL, authClient),
-		StaticDir:        staticDir,
+		AuthHandler:       handlers.NewAuthHandler(authClient, "localhost", false),
+		DashboardHandler:  handlers.NewDashboardHandler(queryServer.URL),
+		AuthMiddleware:    auth.NewMiddleware(authClient, "localhost", false),
+		AuthenticateProxy: proxy.NewProxy(authServer.URL, authClient),
+		SearchProxy:       proxy.NewProxy(queryServer.URL, authClient),
+		CoreProxy:         proxy.NewProxy(queryServer.URL, authClient),
+		RulesProxy:        proxy.NewProxy(queryServer.URL, authClient),
+		AlertingProxy:     proxy.NewProxy(queryServer.URL, authClient),
+		StaticDir:         staticDir,
 	}
 
 	router := NewRouter(cfg)
@@ -231,15 +231,15 @@ func TestNewRouter_SPAFallback(t *testing.T) {
 	defer queryServer.Close()
 
 	cfg := RouterConfig{
-		AuthHandler:      handlers.NewAuthHandler(authClient, "localhost", false),
-		DashboardHandler: handlers.NewDashboardHandler(queryServer.URL),
-		AuthMiddleware:   auth.NewMiddleware(authClient, "localhost", false),
-		AuthProxy:        proxy.NewProxy(authServer.URL, authClient),
-		QueryProxy:       proxy.NewProxy(queryServer.URL, authClient),
-		CoreProxy:        proxy.NewProxy(queryServer.URL, authClient),
-		RulesProxy:       proxy.NewProxy(queryServer.URL, authClient),
-		AlertingProxy:    proxy.NewProxy(queryServer.URL, authClient),
-		StaticDir:        staticDir,
+		AuthHandler:       handlers.NewAuthHandler(authClient, "localhost", false),
+		DashboardHandler:  handlers.NewDashboardHandler(queryServer.URL),
+		AuthMiddleware:    auth.NewMiddleware(authClient, "localhost", false),
+		AuthenticateProxy: proxy.NewProxy(authServer.URL, authClient),
+		SearchProxy:       proxy.NewProxy(queryServer.URL, authClient),
+		CoreProxy:         proxy.NewProxy(queryServer.URL, authClient),
+		RulesProxy:        proxy.NewProxy(queryServer.URL, authClient),
+		AlertingProxy:     proxy.NewProxy(queryServer.URL, authClient),
+		StaticDir:         staticDir,
 	}
 
 	router := NewRouter(cfg)
@@ -281,15 +281,15 @@ func TestNewRouter_RequestIDMiddleware(t *testing.T) {
 	defer queryServer.Close()
 
 	cfg := RouterConfig{
-		AuthHandler:      handlers.NewAuthHandler(authClient, "localhost", false),
-		DashboardHandler: handlers.NewDashboardHandler(queryServer.URL),
-		AuthMiddleware:   auth.NewMiddleware(authClient, "localhost", false),
-		AuthProxy:        proxy.NewProxy(authServer.URL, authClient),
-		QueryProxy:       proxy.NewProxy(queryServer.URL, authClient),
-		CoreProxy:        proxy.NewProxy(queryServer.URL, authClient),
-		RulesProxy:       proxy.NewProxy(queryServer.URL, authClient),
-		AlertingProxy:    proxy.NewProxy(queryServer.URL, authClient),
-		StaticDir:        staticDir,
+		AuthHandler:       handlers.NewAuthHandler(authClient, "localhost", false),
+		DashboardHandler:  handlers.NewDashboardHandler(queryServer.URL),
+		AuthMiddleware:    auth.NewMiddleware(authClient, "localhost", false),
+		AuthenticateProxy: proxy.NewProxy(authServer.URL, authClient),
+		SearchProxy:       proxy.NewProxy(queryServer.URL, authClient),
+		CoreProxy:         proxy.NewProxy(queryServer.URL, authClient),
+		RulesProxy:        proxy.NewProxy(queryServer.URL, authClient),
+		AlertingProxy:     proxy.NewProxy(queryServer.URL, authClient),
+		StaticDir:         staticDir,
 	}
 
 	router := NewRouter(cfg)
@@ -321,15 +321,15 @@ func TestNewRouter_StripPrefixForProxies(t *testing.T) {
 	defer backendServer.Close()
 
 	cfg := RouterConfig{
-		AuthHandler:      handlers.NewAuthHandler(authClient, "localhost", false),
-		DashboardHandler: handlers.NewDashboardHandler(backendServer.URL),
-		AuthMiddleware:   auth.NewMiddleware(authClient, "localhost", false),
-		AuthProxy:        proxy.NewProxy(backendServer.URL, authClient),
-		QueryProxy:       proxy.NewProxy(backendServer.URL, authClient),
-		CoreProxy:        proxy.NewProxy(backendServer.URL, authClient),
-		RulesProxy:       proxy.NewProxy(backendServer.URL, authClient),
-		AlertingProxy:    proxy.NewProxy(backendServer.URL, authClient),
-		StaticDir:        staticDir,
+		AuthHandler:       handlers.NewAuthHandler(authClient, "localhost", false),
+		DashboardHandler:  handlers.NewDashboardHandler(backendServer.URL),
+		AuthMiddleware:    auth.NewMiddleware(authClient, "localhost", false),
+		AuthenticateProxy: proxy.NewProxy(backendServer.URL, authClient),
+		SearchProxy:       proxy.NewProxy(backendServer.URL, authClient),
+		CoreProxy:         proxy.NewProxy(backendServer.URL, authClient),
+		RulesProxy:        proxy.NewProxy(backendServer.URL, authClient),
+		AlertingProxy:     proxy.NewProxy(backendServer.URL, authClient),
+		StaticDir:         staticDir,
 	}
 
 	router := NewRouter(cfg)
@@ -342,7 +342,7 @@ func TestNewRouter_StripPrefixForProxies(t *testing.T) {
 	}{
 		{
 			name:         "Query proxy strips /api/query",
-			requestPath:  "/api/query/v1/search",
+			requestPath:  "/api/search/v1/search",
 			expectedPath: "/v1/search",
 			testKey:      "query-test",
 		},
@@ -403,15 +403,15 @@ func TestNewRouter_RouteOrdering(t *testing.T) {
 	defer queryServer.Close()
 
 	cfg := RouterConfig{
-		AuthHandler:      handlers.NewAuthHandler(authClient, "localhost", false),
-		DashboardHandler: handlers.NewDashboardHandler(queryServer.URL),
-		AuthMiddleware:   auth.NewMiddleware(authClient, "localhost", false),
-		AuthProxy:        proxy.NewProxy(authServer.URL, authClient),
-		QueryProxy:       proxy.NewProxy(queryServer.URL, authClient),
-		CoreProxy:        proxy.NewProxy(queryServer.URL, authClient),
-		RulesProxy:       proxy.NewProxy(queryServer.URL, authClient),
-		AlertingProxy:    proxy.NewProxy(queryServer.URL, authClient),
-		StaticDir:        staticDir,
+		AuthHandler:       handlers.NewAuthHandler(authClient, "localhost", false),
+		DashboardHandler:  handlers.NewDashboardHandler(queryServer.URL),
+		AuthMiddleware:    auth.NewMiddleware(authClient, "localhost", false),
+		AuthenticateProxy: proxy.NewProxy(authServer.URL, authClient),
+		SearchProxy:       proxy.NewProxy(queryServer.URL, authClient),
+		CoreProxy:         proxy.NewProxy(queryServer.URL, authClient),
+		RulesProxy:        proxy.NewProxy(queryServer.URL, authClient),
+		AlertingProxy:     proxy.NewProxy(queryServer.URL, authClient),
+		StaticDir:         staticDir,
 	}
 
 	router := NewRouter(cfg)
@@ -444,15 +444,15 @@ func TestNewRouter_MethodRouting(t *testing.T) {
 	defer queryServer.Close()
 
 	cfg := RouterConfig{
-		AuthHandler:      handlers.NewAuthHandler(authClient, "localhost", false),
-		DashboardHandler: handlers.NewDashboardHandler(queryServer.URL),
-		AuthMiddleware:   auth.NewMiddleware(authClient, "localhost", false),
-		AuthProxy:        proxy.NewProxy(authServer.URL, authClient),
-		QueryProxy:       proxy.NewProxy(queryServer.URL, authClient),
-		CoreProxy:        proxy.NewProxy(queryServer.URL, authClient),
-		RulesProxy:       proxy.NewProxy(queryServer.URL, authClient),
-		AlertingProxy:    proxy.NewProxy(queryServer.URL, authClient),
-		StaticDir:        staticDir,
+		AuthHandler:       handlers.NewAuthHandler(authClient, "localhost", false),
+		DashboardHandler:  handlers.NewDashboardHandler(queryServer.URL),
+		AuthMiddleware:    auth.NewMiddleware(authClient, "localhost", false),
+		AuthenticateProxy: proxy.NewProxy(authServer.URL, authClient),
+		SearchProxy:       proxy.NewProxy(queryServer.URL, authClient),
+		CoreProxy:         proxy.NewProxy(queryServer.URL, authClient),
+		RulesProxy:        proxy.NewProxy(queryServer.URL, authClient),
+		AlertingProxy:     proxy.NewProxy(queryServer.URL, authClient),
+		StaticDir:         staticDir,
 	}
 
 	router := NewRouter(cfg)
@@ -505,15 +505,15 @@ func TestNewRouter_ConfigComplete(t *testing.T) {
 
 	// Test with complete config
 	cfg := RouterConfig{
-		AuthHandler:      handlers.NewAuthHandler(authClient, "localhost", false),
-		DashboardHandler: handlers.NewDashboardHandler(queryServer.URL),
-		AuthMiddleware:   auth.NewMiddleware(authClient, "localhost", false),
-		AuthProxy:        proxy.NewProxy(authServer.URL, authClient),
-		QueryProxy:       proxy.NewProxy(queryServer.URL, authClient),
-		CoreProxy:        proxy.NewProxy(queryServer.URL, authClient),
-		RulesProxy:       proxy.NewProxy(queryServer.URL, authClient),
-		AlertingProxy:    proxy.NewProxy(queryServer.URL, authClient),
-		StaticDir:        staticDir,
+		AuthHandler:       handlers.NewAuthHandler(authClient, "localhost", false),
+		DashboardHandler:  handlers.NewDashboardHandler(queryServer.URL),
+		AuthMiddleware:    auth.NewMiddleware(authClient, "localhost", false),
+		AuthenticateProxy: proxy.NewProxy(authServer.URL, authClient),
+		SearchProxy:       proxy.NewProxy(queryServer.URL, authClient),
+		CoreProxy:         proxy.NewProxy(queryServer.URL, authClient),
+		RulesProxy:        proxy.NewProxy(queryServer.URL, authClient),
+		AlertingProxy:     proxy.NewProxy(queryServer.URL, authClient),
+		StaticDir:         staticDir,
 	}
 
 	router := NewRouter(cfg)

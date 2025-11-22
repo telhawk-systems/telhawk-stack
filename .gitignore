@@ -51,7 +51,8 @@ config.local.yaml
 *.sqlite
 
 # Build artifacts
-dist/
+web/frontend/dist/
+node_modules
 vendor/
 
 # Frontend build output (copied to backend for serving)
@@ -79,3 +80,4 @@ alerting/alerting
 rules/rules
 docs/CLEANLINESS_TODO.md
 cli/thawk
+authenticate/auth
