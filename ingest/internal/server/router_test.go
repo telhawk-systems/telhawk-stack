@@ -8,21 +8,22 @@ import (
 
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/handlers"
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/models"
+	"github.com/telhawk-systems/telhawk-stack/ingest/internal/service"
 )
 
 // Mock service for testing
 type mockIngestService struct{}
 
-func (m *mockIngestService) IngestEvent(event *models.HECEvent, sourceIP, hecTokenID string) (string, error) {
+func (m *mockIngestService) IngestEvent(event *models.HECEvent, sourceIP string, tokenInfo *service.TokenInfo) (string, error) {
 	return "", nil
 }
 
-func (m *mockIngestService) IngestRaw(data []byte, sourceIP, hecTokenID, source, sourceType, host string) (string, error) {
+func (m *mockIngestService) IngestRaw(data []byte, sourceIP string, tokenInfo *service.TokenInfo, source, sourceType, host string) (string, error) {
 	return "", nil
 }
 
-func (m *mockIngestService) ValidateHECToken(ctx context.Context, token string) error {
-	return nil
+func (m *mockIngestService) ValidateHECToken(ctx context.Context, token string) (*service.TokenInfo, error) {
+	return &service.TokenInfo{}, nil
 }
 
 func (m *mockIngestService) GetStats() models.IngestionStats {

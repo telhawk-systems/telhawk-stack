@@ -107,42 +107,38 @@ func TestCreateUser(t *testing.T) {
 		{
 			name: "successful user creation",
 			user: &models.User{
-				ID:           "11111111-1111-1111-1111-111111111111",
+				ID: "11111111-1111-1111-1111-111111111111",
+
+				VersionID:    "11111111-1111-1111-1111-111111111111",
 				Username:     "testuser",
 				Email:        "test@example.com",
 				PasswordHash: "hashed_password",
-				Roles:        []string{"viewer"},
-				CreatedAt:    time.Now(),
-			},
-			expectError: false,
-		},
+				Roles:        []string{"viewer"}},
+			expectError: false},
 		{
 			name: "duplicate username",
 			user: &models.User{
-				ID:           "22222222-2222-2222-2222-222222222222",
+				ID: "22222222-2222-2222-2222-222222222222",
+
+				VersionID:    "22222222-2222-2222-2222-222222222222",
 				Username:     "testuser", // Same as first
 				Email:        "different@example.com",
 				PasswordHash: "hashed_password",
-				Roles:        []string{"viewer"},
-				CreatedAt:    time.Now(),
-			},
+				Roles:        []string{"viewer"}},
 			expectError: true,
-			errorType:   ErrUserExists,
-		},
+			errorType:   ErrUserExists},
 		{
 			name: "duplicate email",
 			user: &models.User{
-				ID:           "33333333-3333-3333-3333-333333333333",
+				ID: "33333333-3333-3333-3333-333333333333",
+
+				VersionID:    "33333333-3333-3333-3333-333333333333",
 				Username:     "differentuser",
 				Email:        "test@example.com", // Same as first
 				PasswordHash: "hashed_password",
-				Roles:        []string{"viewer"},
-				CreatedAt:    time.Now(),
-			},
+				Roles:        []string{"viewer"}},
 			expectError: true,
-			errorType:   ErrUserExists,
-		},
-	}
+			errorType:   ErrUserExists}}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -186,13 +182,13 @@ func TestGetUserByUsername(t *testing.T) {
 
 	// Create test user
 	user := &models.User{
-		ID:           "44444444-4444-4444-4444-444444444444",
+		ID: "44444444-4444-4444-4444-444444444444",
+
+		VersionID:    "44444444-4444-4444-4444-444444444444",
 		Username:     "gettest",
 		Email:        "gettest@example.com",
 		PasswordHash: "hashed_password",
-		Roles:        []string{"viewer"},
-		CreatedAt:    time.Now(),
-	}
+		Roles:        []string{"viewer"}}
 	if err := repo.CreateUser(ctx, user); err != nil {
 		t.Fatalf("Failed to create test user: %v", err)
 	}
@@ -206,15 +202,12 @@ func TestGetUserByUsername(t *testing.T) {
 		{
 			name:        "user found",
 			username:    "gettest",
-			expectError: false,
-		},
+			expectError: false},
 		{
 			name:        "user not found",
 			username:    "nonexistent",
 			expectError: true,
-			errorType:   ErrUserNotFound,
-		},
-	}
+			errorType:   ErrUserNotFound}}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -248,13 +241,13 @@ func TestUpdateUser(t *testing.T) {
 
 	// Create test user
 	user := &models.User{
-		ID:           "55555555-5555-5555-5555-555555555555",
+		ID: "55555555-5555-5555-5555-555555555555",
+
+		VersionID:    "55555555-5555-5555-5555-555555555555",
 		Username:     "updatetest",
 		Email:        "updatetest@example.com",
 		PasswordHash: "hashed_password",
-		Roles:        []string{"viewer"},
-		CreatedAt:    time.Now(),
-	}
+		Roles:        []string{"viewer"}}
 	if err := repo.CreateUser(ctx, user); err != nil {
 		t.Fatalf("Failed to create test user: %v", err)
 	}
@@ -290,13 +283,13 @@ func TestDeleteUser(t *testing.T) {
 
 	// Create test user
 	user := &models.User{
-		ID:           "66666666-6666-6666-6666-666666666666",
+		ID: "66666666-6666-6666-6666-666666666666",
+
+		VersionID:    "66666666-6666-6666-6666-666666666666",
 		Username:     "deletetest",
 		Email:        "deletetest@example.com",
 		PasswordHash: "hashed_password",
-		Roles:        []string{"viewer"},
-		CreatedAt:    time.Now(),
-	}
+		Roles:        []string{"viewer"}}
 	if err := repo.CreateUser(ctx, user); err != nil {
 		t.Fatalf("Failed to create test user: %v", err)
 	}
@@ -322,22 +315,21 @@ func TestListUsers(t *testing.T) {
 	// Create multiple users
 	users := []*models.User{
 		{
-			ID:           "77777777-7777-7777-7777-777777777777",
+			ID: "77777777-7777-7777-7777-777777777777",
+
+			VersionID:    "77777777-7777-7777-7777-777777777777",
 			Username:     "listuser1",
 			Email:        "listuser1@example.com",
 			PasswordHash: "hash",
-			Roles:        []string{"viewer"},
-			CreatedAt:    time.Now(),
-		},
+			Roles:        []string{"viewer"}},
 		{
-			ID:           "88888888-8888-8888-8888-888888888888",
+			ID: "88888888-8888-8888-8888-888888888888",
+
+			VersionID:    "88888888-8888-8888-8888-888888888888",
 			Username:     "listuser2",
 			Email:        "listuser2@example.com",
 			PasswordHash: "hash",
-			Roles:        []string{"admin"},
-			CreatedAt:    time.Now(),
-		},
-	}
+			Roles:        []string{"admin"}}}
 
 	for _, user := range users {
 		if err := repo.CreateUser(ctx, user); err != nil {
@@ -368,26 +360,25 @@ func TestCreateSession(t *testing.T) {
 
 	// Create user first
 	user := &models.User{
-		ID:           "99999999-9999-9999-9999-999999999999",
+		ID: "99999999-9999-9999-9999-999999999999",
+
+		VersionID:    "99999999-9999-9999-9999-999999999999",
 		Username:     "sessionuser",
 		Email:        "sessionuser@example.com",
 		PasswordHash: "hash",
-		Roles:        []string{"viewer"},
-		CreatedAt:    time.Now(),
-	}
+		Roles:        []string{"viewer"}}
 	if err := repo.CreateUser(ctx, user); err != nil {
 		t.Fatalf("Failed to create user: %v", err)
 	}
 
 	// Create session
 	session := &models.Session{
-		ID:           "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+		ID: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+
 		UserID:       user.ID,
 		AccessToken:  "access_token_123",
 		RefreshToken: "refresh_token_123",
-		ExpiresAt:    time.Now().Add(24 * time.Hour),
-		CreatedAt:    time.Now(),
-	}
+		ExpiresAt:    time.Now().Add(24 * time.Hour)}
 
 	err := repo.CreateSession(ctx, session)
 	if err != nil {
@@ -412,23 +403,22 @@ func TestGetSession(t *testing.T) {
 
 	// Create user and session
 	user := &models.User{
-		ID:           "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+		ID: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+
+		VersionID:    "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
 		Username:     "getsessionuser",
 		Email:        "getsession@example.com",
 		PasswordHash: "hash",
-		Roles:        []string{"viewer"},
-		CreatedAt:    time.Now(),
-	}
+		Roles:        []string{"viewer"}}
 	repo.CreateUser(ctx, user)
 
 	session := &models.Session{
-		ID:           "cccccccc-cccc-cccc-cccc-cccccccccccc",
+		ID: "cccccccc-cccc-cccc-cccc-cccccccccccc",
+
 		UserID:       user.ID,
 		AccessToken:  "access_token",
 		RefreshToken: "refresh_token_get",
-		ExpiresAt:    time.Now().Add(24 * time.Hour),
-		CreatedAt:    time.Now(),
-	}
+		ExpiresAt:    time.Now().Add(24 * time.Hour)}
 	repo.CreateSession(ctx, session)
 
 	tests := []struct {
@@ -440,15 +430,12 @@ func TestGetSession(t *testing.T) {
 		{
 			name:         "session found",
 			refreshToken: "refresh_token_get",
-			expectError:  false,
-		},
+			expectError:  false},
 		{
 			name:         "session not found",
 			refreshToken: "nonexistent_token",
 			expectError:  true,
-			errorType:    ErrSessionNotFound,
-		},
-	}
+			errorType:    ErrSessionNotFound}}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -482,23 +469,22 @@ func TestRevokeSession(t *testing.T) {
 
 	// Create user and session
 	user := &models.User{
-		ID:           "dddddddd-dddd-dddd-dddd-dddddddddddd",
+		ID: "dddddddd-dddd-dddd-dddd-dddddddddddd",
+
+		VersionID:    "dddddddd-dddd-dddd-dddd-dddddddddddd",
 		Username:     "revokesessionuser",
 		Email:        "revokesession@example.com",
 		PasswordHash: "hash",
-		Roles:        []string{"viewer"},
-		CreatedAt:    time.Now(),
-	}
+		Roles:        []string{"viewer"}}
 	repo.CreateUser(ctx, user)
 
 	session := &models.Session{
-		ID:           "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee",
+		ID: "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee",
+
 		UserID:       user.ID,
 		AccessToken:  "access_token",
 		RefreshToken: "refresh_token_revoke",
-		ExpiresAt:    time.Now().Add(24 * time.Hour),
-		CreatedAt:    time.Now(),
-	}
+		ExpiresAt:    time.Now().Add(24 * time.Hour)}
 	repo.CreateSession(ctx, session)
 
 	// Revoke session
@@ -535,13 +521,13 @@ func TestCreateHECToken(t *testing.T) {
 
 	// Create user first
 	user := &models.User{
-		ID:           "ffffffff-ffff-ffff-ffff-ffffffffffff",
+		ID: "ffffffff-ffff-ffff-ffff-ffffffffffff",
+
+		VersionID:    "ffffffff-ffff-ffff-ffff-ffffffffffff",
 		Username:     "hectokenuser",
 		Email:        "hectoken@example.com",
 		PasswordHash: "hash",
-		Roles:        []string{"viewer"},
-		CreatedAt:    time.Now(),
-	}
+		Roles:        []string{"viewer"}}
 	repo.CreateUser(ctx, user)
 
 	// Create HEC token
@@ -550,8 +536,8 @@ func TestCreateHECToken(t *testing.T) {
 		UserID:    user.ID,
 		Token:     "test_hec_token_123",
 		Name:      "Test Token",
-		CreatedAt: time.Now(),
-	}
+		TenantID:  "00000000-0000-0000-0000-000000000011", // Default Client
+		CreatedBy: user.ID}
 
 	err := repo.CreateHECToken(ctx, token)
 	if err != nil {
@@ -576,13 +562,13 @@ func TestGetHECToken(t *testing.T) {
 
 	// Create user and token
 	user := &models.User{
-		ID:           "00000002-0002-0002-0002-000000000002",
+		ID: "00000002-0002-0002-0002-000000000002",
+
+		VersionID:    "00000002-0002-0002-0002-000000000002",
 		Username:     "gethectokenuser",
 		Email:        "gethectoken@example.com",
 		PasswordHash: "hash",
-		Roles:        []string{"viewer"},
-		CreatedAt:    time.Now(),
-	}
+		Roles:        []string{"viewer"}}
 	repo.CreateUser(ctx, user)
 
 	token := &models.HECToken{
@@ -590,8 +576,8 @@ func TestGetHECToken(t *testing.T) {
 		UserID:    user.ID,
 		Token:     "get_hec_token_test",
 		Name:      "Get Test Token",
-		CreatedAt: time.Now(),
-	}
+		TenantID:  "00000000-0000-0000-0000-000000000011", // Default Client
+		CreatedBy: user.ID}
 	repo.CreateHECToken(ctx, token)
 
 	tests := []struct {
@@ -603,15 +589,12 @@ func TestGetHECToken(t *testing.T) {
 		{
 			name:        "token found",
 			tokenValue:  "get_hec_token_test",
-			expectError: false,
-		},
+			expectError: false},
 		{
 			name:        "token not found",
 			tokenValue:  "nonexistent_token",
 			expectError: true,
-			errorType:   ErrHECTokenNotFound,
-		},
-	}
+			errorType:   ErrHECTokenNotFound}}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -645,21 +628,21 @@ func TestListHECTokensByUser(t *testing.T) {
 
 	// Create users
 	user1 := &models.User{
-		ID:           "00000004-0004-0004-0004-000000000004",
+		ID: "00000004-0004-0004-0004-000000000004",
+
+		VersionID:    "00000004-0004-0004-0004-000000000004",
 		Username:     "listhecuser1",
 		Email:        "listhec1@example.com",
 		PasswordHash: "hash",
-		Roles:        []string{"viewer"},
-		CreatedAt:    time.Now(),
-	}
+		Roles:        []string{"viewer"}}
 	user2 := &models.User{
-		ID:           "00000005-0005-0005-0005-000000000005",
+		ID: "00000005-0005-0005-0005-000000000005",
+
+		VersionID:    "00000005-0005-0005-0005-000000000005",
 		Username:     "listhecuser2",
 		Email:        "listhec2@example.com",
 		PasswordHash: "hash",
-		Roles:        []string{"viewer"},
-		CreatedAt:    time.Now(),
-	}
+		Roles:        []string{"viewer"}}
 	repo.CreateUser(ctx, user1)
 	repo.CreateUser(ctx, user2)
 
@@ -670,23 +653,22 @@ func TestListHECTokensByUser(t *testing.T) {
 			UserID:    user1.ID,
 			Token:     "user1_token1",
 			Name:      "User 1 Token 1",
-			CreatedAt: time.Now(),
-		},
+			TenantID:  "00000000-0000-0000-0000-000000000011", // Default Client
+			CreatedBy: user1.ID},
 		{
 			ID:        "00000007-0007-0007-0007-000000000007",
 			UserID:    user1.ID,
 			Token:     "user1_token2",
 			Name:      "User 1 Token 2",
-			CreatedAt: time.Now(),
-		},
+			TenantID:  "00000000-0000-0000-0000-000000000011", // Default Client
+			CreatedBy: user1.ID},
 		{
 			ID:        "00000008-0008-0008-0008-000000000008",
 			UserID:    user2.ID,
 			Token:     "user2_token1",
 			Name:      "User 2 Token 1",
-			CreatedAt: time.Now(),
-		},
-	}
+			TenantID:  "00000000-0000-0000-0000-000000000011", // Default Client
+			CreatedBy: user2.ID}}
 
 	for _, token := range tokens {
 		repo.CreateHECToken(ctx, token)
@@ -710,13 +692,13 @@ func TestRevokeHECToken(t *testing.T) {
 
 	// Create user and token
 	user := &models.User{
-		ID:           "00000009-0009-0009-0009-000000000009",
+		ID: "00000009-0009-0009-0009-000000000009",
+
+		VersionID:    "00000009-0009-0009-0009-000000000009",
 		Username:     "revokehectokenuser",
 		Email:        "revokehectoken@example.com",
 		PasswordHash: "hash",
-		Roles:        []string{"viewer"},
-		CreatedAt:    time.Now(),
-	}
+		Roles:        []string{"viewer"}}
 	repo.CreateUser(ctx, user)
 
 	token := &models.HECToken{
@@ -724,8 +706,8 @@ func TestRevokeHECToken(t *testing.T) {
 		UserID:    user.ID,
 		Token:     "revoke_hec_token_test",
 		Name:      "Revoke Test Token",
-		CreatedAt: time.Now(),
-	}
+		TenantID:  "00000000-0000-0000-0000-000000000011", // Default Client
+		CreatedBy: user.ID}
 	repo.CreateHECToken(ctx, token)
 
 	// Revoke token
@@ -758,13 +740,13 @@ func TestGetHECTokenByID(t *testing.T) {
 
 	// Create user and token
 	user := &models.User{
-		ID:           "0000000b-000b-000b-000b-00000000000b",
+		ID: "0000000b-000b-000b-000b-00000000000b",
+
+		VersionID:    "0000000b-000b-000b-000b-00000000000b",
 		Username:     "gethectokenbyiduser",
 		Email:        "gethectokenbyid@example.com",
 		PasswordHash: "hash",
-		Roles:        []string{"viewer"},
-		CreatedAt:    time.Now(),
-	}
+		Roles:        []string{"viewer"}}
 	repo.CreateUser(ctx, user)
 
 	token := &models.HECToken{
@@ -772,8 +754,8 @@ func TestGetHECTokenByID(t *testing.T) {
 		UserID:    user.ID,
 		Token:     "get_by_id_token",
 		Name:      "Get By ID Test Token",
-		CreatedAt: time.Now(),
-	}
+		TenantID:  "00000000-0000-0000-0000-000000000011", // Default Client
+		CreatedBy: user.ID}
 	repo.CreateHECToken(ctx, token)
 
 	// Test found
@@ -806,23 +788,23 @@ func TestListAllHECTokens(t *testing.T) {
 
 	// Create two users and tokens
 	user1 := &models.User{
-		ID:           "0000000d-000d-000d-000d-00000000000d",
+		ID: "0000000d-000d-000d-000d-00000000000d",
+
+		VersionID:    "0000000d-000d-000d-000d-00000000000d",
 		Username:     "listalluser1",
 		Email:        "listall1@example.com",
 		PasswordHash: "hash",
-		Roles:        []string{"viewer"},
-		CreatedAt:    time.Now(),
-	}
+		Roles:        []string{"viewer"}}
 	repo.CreateUser(ctx, user1)
 
 	user2 := &models.User{
-		ID:           "0000000e-000e-000e-000e-00000000000e",
+		ID: "0000000e-000e-000e-000e-00000000000e",
+
+		VersionID:    "0000000e-000e-000e-000e-00000000000e",
 		Username:     "listalluser2",
 		Email:        "listall2@example.com",
 		PasswordHash: "hash",
-		Roles:        []string{"viewer"},
-		CreatedAt:    time.Now(),
-	}
+		Roles:        []string{"viewer"}}
 	repo.CreateUser(ctx, user2)
 
 	// Create tokens for both users
@@ -831,8 +813,8 @@ func TestListAllHECTokens(t *testing.T) {
 		UserID:    user1.ID,
 		Token:     "list_all_token1",
 		Name:      "List All Token 1",
-		CreatedAt: time.Now(),
-	}
+		TenantID:  "00000000-0000-0000-0000-000000000011", // Default Client
+		CreatedBy: user1.ID}
 	repo.CreateHECToken(ctx, token1)
 
 	token2 := &models.HECToken{
@@ -840,8 +822,8 @@ func TestListAllHECTokens(t *testing.T) {
 		UserID:    user2.ID,
 		Token:     "list_all_token2",
 		Name:      "List All Token 2",
-		CreatedAt: time.Now(),
-	}
+		TenantID:  "00000000-0000-0000-0000-000000000011", // Default Client
+		CreatedBy: user2.ID}
 	repo.CreateHECToken(ctx, token2)
 
 	// List all tokens
@@ -889,8 +871,7 @@ func TestLogAudit(t *testing.T) {
 		IPAddress:    "192.168.1.1",
 		UserAgent:    "Mozilla/5.0",
 		Result:       "success",
-		Metadata:     map[string]interface{}{"test": "data"},
-	}
+		Metadata:     map[string]interface{}{"test": "data"}}
 
 	err := repo.LogAudit(ctx, entry)
 	if err != nil {

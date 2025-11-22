@@ -69,11 +69,18 @@ func (s *IngestService) SetAckManager(manager *ack.Manager) {
 	s.ackManager = manager
 }
 
-func (s *IngestService) IngestEvent(event *models.HECEvent, sourceIP, hecTokenID string) (string, error) {
+func (s *IngestService) IngestEvent(event *models.HECEvent, sourceIP string, tokenInfo *TokenInfo) (string, error) {
 	// Determine source_type with fallback to default
 	sourceType := event.SourceType
 	if sourceType == "" {
 		sourceType = s.determineSourceType(event.Event)
+	}
+
+	// Extract token details
+	var hecTokenID, tenantID string
+	if tokenInfo != nil {
+		hecTokenID = tokenInfo.TokenID
+		tenantID = tokenInfo.TenantID
 	}
 
 	// Convert HEC event to internal event
@@ -88,6 +95,7 @@ func (s *IngestService) IngestEvent(event *models.HECEvent, sourceIP, hecTokenID
 		Event:      event.Event,
 		Fields:     event.Fields,
 		HECTokenID: hecTokenID,
+		TenantID:   tenantID,
 	}
 
 	// Serialize raw event
@@ -126,7 +134,14 @@ func (s *IngestService) IngestEvent(event *models.HECEvent, sourceIP, hecTokenID
 	}
 }
 
-func (s *IngestService) IngestRaw(data []byte, sourceIP, hecTokenID, source, sourceType, host string) (string, error) {
+func (s *IngestService) IngestRaw(data []byte, sourceIP string, tokenInfo *TokenInfo, source, sourceType, host string) (string, error) {
+	// Extract token details
+	var hecTokenID, tenantID string
+	if tokenInfo != nil {
+		hecTokenID = tokenInfo.TokenID
+		tenantID = tokenInfo.TenantID
+	}
+
 	event := &models.Event{
 		ID:         uuid.New().String(),
 		Timestamp:  time.Now(),
@@ -138,6 +153,7 @@ func (s *IngestService) IngestRaw(data []byte, sourceIP, hecTokenID, source, sou
 		Event:      string(data),
 		Raw:        data,
 		HECTokenID: hecTokenID,
+		TenantID:   tenantID,
 	}
 
 	event.Signature = s.signEvent(event)
@@ -262,6 +278,11 @@ func (s *IngestService) normalizeEvent(event *models.Event) (map[string]interfac
 		return nil, fmt.Errorf("failed to convert OCSF event: %w", err)
 	}
 
+	// Add tenant_id for data isolation (critical for multi-tenant)
+	if event.TenantID != "" {
+		eventMap["tenant_id"] = event.TenantID
+	}
+
 	log.Printf("event %s normalized via pipeline", event.ID)
 	return eventMap, nil
 }
@@ -315,14 +336,23 @@ func (s *IngestService) eventToMap(event *models.Event) map[string]interface{} {
 		"event":        event.Event,
 		"fields":       event.Fields,
 		"hec_token_id": event.HECTokenID,
+		"tenant_id":    event.TenantID,
 		"signature":    event.Signature,
 	}
 }
 
-func (s *IngestService) ValidateHECToken(ctx context.Context, token string) error {
+// TokenInfo contains validated HEC token information
+type TokenInfo struct {
+	TokenID  string
+	UserID   string
+	TenantID string
+}
+
+func (s *IngestService) ValidateHECToken(ctx context.Context, token string) (*TokenInfo, error) {
 	if s.authClient == nil {
 		log.Println("auth client not configured; skipping token validation")
-		return nil
+		// Return empty token info when no auth client (dev mode)
+		return &TokenInfo{}, nil
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
@@ -330,15 +360,19 @@ func (s *IngestService) ValidateHECToken(ctx context.Context, token string) erro
 
 	resp, err := s.authClient.ValidateHECToken(ctx, token)
 	if err != nil {
-		return fmt.Errorf("token validation failed: %w", err)
+		return nil, fmt.Errorf("token validation failed: %w", err)
 	}
 
 	if !resp.Valid {
-		return fmt.Errorf("invalid or expired HEC token")
+		return nil, fmt.Errorf("invalid or expired HEC token")
 	}
 
-	log.Printf("HEC token validated: token_id=%s user_id=%s", resp.TokenID, resp.UserID)
-	return nil
+	log.Printf("HEC token validated: token_id=%s user_id=%s tenant_id=%s", resp.TokenID, resp.UserID, resp.TenantID)
+	return &TokenInfo{
+		TokenID:  resp.TokenID,
+		UserID:   resp.UserID,
+		TenantID: resp.TenantID,
+	}, nil
 }
 
 func (s *IngestService) parseTime(t *float64) time.Time {

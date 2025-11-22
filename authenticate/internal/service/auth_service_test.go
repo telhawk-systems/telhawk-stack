@@ -45,8 +45,7 @@ func newMockRepository() *mockRepository {
 		usersByUsername: make(map[string]*models.User),
 		sessions:        make(map[string]*models.Session),
 		hecTokens:       make(map[string]*models.HECToken),
-		hecTokensByID:   make(map[string]*models.HECToken),
-	}
+		hecTokensByID:   make(map[string]*models.HECToken)}
 }
 
 // User operations
@@ -239,8 +238,7 @@ func setupTestService() (*AuthService, *mockRepository) {
 	cfg := &config.AuthConfig{
 		JWTSecret:        "test-jwt-secret-that-is-long-enough-for-hs256",
 		JWTRefreshSecret: "test-refresh-secret-that-is-long-enough-for-hs256",
-		AuditSecret:      "test-audit-secret",
-	}
+		AuditSecret:      "test-audit-secret"}
 	service := NewAuthService(repo, nil, cfg)
 	return service, repo
 }
@@ -264,8 +262,7 @@ func TestCreateUser(t *testing.T) {
 				Username: "testuser",
 				Email:    "test@example.com",
 				Password: "password123",
-				Roles:    []string{"viewer"},
-			},
+				Roles:    []string{"viewer"}},
 			setupRepo:   func(m *mockRepository) {},
 			expectError: false,
 			validateUser: func(t *testing.T, user *models.User) {
@@ -283,57 +280,48 @@ func TestCreateUser(t *testing.T) {
 				if err != nil {
 					t.Errorf("Password was not hashed correctly: %v", err)
 				}
-			},
-		},
+			}},
 		{
 			name: "default role assigned when no roles provided",
 			request: &models.CreateUserRequest{
 				Username: "testuser",
 				Email:    "test@example.com",
-				Password: "password123",
-			},
+				Password: "password123"},
 			setupRepo:   func(m *mockRepository) {},
 			expectError: false,
 			validateUser: func(t *testing.T, user *models.User) {
-				if len(user.Roles) != 1 || user.Roles[0] != string(models.RoleViewer) {
+				if len(user.Roles) != 1 || user.Roles[0] != string(models.LegacyRoleViewer) {
 					t.Errorf("Expected default role [viewer], got %v", user.Roles)
 				}
-			},
-		},
+			}},
 		{
 			name: "duplicate username",
 			request: &models.CreateUserRequest{
 				Username: "existing",
 				Email:    "new@example.com",
-				Password: "password123",
-			},
+				Password: "password123"},
 			setupRepo: func(m *mockRepository) {
 				// Pre-create a user with same username
 				existingUser := &models.User{
 					ID:       "existing-id",
 					Username: "existing",
-					Email:    "old@example.com",
-				}
+					Email:    "old@example.com"}
 				m.users["existing-id"] = existingUser
 				m.usersByUsername["existing"] = existingUser
 			},
 			expectError:   true,
-			errorContains: "already exists",
-		},
+			errorContains: "already exists"},
 		{
 			name: "repository error",
 			request: &models.CreateUserRequest{
 				Username: "testuser",
 				Email:    "test@example.com",
-				Password: "password123",
-			},
+				Password: "password123"},
 			setupRepo: func(m *mockRepository) {
 				m.createUserErr = errors.New("database error")
 			},
 			expectError:   true,
-			errorContains: "database error",
-		},
-	}
+			errorContains: "database error"}}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -390,17 +378,14 @@ func TestLogin(t *testing.T) {
 			name: "successful login",
 			request: &models.LoginRequest{
 				Username: "testuser",
-				Password: validPassword,
-			},
+				Password: validPassword},
 			setupRepo: func(m *mockRepository) {
 				user := &models.User{
 					ID:           "user-id",
 					Username:     "testuser",
 					Email:        "test@example.com",
 					PasswordHash: string(hashedPassword),
-					Roles:        []string{"viewer"},
-					CreatedAt:    time.Now(),
-				}
+					Roles:        []string{"viewer"}}
 				m.users[user.ID] = user
 				m.usersByUsername[user.Username] = user
 			},
@@ -415,44 +400,36 @@ func TestLogin(t *testing.T) {
 				if resp.TokenType != "Bearer" {
 					t.Errorf("Expected TokenType Bearer, got %s", resp.TokenType)
 				}
-			},
-		},
+			}},
 		{
 			name: "user not found",
 			request: &models.LoginRequest{
 				Username: "nonexistent",
-				Password: "password123",
-			},
+				Password: "password123"},
 			setupRepo:   func(m *mockRepository) {},
 			expectError: true,
-			errorIs:     ErrInvalidCredentials,
-		},
+			errorIs:     ErrInvalidCredentials},
 		{
 			name: "wrong password",
 			request: &models.LoginRequest{
 				Username: "testuser",
-				Password: "wrongpassword",
-			},
+				Password: "wrongpassword"},
 			setupRepo: func(m *mockRepository) {
 				user := &models.User{
 					ID:           "user-id",
 					Username:     "testuser",
 					PasswordHash: string(hashedPassword),
-					Roles:        []string{"viewer"},
-					CreatedAt:    time.Now(),
-				}
+					Roles:        []string{"viewer"}}
 				m.users[user.ID] = user
 				m.usersByUsername[user.Username] = user
 			},
 			expectError: true,
-			errorIs:     ErrInvalidCredentials,
-		},
+			errorIs:     ErrInvalidCredentials},
 		{
 			name: "disabled user",
 			request: &models.LoginRequest{
 				Username: "disabled",
-				Password: validPassword,
-			},
+				Password: validPassword},
 			setupRepo: func(m *mockRepository) {
 				now := time.Now()
 				user := &models.User{
@@ -460,21 +437,17 @@ func TestLogin(t *testing.T) {
 					Username:     "disabled",
 					PasswordHash: string(hashedPassword),
 					Roles:        []string{"viewer"},
-					CreatedAt:    time.Now(),
-					DisabledAt:   &now,
-				}
+					DisabledAt:   &now}
 				m.users[user.ID] = user
 				m.usersByUsername[user.Username] = user
 			},
 			expectError: true,
-			errorIs:     ErrInvalidCredentials,
-		},
+			errorIs:     ErrInvalidCredentials},
 		{
 			name: "deleted user",
 			request: &models.LoginRequest{
 				Username: "deleted",
-				Password: validPassword,
-			},
+				Password: validPassword},
 			setupRepo: func(m *mockRepository) {
 				now := time.Now()
 				user := &models.User{
@@ -482,16 +455,12 @@ func TestLogin(t *testing.T) {
 					Username:     "deleted",
 					PasswordHash: string(hashedPassword),
 					Roles:        []string{"viewer"},
-					CreatedAt:    time.Now(),
-					DeletedAt:    &now,
-				}
+					DeletedAt:    &now}
 				m.users[user.ID] = user
 				m.usersByUsername[user.Username] = user
 			},
 			expectError: true,
-			errorIs:     ErrInvalidCredentials,
-		},
-	}
+			errorIs:     ErrInvalidCredentials}}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -551,15 +520,12 @@ func TestRefreshToken(t *testing.T) {
 				user := &models.User{
 					ID:       "user-id",
 					Username: "testuser",
-					Roles:    []string{"viewer"},
-				}
+					Roles:    []string{"viewer"}}
 				session := &models.Session{
 					ID:           "session-id",
 					UserID:       user.ID,
 					RefreshToken: "valid-refresh-token",
-					ExpiresAt:    time.Now().Add(24 * time.Hour),
-					CreatedAt:    time.Now(),
-				}
+					ExpiresAt:    time.Now().Add(24 * time.Hour)}
 				m.users[user.ID] = user
 				m.sessions[session.RefreshToken] = session
 			},
@@ -571,15 +537,13 @@ func TestRefreshToken(t *testing.T) {
 				if resp.RefreshToken != "valid-refresh-token" {
 					t.Error("Expected same refresh token")
 				}
-			},
-		},
+			}},
 		{
 			name:         "invalid refresh token",
 			refreshToken: "invalid-token",
 			setupRepo:    func(m *mockRepository) {},
 			expectError:  true,
-			errorIs:      ErrInvalidToken,
-		},
+			errorIs:      ErrInvalidToken},
 		{
 			name:         "expired session",
 			refreshToken: "expired-token",
@@ -589,13 +553,11 @@ func TestRefreshToken(t *testing.T) {
 					UserID:       "user-id",
 					RefreshToken: "expired-token",
 					ExpiresAt:    time.Now().Add(-24 * time.Hour), // Expired
-					CreatedAt:    time.Now().Add(-48 * time.Hour),
 				}
 				m.sessions[session.RefreshToken] = session
 			},
 			expectError: true,
-			errorIs:     ErrInvalidToken,
-		},
+			errorIs:     ErrInvalidToken},
 		{
 			name:         "revoked session",
 			refreshToken: "revoked-token",
@@ -606,15 +568,11 @@ func TestRefreshToken(t *testing.T) {
 					UserID:       "user-id",
 					RefreshToken: "revoked-token",
 					ExpiresAt:    time.Now().Add(24 * time.Hour),
-					CreatedAt:    time.Now(),
-					RevokedAt:    &now,
-				}
+					RevokedAt:    &now}
 				m.sessions[session.RefreshToken] = session
 			},
 			expectError: true,
-			errorIs:     ErrInvalidToken,
-		},
-	}
+			errorIs:     ErrInvalidToken}}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -664,9 +622,7 @@ func TestValidateToken(t *testing.T) {
 		UserID:       "user-123",
 		AccessToken:  validToken,
 		RefreshToken: "refresh-token-123",
-		ExpiresAt:    time.Now().Add(7 * 24 * time.Hour),
-		CreatedAt:    time.Now(),
-	}
+		ExpiresAt:    time.Now().Add(7 * 24 * time.Hour)}
 	if err := repo.CreateSession(ctx, session); err != nil {
 		t.Fatalf("Failed to create test session: %v", err)
 	}
@@ -683,19 +639,15 @@ func TestValidateToken(t *testing.T) {
 			token:        validToken,
 			expectValid:  true,
 			expectUserID: "user-123",
-			expectRoles:  []string{"admin"},
-		},
+			expectRoles:  []string{"admin"}},
 		{
 			name:        "invalid token",
 			token:       "invalid.token.here",
-			expectValid: false,
-		},
+			expectValid: false},
 		{
 			name:        "empty token",
 			token:       "",
-			expectValid: false,
-		},
-	}
+			expectValid: false}}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -758,7 +710,6 @@ func TestValidateToken_RevokedSession(t *testing.T) {
 		AccessToken:  validToken,
 		RefreshToken: "refresh-token-123",
 		ExpiresAt:    time.Now().Add(7 * 24 * time.Hour),
-		CreatedAt:    time.Now(),
 		RevokedAt:    &now, // Session is revoked
 	}
 	if err := repo.CreateSession(ctx, session); err != nil {
@@ -794,24 +745,20 @@ func TestValidateHECToken(t *testing.T) {
 			token: "valid-hec-token",
 			setupRepo: func(m *mockRepository) {
 				hecToken := &models.HECToken{
-					ID:        "token-id",
-					UserID:    "user-id",
-					Name:      "Test Token",
-					Token:     "valid-hec-token",
-					CreatedAt: time.Now(),
-				}
+					ID:     "token-id",
+					UserID: "user-id",
+					Name:   "Test Token",
+					Token:  "valid-hec-token"}
 				m.hecTokens[hecToken.Token] = hecToken
 				m.hecTokensByID[hecToken.ID] = hecToken
 			},
 			expectError: false,
-			expectToken: true,
-		},
+			expectToken: true},
 		{
 			name:        "token not found",
 			token:       "nonexistent-token",
 			setupRepo:   func(m *mockRepository) {},
-			expectError: true,
-		},
+			expectError: true},
 		{
 			name:  "revoked token",
 			token: "revoked-token",
@@ -822,15 +769,11 @@ func TestValidateHECToken(t *testing.T) {
 					UserID:    "user-id",
 					Name:      "Revoked Token",
 					Token:     "revoked-token",
-					CreatedAt: time.Now(),
-					RevokedAt: &now,
-				}
+					RevokedAt: &now}
 				m.hecTokens[hecToken.Token] = hecToken
 			},
 			expectError: true,
-			errorIs:     ErrInvalidToken,
-		},
-	}
+			errorIs:     ErrInvalidToken}}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -870,10 +813,9 @@ func TestListUsers(t *testing.T) {
 
 	// Add some users
 	users := []*models.User{
-		{ID: "user-1", Username: "alice", Email: "alice@test.com", CreatedAt: time.Now()},
-		{ID: "user-2", Username: "bob", Email: "bob@test.com", CreatedAt: time.Now()},
-		{ID: "user-3", Username: "charlie", Email: "charlie@test.com", CreatedAt: time.Now()},
-	}
+		{ID: "user-1", Username: "alice", Email: "alice@test.com"},
+		{ID: "user-2", Username: "bob", Email: "bob@test.com"},
+		{ID: "user-3", Username: "charlie", Email: "charlie@test.com"}}
 	for _, user := range users {
 		repo.users[user.ID] = user
 		repo.usersByUsername[user.Username] = user
@@ -903,18 +845,14 @@ func TestGetUser(t *testing.T) {
 				m.users["user-123"] = &models.User{
 					ID:       "user-123",
 					Username: "testuser",
-					Email:    "test@example.com",
-				}
+					Email:    "test@example.com"}
 			},
-			expectError: false,
-		},
+			expectError: false},
 		{
 			name:        "user not found",
 			userID:      "nonexistent",
 			setupRepo:   func(m *mockRepository) {},
-			expectError: true,
-		},
-	}
+			expectError: true}}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -959,20 +897,16 @@ func TestDeleteUser(t *testing.T) {
 				user := &models.User{
 					ID:       "user-123",
 					Username: "testuser",
-					Email:    "test@example.com",
-				}
+					Email:    "test@example.com"}
 				m.users[user.ID] = user
 				m.usersByUsername[user.Username] = user
 			},
-			expectError: false,
-		},
+			expectError: false},
 		{
 			name:        "user not found",
 			userID:      "nonexistent",
 			setupRepo:   func(m *mockRepository) {},
-			expectError: true,
-		},
-	}
+			expectError: true}}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1016,19 +950,15 @@ func TestResetPassword(t *testing.T) {
 				m.users["user-123"] = &models.User{
 					ID:           "user-123",
 					Username:     "testuser",
-					PasswordHash: "old-hash",
-				}
+					PasswordHash: "old-hash"}
 			},
-			expectError: false,
-		},
+			expectError: false},
 		{
 			name:        "user not found",
 			userID:      "nonexistent",
 			newPassword: "newpassword456",
 			setupRepo:   func(m *mockRepository) {},
-			expectError: true,
-		},
-	}
+			expectError: true}}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1090,16 +1020,13 @@ func TestCreateHECToken(t *testing.T) {
 				if token.Token == "" {
 					t.Error("Expected token to be generated")
 				}
-			},
-		},
+			}},
 		{
 			name:        "token creation for any user",
 			userID:      "any-user-id",
 			tokenName:   "Another Token",
 			setupRepo:   func(m *mockRepository) {},
-			expectError: false,
-		},
-	}
+			expectError: false}}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1145,10 +1072,9 @@ func TestListHECTokensByUser(t *testing.T) {
 
 	// Create tokens for user
 	tokens := []*models.HECToken{
-		{ID: "token-1", UserID: "user-123", Name: "Token 1", Token: "tok1", CreatedAt: time.Now()},
-		{ID: "token-2", UserID: "user-123", Name: "Token 2", Token: "tok2", CreatedAt: time.Now()},
-		{ID: "token-3", UserID: "other-user", Name: "Token 3", Token: "tok3", CreatedAt: time.Now()},
-	}
+		{ID: "token-1", UserID: "user-123", Name: "Token 1", Token: "tok1"},
+		{ID: "token-2", UserID: "user-123", Name: "Token 2", Token: "tok2"},
+		{ID: "token-3", UserID: "other-user", Name: "Token 3", Token: "tok3"}}
 	for _, token := range tokens {
 		repo.hecTokens[token.Token] = token
 		repo.hecTokensByID[token.ID] = token
@@ -1178,18 +1104,14 @@ func TestRevokeToken(t *testing.T) {
 				m.sessions["valid-token"] = &models.Session{
 					ID:           "session-id",
 					RefreshToken: "valid-token",
-					ExpiresAt:    time.Now().Add(24 * time.Hour),
-				}
+					ExpiresAt:    time.Now().Add(24 * time.Hour)}
 			},
-			expectError: false,
-		},
+			expectError: false},
 		{
 			name:         "token not found",
 			refreshToken: "nonexistent",
 			setupRepo:    func(m *mockRepository) {},
-			expectError:  true,
-		},
-	}
+			expectError:  true}}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1231,54 +1153,45 @@ func TestUpdateUserDetails(t *testing.T) {
 			name:   "update email",
 			userID: "user-123",
 			request: &models.UpdateUserRequest{
-				Email: "newemail@example.com",
-			},
+				Email: "newemail@example.com"},
 			setupRepo: func(m *mockRepository) {
 				m.users["user-123"] = &models.User{
 					ID:       "user-123",
 					Username: "testuser",
 					Email:    "oldemail@example.com",
-					Roles:    []string{"viewer"},
-				}
+					Roles:    []string{"viewer"}}
 			},
 			expectError: false,
 			validateUser: func(t *testing.T, user *models.User) {
 				if user.Email != "newemail@example.com" {
 					t.Errorf("Expected email newemail@example.com, got %s", user.Email)
 				}
-			},
-		},
+			}},
 		{
 			name:   "update roles",
 			userID: "user-123",
 			request: &models.UpdateUserRequest{
-				Roles: []string{"admin", "editor"},
-			},
+				Roles: []string{"admin", "editor"}},
 			setupRepo: func(m *mockRepository) {
 				m.users["user-123"] = &models.User{
 					ID:       "user-123",
 					Username: "testuser",
 					Email:    "test@example.com",
-					Roles:    []string{"viewer"},
-				}
+					Roles:    []string{"viewer"}}
 			},
 			expectError: false,
 			validateUser: func(t *testing.T, user *models.User) {
 				if len(user.Roles) != 2 || user.Roles[0] != "admin" || user.Roles[1] != "editor" {
 					t.Errorf("Expected roles [admin, editor], got %v", user.Roles)
 				}
-			},
-		},
+			}},
 		{
 			name:   "user not found",
 			userID: "nonexistent",
 			request: &models.UpdateUserRequest{
-				Email: "test@example.com",
-			},
+				Email: "test@example.com"},
 			setupRepo:   func(m *mockRepository) {},
-			expectError: true,
-		},
-	}
+			expectError: true}}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1322,8 +1235,7 @@ func TestListAllHECTokensWithUsernames(t *testing.T) {
 	// Create users
 	users := []*models.User{
 		{ID: "user-1", Username: "alice"},
-		{ID: "user-2", Username: "bob"},
-	}
+		{ID: "user-2", Username: "bob"}}
 	for _, user := range users {
 		repo.users[user.ID] = user
 		repo.usersByUsername[user.Username] = user
@@ -1331,10 +1243,9 @@ func TestListAllHECTokensWithUsernames(t *testing.T) {
 
 	// Create tokens
 	tokens := []*models.HECToken{
-		{ID: "token-1", UserID: "user-1", Name: "Alice Token 1", Token: "tok1", CreatedAt: time.Now()},
-		{ID: "token-2", UserID: "user-1", Name: "Alice Token 2", Token: "tok2", CreatedAt: time.Now()},
-		{ID: "token-3", UserID: "user-2", Name: "Bob Token", Token: "tok3", CreatedAt: time.Now()},
-	}
+		{ID: "token-1", UserID: "user-1", Name: "Alice Token 1", Token: "tok1"},
+		{ID: "token-2", UserID: "user-1", Name: "Alice Token 2", Token: "tok2"},
+		{ID: "token-3", UserID: "user-2", Name: "Bob Token", Token: "tok3"}}
 	for _, token := range tokens {
 		repo.hecTokens[token.Token] = token
 		repo.hecTokensByID[token.ID] = token
@@ -1372,24 +1283,19 @@ func TestRevokeHECTokenByUser(t *testing.T) {
 			userID: "user-123",
 			setupRepo: func(m *mockRepository) {
 				m.hecTokens["test-token"] = &models.HECToken{
-					ID:        "token-id",
-					UserID:    "user-123",
-					Token:     "test-token",
-					Name:      "Test Token",
-					CreatedAt: time.Now(),
-				}
+					ID:     "token-id",
+					UserID: "user-123",
+					Token:  "test-token",
+					Name:   "Test Token"}
 				m.hecTokensByID["token-id"] = m.hecTokens["test-token"]
 			},
-			expectError: false,
-		},
+			expectError: false},
 		{
 			name:        "token not found",
 			token:       "nonexistent",
 			userID:      "user-123",
 			setupRepo:   func(m *mockRepository) {},
-			expectError: true,
-		},
-	}
+			expectError: true}}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1438,25 +1344,20 @@ func TestRevokeHECTokenByID(t *testing.T) {
 			userID:  "user-123",
 			setupRepo: func(m *mockRepository) {
 				token := &models.HECToken{
-					ID:        "token-id",
-					UserID:    "user-123",
-					Token:     "test-token",
-					Name:      "Test Token",
-					CreatedAt: time.Now(),
-				}
+					ID:     "token-id",
+					UserID: "user-123",
+					Token:  "test-token",
+					Name:   "Test Token"}
 				m.hecTokens["test-token"] = token
 				m.hecTokensByID["token-id"] = token
 			},
-			expectError: false,
-		},
+			expectError: false},
 		{
 			name:        "token not found",
 			tokenID:     "nonexistent",
 			userID:      "user-123",
 			setupRepo:   func(m *mockRepository) {},
-			expectError: true,
-		},
-	}
+			expectError: true}}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1500,8 +1401,7 @@ func TestResetPassword_UpdateUserError(t *testing.T) {
 	repo.users["user-123"] = &models.User{
 		ID:           "user-123",
 		Username:     "testuser",
-		PasswordHash: "old-hash",
-	}
+		PasswordHash: "old-hash"}
 
 	// Force UpdateUser to fail
 	repo.updateUserErr = errors.New("database connection failed")
@@ -1547,8 +1447,7 @@ func TestDeleteUser_DeleteError(t *testing.T) {
 	service, repo := setupTestService()
 	repo.users["user-123"] = &models.User{
 		ID:       "user-123",
-		Username: "testuser",
-	}
+		Username: "testuser"}
 
 	// Force DeleteUser to fail
 	repo.deleteUserErr = errors.New("cascade constraint violation")
@@ -1602,12 +1501,10 @@ func TestRevokeHECTokenByUser_RevokeError(t *testing.T) {
 	service, repo := setupTestService()
 
 	token := &models.HECToken{
-		ID:        "token-id",
-		UserID:    "user-123",
-		Token:     "test-token",
-		Name:      "Test Token",
-		CreatedAt: time.Now(),
-	}
+		ID:     "token-id",
+		UserID: "user-123",
+		Token:  "test-token",
+		Name:   "Test Token"}
 	repo.hecTokens["test-token"] = token
 
 	// Force RevokeHECToken to fail
@@ -1634,12 +1531,10 @@ func TestRevokeHECTokenByID_RevokeError(t *testing.T) {
 	service, repo := setupTestService()
 
 	token := &models.HECToken{
-		ID:        "token-id",
-		UserID:    "user-123",
-		Token:     "test-token",
-		Name:      "Test Token",
-		CreatedAt: time.Now(),
-	}
+		ID:     "token-id",
+		UserID: "user-123",
+		Token:  "test-token",
+		Name:   "Test Token"}
 	repo.hecTokens["test-token"] = token
 	repo.hecTokensByID["token-id"] = token
 
@@ -1667,12 +1562,10 @@ func TestRevokeHECTokenByUser_WrongOwner(t *testing.T) {
 	service, repo := setupTestService()
 
 	token := &models.HECToken{
-		ID:        "token-id",
-		UserID:    "user-123",
-		Token:     "test-token",
-		Name:      "Test Token",
-		CreatedAt: time.Now(),
-	}
+		ID:     "token-id",
+		UserID: "user-123",
+		Token:  "test-token",
+		Name:   "Test Token"}
 	repo.hecTokens["test-token"] = token
 
 	// Try to revoke token with wrong user
@@ -1698,12 +1591,10 @@ func TestRevokeHECTokenByID_WrongOwner(t *testing.T) {
 	service, repo := setupTestService()
 
 	token := &models.HECToken{
-		ID:        "token-id",
-		UserID:    "user-123",
-		Token:     "test-token",
-		Name:      "Test Token",
-		CreatedAt: time.Now(),
-	}
+		ID:     "token-id",
+		UserID: "user-123",
+		Token:  "test-token",
+		Name:   "Test Token"}
 	repo.hecTokens["test-token"] = token
 	repo.hecTokensByID["token-id"] = token
 

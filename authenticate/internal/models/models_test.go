@@ -82,10 +82,10 @@ func TestUser_ToResponse(t *testing.T) {
 			name: "active user",
 			user: &User{
 				ID:         "user-1",
+				VersionID:  "version-1",
 				Username:   "active",
 				Email:      "active@example.com",
 				Roles:      []string{"viewer"},
-				CreatedAt:  now,
 				DisabledAt: nil,
 				DeletedAt:  nil,
 			},
@@ -95,10 +95,10 @@ func TestUser_ToResponse(t *testing.T) {
 			name: "disabled user",
 			user: &User{
 				ID:         "user-2",
+				VersionID:  "version-2",
 				Username:   "disabled",
 				Email:      "disabled@example.com",
 				Roles:      []string{"admin"},
-				CreatedAt:  now,
 				DisabledAt: &disabledTime,
 				DeletedAt:  nil,
 			},
@@ -134,8 +134,8 @@ func TestUser_ToResponse(t *testing.T) {
 				t.Errorf("Expected Enabled = %v, got %v", tt.expectedEnabled, response.Enabled)
 			}
 
-			if !response.CreatedAt.Equal(tt.user.CreatedAt) {
-				t.Errorf("Expected CreatedAt %v, got %v", tt.user.CreatedAt, response.CreatedAt)
+			if response.VersionID != tt.user.VersionID {
+				t.Errorf("Expected VersionID %s, got %s", tt.user.VersionID, response.VersionID)
 			}
 		})
 	}
@@ -234,15 +234,13 @@ func TestHECToken_IsActive(t *testing.T) {
 }
 
 func TestHECToken_ToResponse(t *testing.T) {
-	now := time.Now()
-	future := now.Add(1 * time.Hour)
+	future := time.Now().Add(1 * time.Hour)
 
 	token := &HECToken{
 		ID:        "token-1",
 		Token:     "full-token-value-12345",
 		Name:      "Test Token",
 		UserID:    "user-123",
-		CreatedAt: now,
 		ExpiresAt: &future,
 	}
 
@@ -278,8 +276,6 @@ func TestHECToken_ToResponse(t *testing.T) {
 }
 
 func TestHECToken_ToMaskedResponse(t *testing.T) {
-	now := time.Now()
-
 	tests := []struct {
 		name          string
 		token         *HECToken
@@ -288,22 +284,20 @@ func TestHECToken_ToMaskedResponse(t *testing.T) {
 		{
 			name: "long token is masked",
 			token: &HECToken{
-				ID:        "token-1",
-				Token:     "abcdefgh123456789ijklmnop",
-				Name:      "Test Token",
-				UserID:    "user-123",
-				CreatedAt: now,
+				ID:     "token-1",
+				Token:  "abcdefgh123456789ijklmnop",
+				Name:   "Test Token",
+				UserID: "user-123",
 			},
 			expectedToken: "abcdefgh...ijklmnop",
 		},
 		{
 			name: "short token is not masked",
 			token: &HECToken{
-				ID:        "token-2",
-				Token:     "shorttoken123",
-				Name:      "Short Token",
-				UserID:    "user-456",
-				CreatedAt: now,
+				ID:     "token-2",
+				Token:  "shorttoken123",
+				Name:   "Short Token",
+				UserID: "user-456",
 			},
 			expectedToken: "shorttoken123",
 		},
@@ -333,14 +327,11 @@ func TestHECToken_ToMaskedResponse(t *testing.T) {
 }
 
 func TestHECToken_ToMaskedResponseWithUsername(t *testing.T) {
-	now := time.Now()
-
 	token := &HECToken{
-		ID:        "token-1",
-		Token:     "abcdefgh123456789ijklmnop",
-		Name:      "Test Token",
-		UserID:    "user-123",
-		CreatedAt: now,
+		ID:     "token-1",
+		Token:  "abcdefgh123456789ijklmnop",
+		Name:   "Test Token",
+		UserID: "user-123",
 	}
 
 	username := "testuser"

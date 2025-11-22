@@ -199,6 +199,17 @@ func (s *SearchService) buildOpenSearchQuery(req *models.SearchRequest) map[stri
 
 	boolQuery := make(map[string]interface{})
 	must := []interface{}{}
+	filter := []interface{}{}
+
+	// CRITICAL: Add tenant_id filter for data isolation
+	// This ensures users can only see events belonging to their tenant
+	if req.TenantID != "" {
+		filter = append(filter, map[string]interface{}{
+			"term": map[string]interface{}{
+				"tenant_id": req.TenantID,
+			},
+		})
+	}
 
 	if req.Query != "" && req.Query != "*" {
 		must = append(must, map[string]interface{}{
@@ -210,7 +221,7 @@ func (s *SearchService) buildOpenSearchQuery(req *models.SearchRequest) map[stri
 	}
 
 	if req.TimeRange != nil {
-		must = append(must, map[string]interface{}{
+		filter = append(filter, map[string]interface{}{
 			"range": map[string]interface{}{
 				"time": map[string]interface{}{
 					"gte": req.TimeRange.From.Unix(),
@@ -220,19 +231,23 @@ func (s *SearchService) buildOpenSearchQuery(req *models.SearchRequest) map[stri
 		})
 	}
 
+	// Build bool query
 	if len(must) > 0 {
 		boolQuery["must"] = must
+	}
+	if len(filter) > 0 {
+		boolQuery["filter"] = filter
+	}
+
+	// If we have any bool conditions, use bool query; otherwise match_all
+	if len(must) > 0 || len(filter) > 0 {
+		query["query"] = map[string]interface{}{
+			"bool": boolQuery,
+		}
 	} else {
 		query["query"] = map[string]interface{}{
 			"match_all": map[string]interface{}{},
 		}
-		s.addSortAndSearchAfter(query, req)
-		s.addAggregations(query, req)
-		return query
-	}
-
-	query["query"] = map[string]interface{}{
-		"bool": boolQuery,
 	}
 
 	s.addSortAndSearchAfter(query, req)

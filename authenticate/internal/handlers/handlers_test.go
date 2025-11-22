@@ -39,8 +39,7 @@ func newTestRepo() *testRepo {
 		usersName: make(map[string]*models.User),
 		sessions:  make(map[string]*models.Session),
 		hecTokens: make(map[string]*models.HECToken),
-		hecByID:   make(map[string]*models.HECToken),
-	}
+		hecByID:   make(map[string]*models.HECToken)}
 }
 
 func (r *testRepo) CreateUser(ctx context.Context, user *models.User) error {
@@ -180,8 +179,7 @@ func setupHandler() *AuthHandler {
 	cfg := &config.AuthConfig{
 		JWTSecret:        "test-secret-key-long-enough",
 		JWTRefreshSecret: "test-refresh-secret-long",
-		AuditSecret:      "test-audit",
-	}
+		AuditSecret:      "test-audit"}
 	svc := service.NewAuthService(repo, nil, cfg)
 	return NewAuthHandler(svc)
 }
@@ -235,8 +233,7 @@ func TestLoginHandler(t *testing.T) {
 		handler := setupHandler()
 		body, _ := json.Marshal(models.LoginRequest{
 			Username: "nonexistent",
-			Password: "pass",
-		})
+			Password: "pass"})
 		req := httptest.NewRequest("POST", "/login", bytes.NewReader(body))
 		w := httptest.NewRecorder()
 
@@ -763,30 +760,24 @@ func TestGetClientIP(t *testing.T) {
 			name:       "X-Forwarded-For",
 			headers:    map[string]string{"X-Forwarded-For": "1.2.3.4"},
 			remoteAddr: "5.6.7.8:1234",
-			expected:   "1.2.3.4",
-		},
+			expected:   "1.2.3.4"},
 		{
 			name:       "X-Real-IP",
 			headers:    map[string]string{"X-Real-IP": "2.3.4.5"},
 			remoteAddr: "5.6.7.8:1234",
-			expected:   "2.3.4.5",
-		},
+			expected:   "2.3.4.5"},
 		{
 			name:       "RemoteAddr fallback",
 			headers:    map[string]string{},
 			remoteAddr: "3.4.5.6:1234",
-			expected:   "3.4.5.6:1234",
-		},
+			expected:   "3.4.5.6:1234"},
 		{
 			name: "X-Forwarded-For takes precedence",
 			headers: map[string]string{
 				"X-Forwarded-For": "1.1.1.1",
-				"X-Real-IP":       "2.2.2.2",
-			},
+				"X-Real-IP":       "2.2.2.2"},
 			remoteAddr: "3.3.3.3:1234",
-			expected:   "1.1.1.1",
-		},
-	}
+			expected:   "1.1.1.1"}}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -813,8 +804,7 @@ func TestListHECTokensHandler_AdminUser(t *testing.T) {
 	cfg := &config.AuthConfig{
 		JWTSecret:        "test-secret-key-long-enough",
 		JWTRefreshSecret: "test-refresh-secret-long",
-		AuditSecret:      "test-audit",
-	}
+		AuditSecret:      "test-audit"}
 	svc := service.NewAuthService(repo, nil, cfg)
 	handler := NewAuthHandler(svc)
 
@@ -823,35 +813,28 @@ func TestListHECTokensHandler_AdminUser(t *testing.T) {
 		ID:       "user-1",
 		Username: "user1",
 		Email:    "user1@example.com",
-		Roles:    []string{"viewer"},
-	}
+		Roles:    []string{"viewer"}}
 	user2 := &models.User{
 		ID:       "user-2",
 		Username: "user2",
 		Email:    "user2@example.com",
-		Roles:    []string{"viewer"},
-	}
+		Roles:    []string{"viewer"}}
 
 	// Add users to repo
 	repo.CreateUser(context.Background(), user1)
 	repo.CreateUser(context.Background(), user2)
 
 	// Create tokens
-	now := time.Now()
 	token1 := &models.HECToken{
-		ID:        "token-1",
-		Token:     "abc123456789xyz987654321",
-		Name:      "Token 1",
-		UserID:    "user-1",
-		CreatedAt: now,
-	}
+		ID:     "token-1",
+		Token:  "abc123456789xyz987654321",
+		Name:   "Token 1",
+		UserID: "user-1"}
 	token2 := &models.HECToken{
-		ID:        "token-2",
-		Token:     "def456789012uvw654321098",
-		Name:      "Token 2",
-		UserID:    "user-2",
-		CreatedAt: now,
-	}
+		ID:     "token-2",
+		Token:  "def456789012uvw654321098",
+		Name:   "Token 2",
+		UserID: "user-2"}
 	repo.CreateHECToken(context.Background(), token1)
 	repo.CreateHECToken(context.Background(), token2)
 
@@ -892,8 +875,7 @@ func TestListHECTokensHandler_RegularUser(t *testing.T) {
 	cfg := &config.AuthConfig{
 		JWTSecret:        "test-secret-key-long-enough",
 		JWTRefreshSecret: "test-refresh-secret-long",
-		AuditSecret:      "test-audit",
-	}
+		AuditSecret:      "test-audit"}
 	svc := service.NewAuthService(repo, nil, cfg)
 	handler := NewAuthHandler(svc)
 
@@ -902,26 +884,20 @@ func TestListHECTokensHandler_RegularUser(t *testing.T) {
 		ID:       "user-1",
 		Username: "user1",
 		Email:    "user1@example.com",
-		Roles:    []string{"viewer"},
-	}
+		Roles:    []string{"viewer"}}
 	repo.CreateUser(context.Background(), user1)
 
 	// Create tokens for this user and another user
-	now := time.Now()
 	token1 := &models.HECToken{
-		ID:        "token-1",
-		Token:     "abc123456789xyz987654321",
-		Name:      "My Token",
-		UserID:    "user-1",
-		CreatedAt: now,
-	}
+		ID:     "token-1",
+		Token:  "abc123456789xyz987654321",
+		Name:   "My Token",
+		UserID: "user-1"}
 	token2 := &models.HECToken{
-		ID:        "token-2",
-		Token:     "def456789012uvw654321098",
-		Name:      "Other User Token",
-		UserID:    "user-2",
-		CreatedAt: now,
-	}
+		ID:     "token-2",
+		Token:  "def456789012uvw654321098",
+		Name:   "Other User Token",
+		UserID: "user-2"}
 	repo.CreateHECToken(context.Background(), token1)
 	repo.CreateHECToken(context.Background(), token2)
 
@@ -985,20 +961,16 @@ func TestRevokeHECTokenByIDHandler_Success(t *testing.T) {
 	cfg := &config.AuthConfig{
 		JWTSecret:        "test-secret-key-long-enough",
 		JWTRefreshSecret: "test-refresh-secret-long",
-		AuditSecret:      "test-audit",
-	}
+		AuditSecret:      "test-audit"}
 	svc := service.NewAuthService(repo, nil, cfg)
 	handler := NewAuthHandler(svc)
 
 	// Create token
-	now := time.Now()
 	token := &models.HECToken{
-		ID:        "token-123",
-		Token:     "abc123",
-		Name:      "Test Token",
-		UserID:    "user-1",
-		CreatedAt: now,
-	}
+		ID:     "token-123",
+		Token:  "abc123",
+		Name:   "Test Token",
+		UserID: "user-1"}
 	repo.CreateHECToken(context.Background(), token)
 
 	// User revoking their own token
@@ -1024,20 +996,16 @@ func TestRevokeHECTokenByIDHandler_Unauthorized(t *testing.T) {
 	cfg := &config.AuthConfig{
 		JWTSecret:        "test-secret-key-long-enough",
 		JWTRefreshSecret: "test-refresh-secret-long",
-		AuditSecret:      "test-audit",
-	}
+		AuditSecret:      "test-audit"}
 	svc := service.NewAuthService(repo, nil, cfg)
 	handler := NewAuthHandler(svc)
 
 	// Create token owned by user-1
-	now := time.Now()
 	token := &models.HECToken{
-		ID:        "token-123",
-		Token:     "abc123",
-		Name:      "Test Token",
-		UserID:    "user-1",
-		CreatedAt: now,
-	}
+		ID:     "token-123",
+		Token:  "abc123",
+		Name:   "Test Token",
+		UserID: "user-1"}
 	repo.CreateHECToken(context.Background(), token)
 
 	// Different user trying to revoke
@@ -1093,20 +1061,16 @@ func TestValidateHECTokenHandler_ValidToken(t *testing.T) {
 	cfg := &config.AuthConfig{
 		JWTSecret:        "test-secret-key-long-enough",
 		JWTRefreshSecret: "test-refresh-secret-long",
-		AuditSecret:      "test-audit",
-	}
+		AuditSecret:      "test-audit"}
 	svc := service.NewAuthService(repo, nil, cfg)
 	handler := NewAuthHandler(svc)
 
 	// Create valid token
-	now := time.Now()
 	token := &models.HECToken{
-		ID:        "token-123",
-		Token:     "valid-token-12345",
-		Name:      "Test Token",
-		UserID:    "user-1",
-		CreatedAt: now,
-	}
+		ID:     "token-123",
+		Token:  "valid-token-12345",
+		Name:   "Test Token",
+		UserID: "user-1"}
 	repo.CreateHECToken(context.Background(), token)
 
 	body, _ := json.Marshal(map[string]string{"token": "valid-token-12345"})
@@ -1153,8 +1117,7 @@ func TestValidateHECTokenHandler_RevokedToken(t *testing.T) {
 	cfg := &config.AuthConfig{
 		JWTSecret:        "test-secret-key-long-enough",
 		JWTRefreshSecret: "test-refresh-secret-long",
-		AuditSecret:      "test-audit",
-	}
+		AuditSecret:      "test-audit"}
 	svc := service.NewAuthService(repo, nil, cfg)
 	handler := NewAuthHandler(svc)
 
@@ -1165,7 +1128,6 @@ func TestValidateHECTokenHandler_RevokedToken(t *testing.T) {
 		Token:     "revoked-token",
 		Name:      "Test Token",
 		UserID:    "user-1",
-		CreatedAt: now,
 		RevokedAt: &now,
 	}
 	repo.CreateHECToken(context.Background(), token)
@@ -1219,8 +1181,7 @@ func TestLoginHandler_Success(t *testing.T) {
 	cfg := &config.AuthConfig{
 		JWTSecret:        "test-secret-key-long-enough",
 		JWTRefreshSecret: "test-refresh-secret-long",
-		AuditSecret:      "test-audit",
-	}
+		AuditSecret:      "test-audit"}
 	svc := service.NewAuthService(repo, nil, cfg)
 	handler := NewAuthHandler(svc)
 
@@ -1231,15 +1192,13 @@ func TestLoginHandler_Success(t *testing.T) {
 		Username:     "testuser",
 		Email:        "test@example.com",
 		PasswordHash: string(hashedPassword),
-		Roles:        []string{"viewer"},
-	}
+		Roles:        []string{"viewer"}}
 	repo.CreateUser(context.Background(), user)
 
 	// Test login
 	body, _ := json.Marshal(models.LoginRequest{
 		Username: "testuser",
-		Password: "password123",
-	})
+		Password: "password123"})
 	req := httptest.NewRequest("POST", "/login", bytes.NewReader(body))
 	w := httptest.NewRecorder()
 
@@ -1265,8 +1224,7 @@ func TestCreateUserHandler_Success(t *testing.T) {
 	cfg := &config.AuthConfig{
 		JWTSecret:        "test-secret-key-long-enough",
 		JWTRefreshSecret: "test-refresh-secret-long",
-		AuditSecret:      "test-audit",
-	}
+		AuditSecret:      "test-audit"}
 	svc := service.NewAuthService(repo, nil, cfg)
 	handler := NewAuthHandler(svc)
 
@@ -1275,8 +1233,7 @@ func TestCreateUserHandler_Success(t *testing.T) {
 		Username: "newuser",
 		Email:    "newuser@example.com",
 		Password: "password123",
-		Roles:    []string{"viewer"},
-	}
+		Roles:    []string{"viewer"}}
 	body, _ := json.Marshal(reqData)
 	req := httptest.NewRequest("POST", "/api/v1/users/create", bytes.NewReader(body))
 	req.Header.Set("X-User-ID", "admin-user")
@@ -1308,8 +1265,7 @@ func TestRefreshTokenHandler_Success(t *testing.T) {
 	cfg := &config.AuthConfig{
 		JWTSecret:        "test-secret-key-long-enough",
 		JWTRefreshSecret: "test-refresh-secret-long",
-		AuditSecret:      "test-audit",
-	}
+		AuditSecret:      "test-audit"}
 	svc := service.NewAuthService(repo, nil, cfg)
 	handler := NewAuthHandler(svc)
 
@@ -1320,19 +1276,16 @@ func TestRefreshTokenHandler_Success(t *testing.T) {
 		Username:     "testuser",
 		Email:        "test@example.com",
 		PasswordHash: string(hashedPassword),
-		Roles:        []string{"viewer"},
-	}
+		Roles:        []string{"viewer"}}
 	repo.CreateUser(context.Background(), user)
 
 	loginResp, _ := svc.Login(context.Background(), &models.LoginRequest{
 		Username: "testuser",
-		Password: "password123",
-	}, "127.0.0.1", "test-agent")
+		Password: "password123"}, "127.0.0.1", "test-agent")
 
 	// Test refresh token
 	body, _ := json.Marshal(models.RefreshTokenRequest{
-		RefreshToken: loginResp.RefreshToken,
-	})
+		RefreshToken: loginResp.RefreshToken})
 	req := httptest.NewRequest("POST", "/refresh", bytes.NewReader(body))
 	w := httptest.NewRecorder()
 
@@ -1355,8 +1308,7 @@ func TestValidateTokenHandler_Success(t *testing.T) {
 	cfg := &config.AuthConfig{
 		JWTSecret:        "test-secret-key-long-enough",
 		JWTRefreshSecret: "test-refresh-secret-long",
-		AuditSecret:      "test-audit",
-	}
+		AuditSecret:      "test-audit"}
 	svc := service.NewAuthService(repo, nil, cfg)
 	handler := NewAuthHandler(svc)
 
@@ -1367,19 +1319,16 @@ func TestValidateTokenHandler_Success(t *testing.T) {
 		Username:     "testuser",
 		Email:        "test@example.com",
 		PasswordHash: string(hashedPassword),
-		Roles:        []string{"viewer"},
-	}
+		Roles:        []string{"viewer"}}
 	repo.CreateUser(context.Background(), user)
 
 	loginResp, _ := svc.Login(context.Background(), &models.LoginRequest{
 		Username: "testuser",
-		Password: "password123",
-	}, "127.0.0.1", "test-agent")
+		Password: "password123"}, "127.0.0.1", "test-agent")
 
 	// Test validate token
 	body, _ := json.Marshal(models.ValidateTokenRequest{
-		Token: loginResp.AccessToken,
-	})
+		Token: loginResp.AccessToken})
 	req := httptest.NewRequest("POST", "/validate", bytes.NewReader(body))
 	w := httptest.NewRecorder()
 
@@ -1405,8 +1354,7 @@ func TestRevokeTokenHandler_Success(t *testing.T) {
 	cfg := &config.AuthConfig{
 		JWTSecret:        "test-secret-key-long-enough",
 		JWTRefreshSecret: "test-refresh-secret-long",
-		AuditSecret:      "test-audit",
-	}
+		AuditSecret:      "test-audit"}
 	svc := service.NewAuthService(repo, nil, cfg)
 	handler := NewAuthHandler(svc)
 
@@ -1417,19 +1365,16 @@ func TestRevokeTokenHandler_Success(t *testing.T) {
 		Username:     "testuser",
 		Email:        "test@example.com",
 		PasswordHash: string(hashedPassword),
-		Roles:        []string{"viewer"},
-	}
+		Roles:        []string{"viewer"}}
 	repo.CreateUser(context.Background(), user)
 
 	loginResp, _ := svc.Login(context.Background(), &models.LoginRequest{
 		Username: "testuser",
-		Password: "password123",
-	}, "127.0.0.1", "test-agent")
+		Password: "password123"}, "127.0.0.1", "test-agent")
 
 	// Test revoke token
 	body, _ := json.Marshal(models.RevokeTokenRequest{
-		Token: loginResp.RefreshToken,
-	})
+		Token: loginResp.RefreshToken})
 	req := httptest.NewRequest("POST", "/revoke", bytes.NewReader(body))
 	w := httptest.NewRecorder()
 
@@ -1451,8 +1396,7 @@ func TestGetUserHandler_Success(t *testing.T) {
 	cfg := &config.AuthConfig{
 		JWTSecret:        "test-secret-key-long-enough",
 		JWTRefreshSecret: "test-refresh-secret-long",
-		AuditSecret:      "test-audit",
-	}
+		AuditSecret:      "test-audit"}
 	svc := service.NewAuthService(repo, nil, cfg)
 	handler := NewAuthHandler(svc)
 
@@ -1461,8 +1405,7 @@ func TestGetUserHandler_Success(t *testing.T) {
 		ID:       "user-123",
 		Username: "testuser",
 		Email:    "test@example.com",
-		Roles:    []string{"viewer"},
-	}
+		Roles:    []string{"viewer"}}
 	repo.CreateUser(context.Background(), user)
 
 	// Get user
@@ -1491,8 +1434,7 @@ func TestUpdateUserHandler_Success(t *testing.T) {
 	cfg := &config.AuthConfig{
 		JWTSecret:        "test-secret-key-long-enough",
 		JWTRefreshSecret: "test-refresh-secret-long",
-		AuditSecret:      "test-audit",
-	}
+		AuditSecret:      "test-audit"}
 	svc := service.NewAuthService(repo, nil, cfg)
 	handler := NewAuthHandler(svc)
 
@@ -1501,15 +1443,13 @@ func TestUpdateUserHandler_Success(t *testing.T) {
 		ID:       "user-123",
 		Username: "testuser",
 		Email:    "test@example.com",
-		Roles:    []string{"viewer"},
-	}
+		Roles:    []string{"viewer"}}
 	repo.CreateUser(context.Background(), user)
 
 	// Update user
 	updateReq := models.UpdateUserRequest{
 		Email: "newemail@example.com",
-		Roles: []string{"admin", "viewer"},
-	}
+		Roles: []string{"admin", "viewer"}}
 	body, _ := json.Marshal(updateReq)
 	req := httptest.NewRequest("PUT", "/users?id=user-123", bytes.NewReader(body))
 	req.Header.Set("X-User-ID", "admin-user")
@@ -1537,8 +1477,7 @@ func TestDeleteUserHandler_Success(t *testing.T) {
 	cfg := &config.AuthConfig{
 		JWTSecret:        "test-secret-key-long-enough",
 		JWTRefreshSecret: "test-refresh-secret-long",
-		AuditSecret:      "test-audit",
-	}
+		AuditSecret:      "test-audit"}
 	svc := service.NewAuthService(repo, nil, cfg)
 	handler := NewAuthHandler(svc)
 
@@ -1547,8 +1486,7 @@ func TestDeleteUserHandler_Success(t *testing.T) {
 		ID:       "user-123",
 		Username: "testuser",
 		Email:    "test@example.com",
-		Roles:    []string{"viewer"},
-	}
+		Roles:    []string{"viewer"}}
 	repo.CreateUser(context.Background(), user)
 
 	// Delete user
@@ -1574,8 +1512,7 @@ func TestResetPasswordHandler_Success(t *testing.T) {
 	cfg := &config.AuthConfig{
 		JWTSecret:        "test-secret-key-long-enough",
 		JWTRefreshSecret: "test-refresh-secret-long",
-		AuditSecret:      "test-audit",
-	}
+		AuditSecret:      "test-audit"}
 	svc := service.NewAuthService(repo, nil, cfg)
 	handler := NewAuthHandler(svc)
 
@@ -1586,14 +1523,12 @@ func TestResetPasswordHandler_Success(t *testing.T) {
 		Username:     "testuser",
 		Email:        "test@example.com",
 		PasswordHash: string(hashedPassword),
-		Roles:        []string{"viewer"},
-	}
+		Roles:        []string{"viewer"}}
 	repo.CreateUser(context.Background(), user)
 
 	// Reset password
 	resetReq := models.ResetPasswordRequest{
-		NewPassword: "newpassword123",
-	}
+		NewPassword: "newpassword123"}
 	body, _ := json.Marshal(resetReq)
 	req := httptest.NewRequest("POST", "/reset-password?id=user-123", bytes.NewReader(body))
 	req.Header.Set("X-User-ID", "admin-user")
@@ -1618,8 +1553,7 @@ func TestCreateHECTokenHandler_Success(t *testing.T) {
 	cfg := &config.AuthConfig{
 		JWTSecret:        "test-secret-key-long-enough",
 		JWTRefreshSecret: "test-refresh-secret-long",
-		AuditSecret:      "test-audit",
-	}
+		AuditSecret:      "test-audit"}
 	svc := service.NewAuthService(repo, nil, cfg)
 	handler := NewAuthHandler(svc)
 
@@ -1628,14 +1562,12 @@ func TestCreateHECTokenHandler_Success(t *testing.T) {
 		ID:       "user-123",
 		Username: "testuser",
 		Email:    "test@example.com",
-		Roles:    []string{"viewer"},
-	}
+		Roles:    []string{"viewer"}}
 	repo.CreateUser(context.Background(), user)
 
 	// Create HEC token
 	createReq := models.CreateHECTokenRequest{
-		Name: "My Test Token",
-	}
+		Name: "My Test Token"}
 	body, _ := json.Marshal(createReq)
 	req := httptest.NewRequest("POST", "/api/v1/hec/tokens", bytes.NewReader(body))
 	req.Header.Set("X-User-ID", "user-123")
@@ -1669,25 +1601,21 @@ func TestRevokeHECTokenHandler_Success(t *testing.T) {
 	cfg := &config.AuthConfig{
 		JWTSecret:        "test-secret-key-long-enough",
 		JWTRefreshSecret: "test-refresh-secret-long",
-		AuditSecret:      "test-audit",
-	}
+		AuditSecret:      "test-audit"}
 	svc := service.NewAuthService(repo, nil, cfg)
 	handler := NewAuthHandler(svc)
 
 	// Create HEC token
 	token := &models.HECToken{
-		ID:        "token-123",
-		Token:     "test-token-value",
-		Name:      "Test Token",
-		UserID:    "user-123",
-		CreatedAt: time.Now(),
-	}
+		ID:     "token-123",
+		Token:  "test-token-value",
+		Name:   "Test Token",
+		UserID: "user-123"}
 	repo.CreateHECToken(context.Background(), token)
 
 	// Revoke token
 	revokeReq := models.RevokeHECTokenRequest{
-		Token: "test-token-value",
-	}
+		Token: "test-token-value"}
 	body, _ := json.Marshal(revokeReq)
 	req := httptest.NewRequest("POST", "/hec/tokens/revoke", bytes.NewReader(body))
 	req.Header.Set("X-User-ID", "user-123")
@@ -1711,8 +1639,7 @@ func TestUpdateUserHandler_PatchMethod(t *testing.T) {
 	cfg := &config.AuthConfig{
 		JWTSecret:        "test-secret-key-long-enough",
 		JWTRefreshSecret: "test-refresh-secret-long",
-		AuditSecret:      "test-audit",
-	}
+		AuditSecret:      "test-audit"}
 	svc := service.NewAuthService(repo, nil, cfg)
 	handler := NewAuthHandler(svc)
 
@@ -1721,14 +1648,12 @@ func TestUpdateUserHandler_PatchMethod(t *testing.T) {
 		ID:       "user-123",
 		Username: "testuser",
 		Email:    "test@example.com",
-		Roles:    []string{"viewer"},
-	}
+		Roles:    []string{"viewer"}}
 	repo.CreateUser(context.Background(), user)
 
 	// Update user with PATCH method
 	updateReq := models.UpdateUserRequest{
-		Email: "patched@example.com",
-	}
+		Email: "patched@example.com"}
 	body, _ := json.Marshal(updateReq)
 	req := httptest.NewRequest("PATCH", "/users?id=user-123", bytes.NewReader(body))
 	req.Header.Set("X-User-ID", "admin-user")

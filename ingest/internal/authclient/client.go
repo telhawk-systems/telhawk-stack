@@ -25,6 +25,7 @@ type ValidateHECTokenResponse struct {
 	TokenID   string `json:"token_id,omitempty"`
 	TokenName string `json:"token_name,omitempty"`
 	UserID    string `json:"user_id,omitempty"`
+	TenantID  string `json:"tenant_id,omitempty"` // Client tenant for data isolation
 }
 
 type tokenCache struct {

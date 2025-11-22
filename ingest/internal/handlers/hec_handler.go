@@ -14,13 +14,14 @@ import (
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/metrics"
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/models"
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/ratelimit"
+	"github.com/telhawk-systems/telhawk-stack/ingest/internal/service"
 	"github.com/telhawk-systems/telhawk-stack/ingest/pkg/hec"
 )
 
 type IngestServiceInterface interface {
-	IngestEvent(event *models.HECEvent, sourceIP, hecTokenID string) (string, error)
-	IngestRaw(data []byte, sourceIP, hecTokenID, source, sourceType, host string) (string, error)
-	ValidateHECToken(ctx context.Context, token string) error
+	IngestEvent(event *models.HECEvent, sourceIP string, tokenInfo *service.TokenInfo) (string, error)
+	IngestRaw(data []byte, sourceIP string, tokenInfo *service.TokenInfo, source, sourceType, host string) (string, error)
+	ValidateHECToken(ctx context.Context, token string) (*service.TokenInfo, error)
 	GetStats() models.IngestionStats
 	QueryAcks(ackIDs []string) map[string]bool
 }
@@ -69,7 +70,8 @@ func (h *HECHandler) HandleEvent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validate token with auth service
-	if err := h.service.ValidateHECToken(r.Context(), token); err != nil {
+	tokenInfo, err := h.service.ValidateHECToken(r.Context(), token)
+	if err != nil {
 		log.Printf("HEC token validation failed: %v", err)
 		h.sendError(w, hec.ErrUnauthorized, http.StatusUnauthorized)
 		return
@@ -130,7 +132,7 @@ func (h *HECHandler) HandleEvent(w http.ResponseWriter, r *http.Request) {
 	// Ingest events
 	var ackID string
 	for _, event := range events {
-		eventAckID, err := h.service.IngestEvent(&event, sourceIP, token)
+		eventAckID, err := h.service.IngestEvent(&event, sourceIP, tokenInfo)
 		if err != nil {
 			h.sendError(w, hec.ErrServerBusy, http.StatusServiceUnavailable)
 			return
@@ -184,7 +186,8 @@ func (h *HECHandler) HandleRaw(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validate token with auth service
-	if err := h.service.ValidateHECToken(r.Context(), token); err != nil {
+	tokenInfo, err := h.service.ValidateHECToken(r.Context(), token)
+	if err != nil {
 		log.Printf("HEC token validation failed: %v", err)
 		h.sendError(w, hec.ErrUnauthorized, http.StatusUnauthorized)
 		return
@@ -235,7 +238,7 @@ func (h *HECHandler) HandleRaw(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Ingest raw event
-	ackID, err := h.service.IngestRaw(body, sourceIP, token, source, sourceType, host)
+	ackID, err := h.service.IngestRaw(body, sourceIP, tokenInfo, source, sourceType, host)
 	if err != nil {
 		h.sendError(w, hec.ErrServerBusy, http.StatusServiceUnavailable)
 		return

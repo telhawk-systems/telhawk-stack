@@ -45,18 +45,22 @@ func (r *PostgresRepository) Close() {
 	r.pool.Close()
 }
 
+// =============================================================================
+// USERS (versioned: id + version_id)
+// =============================================================================
+
 func (r *PostgresRepository) CreateUser(ctx context.Context, user *models.User) error {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
 	query := `
-		INSERT INTO users (id, username, email, password_hash, roles, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		INSERT INTO users (id, version_id, username, email, password_hash, roles, primary_tenant_id)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 	`
 
 	_, err := r.pool.Exec(ctx, query,
-		user.ID, user.Username, user.Email, user.PasswordHash,
-		user.Roles, user.CreatedAt,
+		user.ID, user.VersionID, user.Username, user.Email, user.PasswordHash,
+		user.Roles, user.PrimaryTenantID,
 	)
 
 	if err != nil {
@@ -75,16 +79,21 @@ func (r *PostgresRepository) GetUserByUsername(ctx context.Context, username str
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
+	// Get the latest version of the user by username
 	query := `
-		SELECT id, username, email, password_hash, roles, created_at, disabled_at, disabled_by, deleted_at, deleted_by
+		SELECT id, version_id, username, email, password_hash, roles, primary_tenant_id,
+		       disabled_at, disabled_by, deleted_at, deleted_by
 		FROM users
-		WHERE username = $1
+		WHERE username = $1 AND deleted_at IS NULL
+		ORDER BY version_id DESC
+		LIMIT 1
 	`
 
 	var user models.User
 	err := r.pool.QueryRow(ctx, query, username).Scan(
-		&user.ID, &user.Username, &user.Email, &user.PasswordHash,
-		&user.Roles, &user.CreatedAt, &user.DisabledAt, &user.DisabledBy, &user.DeletedAt, &user.DeletedBy,
+		&user.ID, &user.VersionID, &user.Username, &user.Email, &user.PasswordHash,
+		&user.Roles, &user.PrimaryTenantID,
+		&user.DisabledAt, &user.DisabledBy, &user.DeletedAt, &user.DeletedBy,
 	)
 
 	if err != nil {
@@ -101,16 +110,21 @@ func (r *PostgresRepository) GetUserByID(ctx context.Context, id string) (*model
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
+	// Get the latest version of the user by stable ID
 	query := `
-		SELECT id, username, email, password_hash, roles, created_at, disabled_at, disabled_by, deleted_at, deleted_by
+		SELECT id, version_id, username, email, password_hash, roles, primary_tenant_id,
+		       disabled_at, disabled_by, deleted_at, deleted_by
 		FROM users
-		WHERE id = $1
+		WHERE id = $1 AND deleted_at IS NULL
+		ORDER BY version_id DESC
+		LIMIT 1
 	`
 
 	var user models.User
 	err := r.pool.QueryRow(ctx, query, id).Scan(
-		&user.ID, &user.Username, &user.Email, &user.PasswordHash,
-		&user.Roles, &user.CreatedAt, &user.DisabledAt, &user.DisabledBy, &user.DeletedAt, &user.DeletedBy,
+		&user.ID, &user.VersionID, &user.Username, &user.Email, &user.PasswordHash,
+		&user.Roles, &user.PrimaryTenantID,
+		&user.DisabledAt, &user.DisabledBy, &user.DeletedAt, &user.DeletedBy,
 	)
 
 	if err != nil {
@@ -127,14 +141,18 @@ func (r *PostgresRepository) UpdateUser(ctx context.Context, user *models.User) 
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
+	// For versioned tables, we update the existing row (for lifecycle changes)
+	// or insert a new row with new version_id (for content changes)
+	// This simple implementation updates in place - for true versioning,
+	// caller should generate new version_id and insert
 	query := `
 		UPDATE users
-		SET username = $2, email = $3, password_hash = $4, roles = $5
-		WHERE id = $1
+		SET username = $2, email = $3, password_hash = $4, roles = $5, primary_tenant_id = $6
+		WHERE version_id = $1
 	`
 
 	result, err := r.pool.Exec(ctx, query,
-		user.ID, user.Username, user.Email, user.PasswordHash, user.Roles,
+		user.VersionID, user.Username, user.Email, user.PasswordHash, user.Roles, user.PrimaryTenantID,
 	)
 
 	if err != nil {
@@ -148,18 +166,81 @@ func (r *PostgresRepository) UpdateUser(ctx context.Context, user *models.User) 
 	return nil
 }
 
+func (r *PostgresRepository) ListUsers(ctx context.Context) ([]*models.User, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	// Get latest version of each user, ordered by id (created_at via UUIDv7)
+	query := `
+		SELECT DISTINCT ON (id) id, version_id, username, email, password_hash, roles, primary_tenant_id,
+		       disabled_at, disabled_by, deleted_at, deleted_by
+		FROM users
+		WHERE deleted_at IS NULL
+		ORDER BY id DESC, version_id DESC
+	`
+
+	rows, err := r.pool.Query(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list users: %w", err)
+	}
+	defer rows.Close()
+
+	var users []*models.User
+	for rows.Next() {
+		var user models.User
+		err := rows.Scan(
+			&user.ID, &user.VersionID, &user.Username, &user.Email, &user.PasswordHash,
+			&user.Roles, &user.PrimaryTenantID,
+			&user.DisabledAt, &user.DisabledBy, &user.DeletedAt, &user.DeletedBy,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan user: %w", err)
+		}
+		users = append(users, &user)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating users: %w", err)
+	}
+
+	return users, nil
+}
+
+func (r *PostgresRepository) DeleteUser(ctx context.Context, id string) error {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	// Soft delete - set deleted_at on all versions
+	query := `UPDATE users SET deleted_at = NOW() WHERE id = $1 AND deleted_at IS NULL`
+
+	result, err := r.pool.Exec(ctx, query, id)
+	if err != nil {
+		return fmt.Errorf("failed to delete user: %w", err)
+	}
+
+	if result.RowsAffected() == 0 {
+		return ErrUserNotFound
+	}
+
+	return nil
+}
+
+// =============================================================================
+// SESSIONS (append-only: id only, no version_id)
+// =============================================================================
+
 func (r *PostgresRepository) CreateSession(ctx context.Context, session *models.Session) error {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
 	query := `
-		INSERT INTO sessions (id, user_id, access_token, refresh_token, expires_at, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		INSERT INTO sessions (id, user_id, access_token, refresh_token, expires_at)
+		VALUES ($1, $2, $3, $4, $5)
 	`
 
 	_, err := r.pool.Exec(ctx, query,
 		session.ID, session.UserID, session.AccessToken, session.RefreshToken,
-		session.ExpiresAt, session.CreatedAt,
+		session.ExpiresAt,
 	)
 
 	if err != nil {
@@ -174,7 +255,7 @@ func (r *PostgresRepository) GetSession(ctx context.Context, refreshToken string
 	defer cancel()
 
 	query := `
-		SELECT id, user_id, access_token, refresh_token, expires_at, created_at, revoked_at, revoked_by
+		SELECT id, user_id, access_token, refresh_token, expires_at, revoked_at, revoked_by
 		FROM sessions
 		WHERE refresh_token = $1
 	`
@@ -182,7 +263,7 @@ func (r *PostgresRepository) GetSession(ctx context.Context, refreshToken string
 	var session models.Session
 	err := r.pool.QueryRow(ctx, query, refreshToken).Scan(
 		&session.ID, &session.UserID, &session.AccessToken, &session.RefreshToken,
-		&session.ExpiresAt, &session.CreatedAt, &session.RevokedAt, &session.RevokedBy,
+		&session.ExpiresAt, &session.RevokedAt, &session.RevokedBy,
 	)
 
 	if err != nil {
@@ -200,7 +281,7 @@ func (r *PostgresRepository) GetSessionByAccessToken(ctx context.Context, access
 	defer cancel()
 
 	query := `
-		SELECT id, user_id, access_token, refresh_token, expires_at, created_at, revoked_at, revoked_by
+		SELECT id, user_id, access_token, refresh_token, expires_at, revoked_at, revoked_by
 		FROM sessions
 		WHERE access_token = $1
 	`
@@ -208,7 +289,7 @@ func (r *PostgresRepository) GetSessionByAccessToken(ctx context.Context, access
 	var session models.Session
 	err := r.pool.QueryRow(ctx, query, accessToken).Scan(
 		&session.ID, &session.UserID, &session.AccessToken, &session.RefreshToken,
-		&session.ExpiresAt, &session.CreatedAt, &session.RevokedAt, &session.RevokedBy,
+		&session.ExpiresAt, &session.RevokedAt, &session.RevokedBy,
 	)
 
 	if err != nil {
@@ -239,18 +320,21 @@ func (r *PostgresRepository) RevokeSession(ctx context.Context, refreshToken str
 	return nil
 }
 
+// =============================================================================
+// HEC TOKENS (append-only: id only, no version_id)
+// =============================================================================
+
 func (r *PostgresRepository) CreateHECToken(ctx context.Context, token *models.HECToken) error {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
 	query := `
-		INSERT INTO hec_tokens (id, token, name, user_id, created_at, expires_at)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		INSERT INTO hec_tokens (id, token, name, user_id, tenant_id, created_by, expires_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 	`
 
 	_, err := r.pool.Exec(ctx, query,
-		token.ID, token.Token, token.Name, token.UserID,
-		token.CreatedAt, token.ExpiresAt,
+		token.ID, token.Token, token.Name, token.UserID, token.TenantID, token.CreatedBy, token.ExpiresAt,
 	)
 
 	if err != nil {
@@ -265,18 +349,17 @@ func (r *PostgresRepository) GetHECToken(ctx context.Context, token string) (*mo
 	defer cancel()
 
 	query := `
-		SELECT id, token, name, user_id, created_at, COALESCE(expires_at, '0001-01-01'::timestamp),
+		SELECT id, token, name, user_id, tenant_id, created_by, expires_at,
 		       disabled_at, disabled_by, revoked_at, revoked_by
 		FROM hec_tokens
 		WHERE token = $1
 	`
 
 	var hecToken models.HECToken
-	var expiresAt time.Time
-
 	err := r.pool.QueryRow(ctx, query, token).Scan(
 		&hecToken.ID, &hecToken.Token, &hecToken.Name, &hecToken.UserID,
-		&hecToken.CreatedAt, &expiresAt, &hecToken.DisabledAt, &hecToken.DisabledBy,
+		&hecToken.TenantID, &hecToken.CreatedBy, &hecToken.ExpiresAt,
+		&hecToken.DisabledAt, &hecToken.DisabledBy,
 		&hecToken.RevokedAt, &hecToken.RevokedBy,
 	)
 
@@ -285,11 +368,6 @@ func (r *PostgresRepository) GetHECToken(ctx context.Context, token string) (*mo
 			return nil, ErrHECTokenNotFound
 		}
 		return nil, fmt.Errorf("failed to get HEC token: %w", err)
-	}
-
-	if !expiresAt.IsZero() && expiresAt.Year() > 1 {
-		expiresCopy := expiresAt
-		hecToken.ExpiresAt = &expiresCopy
 	}
 
 	return &hecToken, nil
@@ -301,18 +379,17 @@ func (r *PostgresRepository) GetHECTokenByID(ctx context.Context, id string) (*m
 	defer cancel()
 
 	query := `
-		SELECT id, token, name, user_id, created_at, COALESCE(expires_at, '0001-01-01'::timestamp),
+		SELECT id, token, name, user_id, tenant_id, created_by, expires_at,
 		       disabled_at, disabled_by, revoked_at, revoked_by
 		FROM hec_tokens
 		WHERE id = $1
 	`
 
 	var hecToken models.HECToken
-	var expiresAt time.Time
-
 	err := r.pool.QueryRow(ctx, query, id).Scan(
 		&hecToken.ID, &hecToken.Token, &hecToken.Name, &hecToken.UserID,
-		&hecToken.CreatedAt, &expiresAt, &hecToken.DisabledAt, &hecToken.DisabledBy,
+		&hecToken.TenantID, &hecToken.CreatedBy, &hecToken.ExpiresAt,
+		&hecToken.DisabledAt, &hecToken.DisabledBy,
 		&hecToken.RevokedAt, &hecToken.RevokedBy,
 	)
 
@@ -323,11 +400,6 @@ func (r *PostgresRepository) GetHECTokenByID(ctx context.Context, id string) (*m
 		return nil, fmt.Errorf("failed to get HEC token: %w", err)
 	}
 
-	if !expiresAt.IsZero() && expiresAt.Year() > 1 {
-		expiresCopy := expiresAt
-		hecToken.ExpiresAt = &expiresCopy
-	}
-
 	return &hecToken, nil
 }
 
@@ -335,12 +407,13 @@ func (r *PostgresRepository) ListHECTokensByUser(ctx context.Context, userID str
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
+	// Order by id DESC (UUIDv7 = created_at)
 	query := `
-		SELECT id, token, name, user_id, created_at, COALESCE(expires_at, '0001-01-01'::timestamp),
+		SELECT id, token, name, user_id, tenant_id, created_by, expires_at,
 		       disabled_at, disabled_by, revoked_at, revoked_by
 		FROM hec_tokens
 		WHERE user_id = $1
-		ORDER BY created_at DESC
+		ORDER BY id DESC
 	`
 
 	rows, err := r.pool.Query(ctx, query, userID)
@@ -352,22 +425,15 @@ func (r *PostgresRepository) ListHECTokensByUser(ctx context.Context, userID str
 	var tokens []*models.HECToken
 	for rows.Next() {
 		var token models.HECToken
-		var expiresAt time.Time
-
 		err := rows.Scan(
 			&token.ID, &token.Token, &token.Name, &token.UserID,
-			&token.CreatedAt, &expiresAt, &token.DisabledAt, &token.DisabledBy,
+			&token.TenantID, &token.CreatedBy, &token.ExpiresAt,
+			&token.DisabledAt, &token.DisabledBy,
 			&token.RevokedAt, &token.RevokedBy,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan HEC token: %w", err)
 		}
-
-		if !expiresAt.IsZero() && expiresAt.Year() > 1 {
-			expiresCopy := expiresAt
-			token.ExpiresAt = &expiresCopy
-		}
-
 		tokens = append(tokens, &token)
 	}
 
@@ -378,11 +444,12 @@ func (r *PostgresRepository) ListAllHECTokens(ctx context.Context) ([]*models.HE
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
+	// Order by id DESC (UUIDv7 = created_at)
 	query := `
-		SELECT id, token, name, user_id, created_at, COALESCE(expires_at, '0001-01-01'::timestamp),
+		SELECT id, token, name, user_id, tenant_id, created_by, expires_at,
 		       disabled_at, disabled_by, revoked_at, revoked_by
 		FROM hec_tokens
-		ORDER BY created_at DESC
+		ORDER BY id DESC
 	`
 
 	rows, err := r.pool.Query(ctx, query)
@@ -394,22 +461,15 @@ func (r *PostgresRepository) ListAllHECTokens(ctx context.Context) ([]*models.HE
 	var tokens []*models.HECToken
 	for rows.Next() {
 		var token models.HECToken
-		var expiresAt time.Time
-
 		err := rows.Scan(
 			&token.ID, &token.Token, &token.Name, &token.UserID,
-			&token.CreatedAt, &expiresAt, &token.DisabledAt, &token.DisabledBy,
+			&token.TenantID, &token.CreatedBy, &token.ExpiresAt,
+			&token.DisabledAt, &token.DisabledBy,
 			&token.RevokedAt, &token.RevokedBy,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan HEC token: %w", err)
 		}
-
-		if !expiresAt.IsZero() && expiresAt.Year() > 1 {
-			expiresCopy := expiresAt
-			token.ExpiresAt = &expiresCopy
-		}
-
 		tokens = append(tokens, &token)
 	}
 
@@ -433,6 +493,10 @@ func (r *PostgresRepository) RevokeHECToken(ctx context.Context, token string) e
 
 	return nil
 }
+
+// =============================================================================
+// AUDIT LOG (append-only)
+// =============================================================================
 
 func (r *PostgresRepository) LogAudit(ctx context.Context, entry *models.AuditLogEntry) error {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
@@ -463,62 +527,6 @@ func (r *PostgresRepository) LogAudit(ctx context.Context, entry *models.AuditLo
 
 	if err != nil {
 		return fmt.Errorf("failed to log audit entry: %w", err)
-	}
-
-	return nil
-}
-
-func (r *PostgresRepository) ListUsers(ctx context.Context) ([]*models.User, error) {
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-
-	query := `
-		SELECT id, username, email, password_hash, roles, created_at,
-		       disabled_at, disabled_by, deleted_at, deleted_by
-		FROM users
-		ORDER BY created_at DESC
-	`
-
-	rows, err := r.pool.Query(ctx, query)
-	if err != nil {
-		return nil, fmt.Errorf("failed to list users: %w", err)
-	}
-	defer rows.Close()
-
-	var users []*models.User
-	for rows.Next() {
-		var user models.User
-		err := rows.Scan(
-			&user.ID, &user.Username, &user.Email, &user.PasswordHash,
-			&user.Roles, &user.CreatedAt, &user.DisabledAt, &user.DisabledBy,
-			&user.DeletedAt, &user.DeletedBy,
-		)
-		if err != nil {
-			return nil, fmt.Errorf("failed to scan user: %w", err)
-		}
-		users = append(users, &user)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("error iterating users: %w", err)
-	}
-
-	return users, nil
-}
-
-func (r *PostgresRepository) DeleteUser(ctx context.Context, id string) error {
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-
-	query := `DELETE FROM users WHERE id = $1`
-
-	result, err := r.pool.Exec(ctx, query, id)
-	if err != nil {
-		return fmt.Errorf("failed to delete user: %w", err)
-	}
-
-	if result.RowsAffected() == 0 {
-		return ErrUserNotFound
 	}
 
 	return nil

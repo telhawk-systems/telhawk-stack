@@ -60,11 +60,11 @@ func (h *AuthHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 			"type": "user",
 			"id":   resp.ID,
 			"attributes": map[string]interface{}{
+				"version_id": resp.VersionID,
 				"username":   resp.Username,
 				"email":      resp.Email,
 				"roles":      resp.Roles,
 				"enabled":    resp.Enabled,
-				"created_at": resp.CreatedAt,
 			},
 		},
 	}
@@ -192,6 +192,7 @@ func (h *AuthHandler) ValidateHECToken(w http.ResponseWriter, r *http.Request) {
 		TokenID:   hecToken.ID,
 		TokenName: hecToken.Name,
 		UserID:    hecToken.UserID,
+		TenantID:  hecToken.TenantID,
 	})
 }
 
@@ -220,11 +221,11 @@ func (h *AuthHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
 			"type": "user",
 			"id":   resp.ID,
 			"attributes": map[string]interface{}{
+				"version_id": resp.VersionID,
 				"username":   resp.Username,
 				"email":      resp.Email,
 				"roles":      resp.Roles,
 				"enabled":    resp.Enabled,
-				"created_at": resp.CreatedAt,
 			},
 		}
 	}
@@ -262,11 +263,11 @@ func (h *AuthHandler) GetUser(w http.ResponseWriter, r *http.Request) {
 			"type": "user",
 			"id":   resp.ID,
 			"attributes": map[string]interface{}{
+				"version_id": resp.VersionID,
 				"username":   resp.Username,
 				"email":      resp.Email,
 				"roles":      resp.Roles,
 				"enabled":    resp.Enabled,
-				"created_at": resp.CreatedAt,
 			},
 		},
 	}
@@ -310,11 +311,11 @@ func (h *AuthHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 			"type": "user",
 			"id":   resp.ID,
 			"attributes": map[string]interface{}{
+				"version_id": resp.VersionID,
 				"username":   resp.Username,
 				"email":      resp.Email,
 				"roles":      resp.Roles,
 				"enabled":    resp.Enabled,
-				"created_at": resp.CreatedAt,
 			},
 		},
 	}
@@ -415,7 +416,6 @@ func (h *AuthHandler) CreateHECToken(w http.ResponseWriter, r *http.Request) {
 				"name":       resp.Name,
 				"user_id":    resp.UserID,
 				"enabled":    resp.Enabled,
-				"created_at": resp.CreatedAt,
 				"expires_at": resp.ExpiresAt,
 			},
 		},
@@ -463,7 +463,6 @@ func (h *AuthHandler) ListHECTokens(w http.ResponseWriter, r *http.Request) {
 					"user_id":    resp.UserID,
 					"username":   resp.Username,
 					"enabled":    resp.Enabled,
-					"created_at": resp.CreatedAt,
 					"expires_at": resp.ExpiresAt,
 				},
 			}
@@ -487,7 +486,6 @@ func (h *AuthHandler) ListHECTokens(w http.ResponseWriter, r *http.Request) {
 					"name":       resp.Name,
 					"user_id":    resp.UserID,
 					"enabled":    resp.Enabled,
-					"created_at": resp.CreatedAt,
 					"expires_at": resp.ExpiresAt,
 				},
 			}

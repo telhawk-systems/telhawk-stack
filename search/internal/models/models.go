@@ -23,6 +23,7 @@ type SearchRequest struct {
 	IncludeFields []string                      `json:"include_fields,omitempty"`
 	SearchAfter   []interface{}                 `json:"search_after,omitempty"`
 	Aggregations  map[string]AggregationRequest `json:"aggregations,omitempty"`
+	TenantID      string                        `json:"-"` // Injected from auth context, not from request body
 }
 
 // AggregationRequest defines an aggregation to compute.

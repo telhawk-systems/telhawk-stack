@@ -12,27 +12,35 @@ import (
 	"testing"
 
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/models"
+	"github.com/telhawk-systems/telhawk-stack/ingest/internal/service"
 )
 
 // Mock service for testing
 type mockIngestService struct {
-	validateTokenErr error
-	ingestEventAckID string
-	ingestEventErr   error
-	ingestRawAckID   string
-	ingestRawErr     error
+	validateTokenErr  error
+	validateTokenInfo *service.TokenInfo
+	ingestEventAckID  string
+	ingestEventErr    error
+	ingestRawAckID    string
+	ingestRawErr      error
 }
 
-func (m *mockIngestService) IngestEvent(event *models.HECEvent, sourceIP, token string) (string, error) {
+func (m *mockIngestService) IngestEvent(event *models.HECEvent, sourceIP string, tokenInfo *service.TokenInfo) (string, error) {
 	return m.ingestEventAckID, m.ingestEventErr
 }
 
-func (m *mockIngestService) IngestRaw(data []byte, sourceIP, token, source, sourceType, host string) (string, error) {
+func (m *mockIngestService) IngestRaw(data []byte, sourceIP string, tokenInfo *service.TokenInfo, source, sourceType, host string) (string, error) {
 	return m.ingestRawAckID, m.ingestRawErr
 }
 
-func (m *mockIngestService) ValidateHECToken(ctx context.Context, token string) error {
-	return m.validateTokenErr
+func (m *mockIngestService) ValidateHECToken(ctx context.Context, token string) (*service.TokenInfo, error) {
+	if m.validateTokenErr != nil {
+		return nil, m.validateTokenErr
+	}
+	if m.validateTokenInfo != nil {
+		return m.validateTokenInfo, nil
+	}
+	return &service.TokenInfo{}, nil
 }
 
 func (m *mockIngestService) GetStats() models.IngestionStats {

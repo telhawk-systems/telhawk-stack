@@ -123,11 +123,13 @@ func TestBuildOpenSearchQuery_WithTimeRange(t *testing.T) {
 
 	qMap := q.(map[string]interface{})
 	boolQuery := qMap["bool"].(map[string]interface{})
-	must := boolQuery["must"].([]interface{})
 
-	// Check that time range is included in the must clauses
+	// Time range is now in filter clause (more efficient, doesn't affect scoring)
+	filter := boolQuery["filter"].([]interface{})
+
+	// Check that time range is included in the filter clauses
 	var hasTimeRange bool
-	for _, clause := range must {
+	for _, clause := range filter {
 		clauseMap := clause.(map[string]interface{})
 		if _, ok := clauseMap["range"]; ok {
 			hasTimeRange = true
@@ -139,7 +141,7 @@ func TestBuildOpenSearchQuery_WithTimeRange(t *testing.T) {
 			break
 		}
 	}
-	assert.True(t, hasTimeRange, "query should include time range")
+	assert.True(t, hasTimeRange, "query should include time range in filter")
 }
 
 func TestBuildOpenSearchQuery_WithSort(t *testing.T) {
@@ -469,9 +471,11 @@ func TestBuildOpenSearchQuery_ComplexBoolQuery(t *testing.T) {
 	q := query["query"].(map[string]interface{})
 	boolQuery := q["bool"].(map[string]interface{})
 	must := boolQuery["must"].([]interface{})
+	filter := boolQuery["filter"].([]interface{})
 
-	// Should have both query_string and time range
-	assert.Len(t, must, 2, "should have query_string and time range")
+	// Query string should be in must, time range in filter
+	assert.Len(t, must, 1, "should have query_string in must")
+	assert.Len(t, filter, 1, "should have time range in filter")
 
 	// Check sort
 	assert.Contains(t, query, "sort")

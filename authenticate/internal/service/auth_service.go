@@ -73,15 +73,15 @@ func (s *AuthService) CreateUser(ctx context.Context, req *models.CreateUserRequ
 
 	user := &models.User{
 		ID:           userID.String(),
+		VersionID:    userID.String(), // Same as ID for initial version
 		Username:     req.Username,
 		Email:        req.Email,
 		PasswordHash: string(hashedPassword),
 		Roles:        req.Roles,
-		CreatedAt:    time.Now(),
 	}
 
 	if len(user.Roles) == 0 {
-		user.Roles = []string{string(models.RoleViewer)}
+		user.Roles = []string{string(models.LegacyRoleViewer)}
 	}
 
 	if err := s.repo.CreateUser(ctx, user); err != nil {
@@ -169,7 +169,6 @@ func (s *AuthService) Login(ctx context.Context, req *models.LoginRequest, ipAdd
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 		ExpiresAt:    time.Now().Add(7 * 24 * time.Hour),
-		CreatedAt:    time.Now(),
 	}
 
 	if err := s.repo.CreateSession(ctx, session); err != nil {
@@ -419,11 +418,10 @@ func (s *AuthService) CreateHECToken(ctx context.Context, userID, name, expiresI
 
 	idUUID, _ := uuid.NewV7()
 	hecToken := &models.HECToken{
-		ID:        idUUID.String(),
-		UserID:    userID,
-		Token:     token,
-		Name:      name,
-		CreatedAt: time.Now(),
+		ID:     idUUID.String(),
+		UserID: userID,
+		Token:  token,
+		Name:   name,
 	}
 
 	if err := s.repo.CreateHECToken(ctx, hecToken); err != nil {
