@@ -12,43 +12,84 @@ import (
 )
 
 func TestNewQueryClient(t *testing.T) {
-	client := NewQueryClient("http://localhost:8082")
+	client := NewQueryClient("http://localhost:3000")
 
 	assert.NotNil(t, client)
-	assert.Equal(t, "http://localhost:8082", client.baseURL)
+	assert.Equal(t, "http://localhost:3000", client.baseURL)
 	assert.NotNil(t, client.client)
 	assert.Equal(t, 30*time.Second, client.client.Timeout)
 }
 
 func TestQueryClient_Client(t *testing.T) {
-	client := NewQueryClient("http://localhost:8082")
+	client := NewQueryClient("http://localhost:3000")
 
 	httpClient := client.Client()
 	assert.NotNil(t, httpClient)
 	assert.Equal(t, client.client, httpClient)
 }
 
+// writeJSONAPIResponse is a helper to send JSON:API formatted responses
+func writeJSONAPIResponse(w http.ResponseWriter, results []map[string]interface{}) {
+	w.Header().Set("Content-Type", "application/vnd.api+json")
+	w.WriteHeader(http.StatusOK)
+	resp := map[string]interface{}{
+		"data": map[string]interface{}{
+			"type": "search-result",
+			"id":   "test-request-id",
+			"attributes": map[string]interface{}{
+				"request_id":    "test-request-id",
+				"latency_ms":    10,
+				"result_count":  len(results),
+				"total_matches": len(results),
+				"results":       results,
+			},
+		},
+	}
+	json.NewEncoder(w).Encode(resp)
+}
+
+// writeJSONAPIError is a helper to send JSON:API error responses
+func writeJSONAPIErrorResponse(w http.ResponseWriter, status int, code, detail string) {
+	w.Header().Set("Content-Type", "application/vnd.api+json")
+	w.WriteHeader(status)
+	resp := map[string]interface{}{
+		"errors": []map[string]interface{}{
+			{
+				"status": http.StatusText(status),
+				"code":   code,
+				"title":  code,
+				"detail": detail,
+			},
+		},
+	}
+	json.NewEncoder(w).Encode(resp)
+}
+
 func TestSearch_Success(t *testing.T) {
 	testToken := createTestJWT("user-123")
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "/api/v1/search", r.URL.Path)
+		assert.Equal(t, "/api/query/v1/search", r.URL.Path)
 		assert.Equal(t, "POST", r.Method)
 		assert.Equal(t, "Bearer "+testToken, r.Header.Get("Authorization"))
-		assert.Equal(t, "application/json", r.Header.Get("Content-Type"))
+		assert.Contains(t, r.Header.Get("Content-Type"), "application/vnd.api+json")
+		assert.Contains(t, r.Header.Get("Accept"), "application/vnd.api+json")
 
 		var payload map[string]interface{}
 		err := json.NewDecoder(r.Body).Decode(&payload)
 		require.NoError(t, err)
 
-		assert.Equal(t, "severity:high", payload["query"])
-		assert.Equal(t, "-1h", payload["earliest"])
-		assert.Equal(t, "now", payload["latest"])
-		assert.Equal(t, "", payload["last"])
+		// Verify JSON:API structure
+		data, ok := payload["data"].(map[string]interface{})
+		require.True(t, ok, "payload should have data field")
+		assert.Equal(t, "search", data["type"])
 
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode([]map[string]interface{}{
+		attrs, ok := data["attributes"].(map[string]interface{})
+		require.True(t, ok, "data should have attributes field")
+		assert.Equal(t, "severity:high", attrs["query"])
+		assert.NotNil(t, attrs["time_range"])
+
+		writeJSONAPIResponse(w, []map[string]interface{}{
 			{
 				"time":     1700000000,
 				"severity": "high",
@@ -86,9 +127,7 @@ func TestSearch_EmptyResults(t *testing.T) {
 	testToken := createTestJWT("user-123")
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode([]map[string]interface{}{})
+		writeJSONAPIResponse(w, []map[string]interface{}{})
 	}))
 	defer server.Close()
 
@@ -107,12 +146,16 @@ func TestSearch_WithLastParameter(t *testing.T) {
 		err := json.NewDecoder(r.Body).Decode(&payload)
 		require.NoError(t, err)
 
-		assert.Equal(t, "24h", payload["last"])
-		assert.Equal(t, "", payload["earliest"]) // last takes precedence
-		assert.Equal(t, "", payload["latest"])
+		data := payload["data"].(map[string]interface{})
+		attrs := data["attributes"].(map[string]interface{})
 
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode([]map[string]interface{}{})
+		// When "last" is provided, time_range should be computed from it
+		timeRange, ok := attrs["time_range"].(map[string]interface{})
+		require.True(t, ok, "should have time_range")
+		assert.NotNil(t, timeRange["from"])
+		assert.NotNil(t, timeRange["to"])
+
+		writeJSONAPIResponse(w, []map[string]interface{}{})
 	}))
 	defer server.Close()
 
@@ -131,10 +174,11 @@ func TestSearch_ComplexQuery(t *testing.T) {
 		err := json.NewDecoder(r.Body).Decode(&payload)
 		require.NoError(t, err)
 
-		assert.Equal(t, "class_uid:3002 AND status_id:2 AND actor.user.name:admin", payload["query"])
+		data := payload["data"].(map[string]interface{})
+		attrs := data["attributes"].(map[string]interface{})
+		assert.Equal(t, "class_uid:3002 AND status_id:2 AND actor.user.name:admin", attrs["query"])
 
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode([]map[string]interface{}{
+		writeJSONAPIResponse(w, []map[string]interface{}{
 			{
 				"class_uid":  3002,
 				"status_id":  2,
@@ -159,8 +203,7 @@ func TestSearch_ComplexQuery(t *testing.T) {
 
 func TestSearch_Unauthorized(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusUnauthorized)
-		w.Write([]byte(`{"error":"unauthorized"}`))
+		writeJSONAPIErrorResponse(w, http.StatusUnauthorized, "unauthorized", "Invalid token")
 	}))
 	defer server.Close()
 
@@ -169,15 +212,14 @@ func TestSearch_Unauthorized(t *testing.T) {
 
 	assert.Error(t, err)
 	assert.Nil(t, results)
-	assert.Contains(t, err.Error(), "search failed with status 401")
+	assert.Contains(t, err.Error(), "unauthorized")
 }
 
 func TestSearch_BadRequest(t *testing.T) {
 	testToken := createTestJWT("user-123")
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(`{"error":"invalid query syntax"}`))
+		writeJSONAPIErrorResponse(w, http.StatusBadRequest, "invalid_query", "Invalid query syntax")
 	}))
 	defer server.Close()
 
@@ -186,15 +228,14 @@ func TestSearch_BadRequest(t *testing.T) {
 
 	assert.Error(t, err)
 	assert.Nil(t, results)
-	assert.Contains(t, err.Error(), "search failed with status 400")
+	assert.Contains(t, err.Error(), "invalid_query")
 }
 
 func TestSearch_ServerError(t *testing.T) {
 	testToken := createTestJWT("user-123")
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(`{"error":"opensearch unavailable"}`))
+		writeJSONAPIErrorResponse(w, http.StatusInternalServerError, "opensearch_error", "OpenSearch unavailable")
 	}))
 	defer server.Close()
 
@@ -203,7 +244,7 @@ func TestSearch_ServerError(t *testing.T) {
 
 	assert.Error(t, err)
 	assert.Nil(t, results)
-	assert.Contains(t, err.Error(), "search failed with status 500")
+	assert.Contains(t, err.Error(), "opensearch_error")
 }
 
 func TestSearch_NetworkError(t *testing.T) {
@@ -244,19 +285,13 @@ func TestSearch_TimeRanges(t *testing.T) {
 			last:     "",
 		},
 		{
-			name:     "last 24 hours",
+			name:     "last 24 hours shorthand",
 			earliest: "",
 			latest:   "",
 			last:     "24h",
 		},
 		{
-			name:     "absolute timestamps",
-			earliest: "1700000000",
-			latest:   "1700100000",
-			last:     "",
-		},
-		{
-			name:     "last 7 days",
+			name:     "last 7 days shorthand",
 			earliest: "",
 			latest:   "",
 			last:     "7d",
@@ -271,12 +306,16 @@ func TestSearch_TimeRanges(t *testing.T) {
 				var payload map[string]interface{}
 				json.NewDecoder(r.Body).Decode(&payload)
 
-				assert.Equal(t, tt.earliest, payload["earliest"])
-				assert.Equal(t, tt.latest, payload["latest"])
-				assert.Equal(t, tt.last, payload["last"])
+				data := payload["data"].(map[string]interface{})
+				attrs := data["attributes"].(map[string]interface{})
 
-				w.WriteHeader(http.StatusOK)
-				json.NewEncoder(w).Encode([]map[string]interface{}{})
+				// All cases should have a time_range computed
+				timeRange, ok := attrs["time_range"].(map[string]interface{})
+				require.True(t, ok, "should have time_range")
+				assert.NotNil(t, timeRange["from"])
+				assert.NotNil(t, timeRange["to"])
+
+				writeJSONAPIResponse(w, []map[string]interface{}{})
 			}))
 			defer server.Close()
 
@@ -300,8 +339,7 @@ func TestSearch_LargeResultSet(t *testing.T) {
 			}
 		}
 
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(results)
+		writeJSONAPIResponse(w, results)
 	}))
 	defer server.Close()
 
@@ -310,4 +348,84 @@ func TestSearch_LargeResultSet(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Len(t, results, 1000)
+}
+
+func TestParseDuration(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected time.Duration
+		hasError bool
+	}{
+		{"1h", time.Hour, false},
+		{"24h", 24 * time.Hour, false},
+		{"1d", 24 * time.Hour, false},
+		{"7d", 7 * 24 * time.Hour, false},
+		{"1w", 7 * 24 * time.Hour, false},
+		{"30m", 30 * time.Minute, false},
+		{"", 0, true},
+		{"invalid", 0, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			d, err := parseDuration(tt.input)
+			if tt.hasError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expected, d)
+			}
+		})
+	}
+}
+
+func TestParseTimeSpec(t *testing.T) {
+	now := time.Now().UTC()
+
+	tests := []struct {
+		input    string
+		hasError bool
+	}{
+		{"now", false},
+		{"-1h", false},
+		{"-7d", false},
+		{"2024-01-15T10:30:00Z", false},
+		{"2024-01-15", false},
+		{"invalid-time", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			_, err := parseTimeSpec(tt.input, now)
+			if tt.hasError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestParseTimeRange(t *testing.T) {
+	// Test with "last" parameter
+	tr, err := parseTimeRange("", "", "1h")
+	assert.NoError(t, err)
+	assert.NotNil(t, tr)
+	assert.True(t, tr.To.After(tr.From))
+
+	// Test with earliest/latest
+	tr, err = parseTimeRange("-1h", "now", "")
+	assert.NoError(t, err)
+	assert.NotNil(t, tr)
+	assert.True(t, tr.To.After(tr.From))
+
+	// Test default (no params - defaults to last 24h)
+	tr, err = parseTimeRange("", "", "")
+	assert.NoError(t, err)
+	assert.NotNil(t, tr)
+	assert.True(t, tr.To.After(tr.From))
+
+	// Test invalid duration
+	_, err = parseTimeRange("", "", "invalid")
+	assert.Error(t, err)
 }

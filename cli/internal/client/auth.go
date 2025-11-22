@@ -68,7 +68,7 @@ func (c *AuthClient) Login(username, password string) (*LoginResponse, error) {
 	}
 
 	resp, err := c.client.Post(
-		c.baseURL+"/api/v1/auth/login",
+		c.baseURL+"/api/auth/login",
 		"application/json",
 		bytes.NewBuffer(body),
 	)
@@ -101,7 +101,7 @@ func (c *AuthClient) ValidateToken(token string) (*ValidateResponse, error) {
 	}
 
 	resp, err := c.client.Post(
-		c.baseURL+"/api/v1/auth/validate",
+		c.baseURL+"/api/auth/validate",
 		"application/json",
 		bytes.NewBuffer(body),
 	)
@@ -131,7 +131,7 @@ func (c *AuthClient) CreateHECToken(accessToken, name, expires string) (*HECToke
 		return nil, err
 	}
 
-	req, err := http.NewRequest("POST", c.baseURL+"/api/v1/hec/tokens", bytes.NewBuffer(body))
+	req, err := http.NewRequest("POST", c.baseURL+"/api/auth/api/v1/hec/tokens", bytes.NewBuffer(body))
 	if err != nil {
 		return nil, err
 	}
@@ -159,7 +159,7 @@ func (c *AuthClient) CreateHECToken(accessToken, name, expires string) (*HECToke
 }
 
 func (c *AuthClient) ListHECTokens(accessToken string) ([]*HECToken, error) {
-	req, err := http.NewRequest("GET", c.baseURL+"/api/v1/hec/tokens", http.NoBody)
+	req, err := http.NewRequest("GET", c.baseURL+"/api/auth/api/v1/hec/tokens", http.NoBody)
 	if err != nil {
 		return nil, err
 	}
@@ -191,7 +191,7 @@ func (c *AuthClient) RevokeHECToken(accessToken, token string) error {
 		return err
 	}
 
-	req, err := http.NewRequest("POST", c.baseURL+"/api/v1/hec/tokens/revoke", bytes.NewBuffer(body))
+	req, err := http.NewRequest("POST", c.baseURL+"/api/auth/api/v1/hec/tokens/revoke", bytes.NewBuffer(body))
 	if err != nil {
 		return err
 	}
@@ -237,7 +237,7 @@ func extractUserIDFromToken(token string) string {
 }
 
 func (c *AuthClient) ListUsers(accessToken string) ([]*User, error) {
-	req, err := http.NewRequest("GET", c.baseURL+"/api/v1/users", http.NoBody)
+	req, err := http.NewRequest("GET", c.baseURL+"/api/auth/api/v1/users", http.NoBody)
 	if err != nil {
 		return nil, err
 	}
@@ -263,7 +263,7 @@ func (c *AuthClient) ListUsers(accessToken string) ([]*User, error) {
 }
 
 func (c *AuthClient) GetUser(accessToken, userID string) (*User, error) {
-	req, err := http.NewRequest("GET", c.baseURL+"/api/v1/users/get?id="+userID, http.NoBody)
+	req, err := http.NewRequest("GET", c.baseURL+"/api/auth/api/v1/users/get?id="+userID, http.NoBody)
 	if err != nil {
 		return nil, err
 	}
@@ -301,7 +301,7 @@ func (c *AuthClient) CreateUser(accessToken, username, email, password string, r
 		return nil, err
 	}
 
-	req, err := http.NewRequest("POST", c.baseURL+"/api/v1/auth/register", bytes.NewBuffer(body))
+	req, err := http.NewRequest("POST", c.baseURL+"/api/auth/api/v1/auth/register", bytes.NewBuffer(body))
 	if err != nil {
 		return nil, err
 	}
@@ -344,7 +344,7 @@ func (c *AuthClient) UpdateUser(accessToken, userID, email string, roles []strin
 		return nil, err
 	}
 
-	req, err := http.NewRequest("PUT", c.baseURL+"/api/v1/users/update?id="+userID, bytes.NewBuffer(body))
+	req, err := http.NewRequest("PUT", c.baseURL+"/api/auth/api/v1/users/update?id="+userID, bytes.NewBuffer(body))
 	if err != nil {
 		return nil, err
 	}
@@ -371,7 +371,7 @@ func (c *AuthClient) UpdateUser(accessToken, userID, email string, roles []strin
 }
 
 func (c *AuthClient) DeleteUser(accessToken, userID string) error {
-	req, err := http.NewRequest("DELETE", c.baseURL+"/api/v1/users/delete?id="+userID, http.NoBody)
+	req, err := http.NewRequest("DELETE", c.baseURL+"/api/auth/api/v1/users/delete?id="+userID, http.NoBody)
 	if err != nil {
 		return err
 	}
@@ -401,7 +401,7 @@ func (c *AuthClient) ResetPassword(accessToken, userID, newPassword string) erro
 		return err
 	}
 
-	req, err := http.NewRequest("POST", c.baseURL+"/api/v1/users/reset-password?id="+userID, bytes.NewBuffer(body))
+	req, err := http.NewRequest("POST", c.baseURL+"/api/auth/api/v1/users/reset-password?id="+userID, bytes.NewBuffer(body))
 	if err != nil {
 		return err
 	}

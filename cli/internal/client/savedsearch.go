@@ -19,16 +19,6 @@ type SavedSearch struct {
 	HiddenAt   *string                `json:"hidden_at"`
 }
 
-type jsonAPIResource struct {
-	Type       string                 `json:"type"`
-	ID         string                 `json:"id"`
-	Attributes map[string]interface{} `json:"attributes"`
-}
-
-type jsonAPIResponse struct {
-	Data interface{} `json:"data"`
-}
-
 func (c *QueryClient) SavedSearchCreate(token string, baseURL string, name string, query map[string]interface{}, filters map[string]interface{}, isGlobal bool) (*SavedSearch, error) {
 	body := map[string]interface{}{
 		"data": map[string]interface{}{

@@ -39,11 +39,12 @@ func Default() *Config {
 		CurrentProfile: "default",
 		Profiles:       make(map[string]*Profile),
 		Defaults: &Defaults{
-			AuthURL:     "http://localhost:8080",
-			IngestURL:   "http://localhost:8088",
-			QueryURL:    "http://localhost:8082",
-			RulesURL:    "http://localhost:8084",
-			AlertingURL: "http://localhost:8085",
+			// All CLI operations go through the web backend
+			AuthURL:     "http://localhost:3000",
+			IngestURL:   "http://localhost:8088", // Ingest is exposed directly for HEC
+			QueryURL:    "http://localhost:3000",
+			RulesURL:    "http://localhost:3000",
+			AlertingURL: "http://localhost:3000",
 		},
 	}
 }
@@ -51,13 +52,13 @@ func Default() *Config {
 func Load(cfgFile string) (*Config, error) {
 	v := viper.New()
 
-	// Set defaults
+	// Set defaults - all go through web backend except ingest (HEC is exposed directly)
 	v.SetDefault("current_profile", "default")
-	v.SetDefault("defaults.auth_url", "http://localhost:8080")
+	v.SetDefault("defaults.auth_url", "http://localhost:3000")
 	v.SetDefault("defaults.ingest_url", "http://localhost:8088")
-	v.SetDefault("defaults.query_url", "http://localhost:8082")
-	v.SetDefault("defaults.rules_url", "http://localhost:8084")
-	v.SetDefault("defaults.alerting_url", "http://localhost:8085")
+	v.SetDefault("defaults.query_url", "http://localhost:3000")
+	v.SetDefault("defaults.rules_url", "http://localhost:3000")
+	v.SetDefault("defaults.alerting_url", "http://localhost:3000")
 
 	// Determine config file path
 	if cfgFile == "" {

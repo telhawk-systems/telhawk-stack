@@ -166,14 +166,15 @@ main() {
     fi
 
     # Build docker run command
+    # All CLI operations go through the web backend for consistent access
     local docker_cmd=(
         docker run --rm
         --network telhawk-stack_telhawk
-        -e THAWK_AUTH_URL=http://auth:8080
+        -e THAWK_AUTH_URL=http://web:3000
         -e THAWK_INGEST_URL=http://ingest:8088
-        -e THAWK_QUERY_URL=http://query:8082
-        -e THAWK_RULES_URL=http://rules:8084
-        -e THAWK_ALERTING_URL=http://alerting:8085
+        -e THAWK_QUERY_URL=http://web:3000
+        -e THAWK_RULES_URL=http://web:3000
+        -e THAWK_ALERTING_URL=http://web:3000
         -v "$HOME/.thawk:/root/.thawk"
     )
 

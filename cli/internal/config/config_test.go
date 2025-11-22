@@ -16,11 +16,12 @@ func TestDefault(t *testing.T) {
 	assert.NotNil(t, cfg.Profiles)
 	assert.Empty(t, cfg.Profiles)
 	assert.NotNil(t, cfg.Defaults)
-	assert.Equal(t, "http://localhost:8080", cfg.Defaults.AuthURL)
+	// All services go through web backend except ingest (HEC is exposed directly)
+	assert.Equal(t, "http://localhost:3000", cfg.Defaults.AuthURL)
 	assert.Equal(t, "http://localhost:8088", cfg.Defaults.IngestURL)
-	assert.Equal(t, "http://localhost:8082", cfg.Defaults.QueryURL)
-	assert.Equal(t, "http://localhost:8084", cfg.Defaults.RulesURL)
-	assert.Equal(t, "http://localhost:8085", cfg.Defaults.AlertingURL)
+	assert.Equal(t, "http://localhost:3000", cfg.Defaults.QueryURL)
+	assert.Equal(t, "http://localhost:3000", cfg.Defaults.RulesURL)
+	assert.Equal(t, "http://localhost:3000", cfg.Defaults.AlertingURL)
 }
 
 func TestLoad_NoConfigFile(t *testing.T) {
@@ -30,7 +31,7 @@ func TestLoad_NoConfigFile(t *testing.T) {
 
 	assert.Equal(t, "default", cfg.CurrentProfile)
 	assert.NotNil(t, cfg.Defaults)
-	assert.Equal(t, "http://localhost:8080", cfg.Defaults.AuthURL)
+	assert.Equal(t, "http://localhost:3000", cfg.Defaults.AuthURL)
 }
 
 func TestLoad_WithConfigFile(t *testing.T) {
@@ -249,12 +250,12 @@ func TestGetAuthURL(t *testing.T) {
 		{
 			name:    "get from defaults when profile not found",
 			profile: "nonexistent",
-			want:    "http://localhost:8080",
+			want:    "http://localhost:3000",
 		},
 		{
 			name:    "get from defaults when profile empty",
 			profile: "",
-			want:    "http://localhost:8080",
+			want:    "http://localhost:3000",
 		},
 	}
 
@@ -309,7 +310,7 @@ func TestGetQueryURL(t *testing.T) {
 	}
 
 	assert.Equal(t, "https://custom-query.example.com", cfg.GetQueryURL("custom"))
-	assert.Equal(t, "http://localhost:8082", cfg.GetQueryURL("nonexistent"))
+	assert.Equal(t, "http://localhost:3000", cfg.GetQueryURL("nonexistent"))
 }
 
 func TestGetRulesURL(t *testing.T) {
@@ -319,7 +320,7 @@ func TestGetRulesURL(t *testing.T) {
 	}
 
 	assert.Equal(t, "https://custom-rules.example.com", cfg.GetRulesURL("custom"))
-	assert.Equal(t, "http://localhost:8084", cfg.GetRulesURL("nonexistent"))
+	assert.Equal(t, "http://localhost:3000", cfg.GetRulesURL("nonexistent"))
 }
 
 func TestGetAlertingURL(t *testing.T) {
@@ -329,7 +330,7 @@ func TestGetAlertingURL(t *testing.T) {
 	}
 
 	assert.Equal(t, "https://custom-alerting.example.com", cfg.GetAlertingURL("custom"))
-	assert.Equal(t, "http://localhost:8085", cfg.GetAlertingURL("nonexistent"))
+	assert.Equal(t, "http://localhost:3000", cfg.GetAlertingURL("nonexistent"))
 }
 
 func TestGetURLFallback(t *testing.T) {
@@ -342,7 +343,7 @@ func TestGetURLFallback(t *testing.T) {
 
 	assert.Equal(t, "https://custom-auth.example.com", cfg.GetAuthURL("partial"))
 	assert.Equal(t, "http://localhost:8088", cfg.GetIngestURL("partial")) // Falls back to default
-	assert.Equal(t, "http://localhost:8082", cfg.GetQueryURL("partial"))  // Falls back to default
+	assert.Equal(t, "http://localhost:3000", cfg.GetQueryURL("partial"))  // Falls back to default
 }
 
 func TestSaveProfile_InitializesProfilesMap(t *testing.T) {
