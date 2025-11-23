@@ -143,6 +143,142 @@ func (r *PostgresRepository) GetUserByID(ctx context.Context, id string) (*model
 	return &user, nil
 }
 
+// GetUserWithRoles retrieves a user by ID with their full RBAC data loaded:
+// UserRoles -> Role -> Permissions
+// This is needed for permission checking in middleware.
+func (r *PostgresRepository) GetUserWithRoles(ctx context.Context, id string) (*models.User, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	// First get the user
+	user, err := r.GetUserByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	// Load user_roles with roles and permissions using a single query
+	// This query joins user_roles -> roles -> role_permissions -> permissions
+	query := `
+		SELECT
+			ur.id, ur.user_id, ur.role_id, ur.organization_id, ur.client_id,
+			ur.scope_organization_ids, ur.scope_client_ids,
+			ur.granted_by, ur.revoked_at, ur.revoked_by,
+			r.id, r.version_id, r.organization_id, r.client_id,
+			r.name, r.slug, r.ordinal, r.description,
+			r.is_system, r.is_protected, r.is_template,
+			r.created_by, r.updated_by, r.deleted_at, r.deleted_by,
+			p.id, p.resource, p.action, p.description
+		FROM user_roles ur
+		JOIN roles r ON r.id = ur.role_id AND r.deleted_at IS NULL
+		LEFT JOIN role_permissions rp ON rp.role_id = r.id
+		LEFT JOIN permissions p ON p.id = rp.permission_id
+		WHERE ur.user_id = $1 AND ur.revoked_at IS NULL
+		ORDER BY ur.id, r.id, p.id
+	`
+
+	rows, err := r.pool.Query(ctx, query, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load user roles: %w", err)
+	}
+	defer rows.Close()
+
+	// Build UserRoles with nested Role and Permissions
+	userRolesMap := make(map[string]*models.UserRole)
+	var userRolesOrder []string
+
+	for rows.Next() {
+		var (
+			urID, urUserID, urRoleID              string
+			urOrgID, urClientID                   *string
+			urScopeOrgIDs, urScopeClientIDs       []string
+			urGrantedBy, urRevokedBy              *string
+			urRevokedAt                           *time.Time
+			rID, rVersionID                       string
+			rOrgID, rClientID                     *string
+			rName, rSlug                          string
+			rOrdinal                              int
+			rDescription                          *string
+			rIsSystem, rIsProtected, rIsTemplate  bool
+			rCreatedBy, rUpdatedBy, rDeletedBy    *string
+			rDeletedAt                            *time.Time
+			pID, pResource, pAction, pDescription *string
+		)
+
+		err := rows.Scan(
+			&urID, &urUserID, &urRoleID, &urOrgID, &urClientID,
+			&urScopeOrgIDs, &urScopeClientIDs,
+			&urGrantedBy, &urRevokedAt, &urRevokedBy,
+			&rID, &rVersionID, &rOrgID, &rClientID,
+			&rName, &rSlug, &rOrdinal, &rDescription,
+			&rIsSystem, &rIsProtected, &rIsTemplate,
+			&rCreatedBy, &rUpdatedBy, &rDeletedAt, &rDeletedBy,
+			&pID, &pResource, &pAction, &pDescription,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan user role: %w", err)
+		}
+
+		// Get or create UserRole
+		ur, exists := userRolesMap[urID]
+		if !exists {
+			ur = &models.UserRole{
+				ID:                   urID,
+				UserID:               urUserID,
+				RoleID:               urRoleID,
+				OrganizationID:       urOrgID,
+				ClientID:             urClientID,
+				ScopeOrganizationIDs: urScopeOrgIDs,
+				ScopeClientIDs:       urScopeClientIDs,
+				GrantedBy:            urGrantedBy,
+				RevokedAt:            urRevokedAt,
+				RevokedBy:            urRevokedBy,
+				Role: &models.Role{
+					ID:             rID,
+					VersionID:      rVersionID,
+					OrganizationID: rOrgID,
+					ClientID:       rClientID,
+					Name:           rName,
+					Slug:           rSlug,
+					Ordinal:        rOrdinal,
+					Description:    rDescription,
+					IsSystem:       rIsSystem,
+					IsProtected:    rIsProtected,
+					IsTemplate:     rIsTemplate,
+					CreatedBy:      rCreatedBy,
+					UpdatedBy:      rUpdatedBy,
+					DeletedAt:      rDeletedAt,
+					DeletedBy:      rDeletedBy,
+					Permissions:    []models.Permission{},
+				},
+			}
+			userRolesMap[urID] = ur
+			userRolesOrder = append(userRolesOrder, urID)
+		}
+
+		// Add permission if present (LEFT JOIN may return NULLs)
+		if pID != nil && pResource != nil && pAction != nil {
+			ur.Role.Permissions = append(ur.Role.Permissions, models.Permission{
+				ID:          *pID,
+				Resource:    *pResource,
+				Action:      *pAction,
+				Description: pDescription,
+			})
+		}
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating user roles: %w", err)
+	}
+
+	// Convert map to slice preserving order
+	user.UserRoles = make([]*models.UserRole, 0, len(userRolesOrder))
+	for _, urID := range userRolesOrder {
+		user.UserRoles = append(user.UserRoles, userRolesMap[urID])
+	}
+
+	return user, nil
+}
+
 // GetUserPermissionsVersion returns just the permissions_version for efficient JWT validation
 func (r *PostgresRepository) GetUserPermissionsVersion(ctx context.Context, userID string) (int, error) {
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)

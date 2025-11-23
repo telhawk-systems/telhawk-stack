@@ -15,10 +15,13 @@ interface ScopeContextType {
   setScopeToOrganization: (org: Organization) => void;
   setScopeToClient: (client: Client, org: Organization) => void;
   setScopeToPlatform: () => void;
+  clearOrganization: () => void;
+  clearClient: () => void;
   // Helpers
   canViewPlatform: () => boolean;
   canViewOrganization: (orgId: string) => boolean;
   canViewClient: (clientId: string) => boolean;
+  hasClientSelected: () => boolean;
 }
 
 const ScopeContext = createContext<ScopeContextType | undefined>(undefined);
@@ -28,15 +31,15 @@ const SCOPE_STORAGE_KEY = 'telhawk_viewing_scope';
 // Default scope for users without platform access
 const getDefaultScope = (userScope: UserScope | null): ViewingScope => {
   if (!userScope) {
-    return { type: 'client' };
+    return { type: 'platform' };
   }
 
-  // Platform users default to platform view
+  // Platform users default to platform view (no org/client selected)
   if (userScope.max_tier === 'platform') {
     return { type: 'platform' };
   }
 
-  // Org users default to their first org
+  // Org users default to their first org (no client selected)
   if (userScope.max_tier === 'organization' && userScope.organizations.length > 0) {
     const org = userScope.organizations[0];
     return {
@@ -59,7 +62,7 @@ const getDefaultScope = (userScope: UserScope | null): ViewingScope => {
     };
   }
 
-  return { type: 'client' };
+  return { type: 'platform' };
 };
 
 export function ScopeProvider({ children }: { children: React.ReactNode }) {
@@ -162,6 +165,22 @@ export function ScopeProvider({ children }: { children: React.ReactNode }) {
     });
   }, [setScope]);
 
+  // Clear organization selection (go back to platform view)
+  const clearOrganization = useCallback(() => {
+    setScope({ type: 'platform' });
+  }, [setScope]);
+
+  // Clear client selection (stay at organization level)
+  const clearClient = useCallback(() => {
+    if (scope.organization_id && scope.organization_name) {
+      setScope({
+        type: 'organization',
+        organization_id: scope.organization_id,
+        organization_name: scope.organization_name,
+      });
+    }
+  }, [setScope, scope.organization_id, scope.organization_name]);
+
   const canViewPlatform = useCallback(() => {
     return userScope?.max_tier === 'platform';
   }, [userScope]);
@@ -179,6 +198,11 @@ export function ScopeProvider({ children }: { children: React.ReactNode }) {
     return userScope.clients.some(c => c.id === clientId);
   }, [userScope]);
 
+  // Check if a specific client is selected
+  const hasClientSelected = useCallback(() => {
+    return scope.type === 'client' && !!scope.client_id;
+  }, [scope]);
+
   return (
     <ScopeContext.Provider value={{
       scope,
@@ -188,9 +212,12 @@ export function ScopeProvider({ children }: { children: React.ReactNode }) {
       setScopeToOrganization,
       setScopeToClient,
       setScopeToPlatform,
+      clearOrganization,
+      clearClient,
       canViewPlatform,
       canViewOrganization,
       canViewClient,
+      hasClientSelected,
     }}>
       {children}
     </ScopeContext.Provider>

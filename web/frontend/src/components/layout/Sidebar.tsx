@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../AuthProvider';
+import { useScope } from '../ScopeProvider';
 import { ScopePicker } from '../ScopePicker';
 import logo from '../../assets/logo.svg';
 
@@ -8,6 +9,7 @@ interface NavItem {
   label: string;
   icon: React.ReactNode;
   adminOnly?: boolean;
+  requiresClient?: boolean;  // Only show when a client is selected
 }
 
 // Icon components (inline SVGs for simplicity)
@@ -61,10 +63,10 @@ const LogoutIcon = () => (
 
 const primaryNavItems: NavItem[] = [
   { path: '/', label: 'Dashboard', icon: <DashboardIcon /> },
-  { path: '/events', label: 'Events', icon: <EventsIcon /> },
-  { path: '/alerts', label: 'Alerts', icon: <AlertsIcon /> },
-  { path: '/rules', label: 'Rules', icon: <RulesIcon /> },
-  { path: '/saved-searches', label: 'Saved Searches', icon: <SavedSearchIcon /> },
+  { path: '/events', label: 'Events', icon: <EventsIcon />, requiresClient: true },
+  { path: '/alerts', label: 'Alerts', icon: <AlertsIcon />, requiresClient: true },
+  { path: '/rules', label: 'Rules', icon: <RulesIcon />, requiresClient: true },
+  { path: '/saved-searches', label: 'Saved Searches', icon: <SavedSearchIcon />, requiresClient: true },
 ];
 
 const adminNavItems: NavItem[] = [
@@ -74,8 +76,10 @@ const adminNavItems: NavItem[] = [
 
 export function Sidebar() {
   const { user, logout } = useAuth();
+  const { hasClientSelected } = useScope();
   const location = useLocation();
   const isAdmin = user?.roles.includes('admin');
+  const clientSelected = hasClientSelected();
 
   const handleLogout = async () => {
     try {
@@ -91,6 +95,14 @@ export function Sidebar() {
     }
     return location.pathname.startsWith(path);
   };
+
+  // Filter nav items based on whether they require a client to be selected
+  const visibleNavItems = primaryNavItems.filter(item => {
+    if (item.requiresClient && !clientSelected) {
+      return false;
+    }
+    return true;
+  });
 
   const NavLink = ({ item }: { item: NavItem }) => (
     <Link
@@ -123,10 +135,19 @@ export function Sidebar() {
       {/* Primary Navigation */}
       <nav className="flex-1 py-4 overflow-y-auto sidebar-scrollbar">
         <div className="space-y-1">
-          {primaryNavItems.map((item) => (
+          {visibleNavItems.map((item) => (
             <NavLink key={item.path} item={item} />
           ))}
         </div>
+
+        {/* Client selection hint when items are hidden */}
+        {!clientSelected && (
+          <div className="mt-4 mx-4 p-3 bg-sidebar-hover/50 rounded-lg border border-sidebar-hover">
+            <p className="text-xs text-gray-400">
+              Select a client to view Events, Alerts, Rules, and Saved Searches.
+            </p>
+          </div>
+        )}
 
         {/* Admin Section */}
         {isAdmin && (

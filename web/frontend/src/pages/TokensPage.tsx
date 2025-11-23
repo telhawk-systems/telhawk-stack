@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Layout } from '../components/Layout';
+import { useScope } from '../components/ScopeProvider';
 import { apiClient } from '../services/api';
 import { HECToken } from '../types';
 
 export function TokensPage() {
+  const { scope, hasClientSelected } = useScope();
   const [tokens, setTokens] = useState<HECToken[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -35,8 +37,13 @@ export function TokensPage() {
       return;
     }
 
+    if (!scope.client_id) {
+      setError('A client must be selected to create HEC tokens');
+      return;
+    }
+
     try {
-      const token = await apiClient.createHECToken(tokenName);
+      const token = await apiClient.createHECToken(tokenName, scope.client_id);
       setNewlyCreatedToken(token);
       await loadTokens();
       setShowCreateForm(false);
@@ -75,6 +82,8 @@ export function TokensPage() {
     );
   }
 
+  const clientSelected = hasClientSelected();
+
   return (
     <Layout>
       <div className="mb-6 flex justify-between items-center">
@@ -84,11 +93,25 @@ export function TokensPage() {
         </div>
         <button
           onClick={() => setShowCreateForm(true)}
-          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium transition-colors"
+          disabled={!clientSelected}
+          className={`px-4 py-2 rounded-md font-medium transition-colors ${
+            clientSelected
+              ? 'bg-blue-600 text-white hover:bg-blue-700'
+              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+          }`}
+          title={!clientSelected ? 'Select a client to create tokens' : undefined}
         >
           Create New Token
         </button>
       </div>
+
+      {!clientSelected && (
+        <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <p className="text-yellow-800">
+            Select a client from the sidebar to create new HEC tokens. Existing tokens are shown below.
+          </p>
+        </div>
+      )}
 
       {error && (
         <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
@@ -125,6 +148,15 @@ export function TokensPage() {
       {showCreateForm && (
         <div className="mb-6 bg-white shadow-md rounded-lg p-6">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Create New HEC Token</h2>
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Client</label>
+            <div className="px-3 py-2 bg-gray-100 border border-gray-300 rounded-md text-sm text-gray-700">
+              {scope.client_name || 'No client selected'}
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              Token will be created for the currently selected client
+            </p>
+          </div>
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-1">Token Name</label>
             <input

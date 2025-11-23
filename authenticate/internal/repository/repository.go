@@ -20,6 +20,7 @@ type Repository interface {
 	CreateUser(ctx context.Context, user *models.User) error
 	GetUserByUsername(ctx context.Context, username string) (*models.User, error)
 	GetUserByID(ctx context.Context, id string) (*models.User, error)
+	GetUserWithRoles(ctx context.Context, id string) (*models.User, error) // Loads UserRoles with Role and Permissions
 	GetUserPermissionsVersion(ctx context.Context, userID string) (int, error)
 	UpdateUser(ctx context.Context, user *models.User) error
 	ListUsers(ctx context.Context) ([]*models.User, error)

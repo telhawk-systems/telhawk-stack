@@ -3,12 +3,6 @@ import { useScope } from './ScopeProvider';
 import { Organization, Client } from '../types';
 
 // Icons
-const PlatformIcon = () => (
-  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-  </svg>
-);
-
 const OrgIcon = () => (
   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
@@ -33,79 +27,138 @@ const CheckIcon = () => (
   </svg>
 );
 
+const NoneIcon = () => (
+  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+  </svg>
+);
+
+interface DropdownProps {
+  label: string;
+  value: string;
+  icon: React.ReactNode;
+  isOpen: boolean;
+  onToggle: () => void;
+  onClose: () => void;
+  children: React.ReactNode;
+  disabled?: boolean;
+}
+
+function Dropdown({ label, value, icon, isOpen, onToggle, onClose, children, disabled }: DropdownProps) {
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        onClose();
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [onClose]);
+
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <label className="block text-xs text-gray-400 mb-1 px-1">{label}</label>
+      <button
+        onClick={onToggle}
+        disabled={disabled}
+        className={`w-full flex items-center justify-between gap-2 px-3 py-2 text-sm text-sidebar-text hover:text-white hover:bg-sidebar-hover rounded-lg transition-colors ${
+          disabled ? 'opacity-50 cursor-not-allowed' : ''
+        }`}
+      >
+        <div className="flex items-center gap-2 min-w-0">
+          {icon}
+          <span className="truncate">{value}</span>
+        </div>
+        <ChevronIcon open={isOpen} />
+      </button>
+
+      {isOpen && (
+        <div className="absolute left-0 right-0 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-50 max-h-60 overflow-y-auto">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface DropdownItemProps {
+  icon: React.ReactNode;
+  label: string;
+  selected: boolean;
+  onClick: () => void;
+  indent?: boolean;
+}
+
+function DropdownItem({ icon, label, selected, onClick, indent }: DropdownItemProps) {
+  return (
+    <button
+      onClick={onClick}
+      className={`w-full flex items-center justify-between px-3 py-2.5 text-sm hover:bg-gray-700 transition-colors ${
+        selected ? 'text-white bg-gray-700' : 'text-gray-300'
+      } ${indent ? 'pl-8' : ''}`}
+    >
+      <div className="flex items-center gap-2">
+        {icon}
+        <span>{label}</span>
+      </div>
+      {selected && <CheckIcon />}
+    </button>
+  );
+}
+
 export function ScopePicker() {
   const {
     scope,
     userScope,
     loading,
-    setScopeToPlatform,
     setScopeToOrganization,
     setScopeToClient,
+    clearOrganization,
+    clearClient,
     canViewPlatform,
   } = useScope();
 
-  const [isOpen, setIsOpen] = useState(false);
-  const [expandedOrg, setExpandedOrg] = useState<string | null>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  const [orgDropdownOpen, setOrgDropdownOpen] = useState(false);
+  const [clientDropdownOpen, setClientDropdownOpen] = useState(false);
 
   if (loading || !userScope) {
     return (
       <div className="px-4 py-3 border-b border-sidebar-hover">
-        <div className="animate-pulse flex items-center gap-2">
-          <div className="w-4 h-4 bg-sidebar-hover rounded"></div>
-          <div className="h-4 bg-sidebar-hover rounded w-24"></div>
+        <div className="animate-pulse space-y-3">
+          <div className="h-4 bg-sidebar-hover rounded w-16"></div>
+          <div className="h-8 bg-sidebar-hover rounded"></div>
+          <div className="h-4 bg-sidebar-hover rounded w-16"></div>
+          <div className="h-8 bg-sidebar-hover rounded"></div>
         </div>
       </div>
     );
   }
 
-  // Get display label for current scope
-  const getScopeLabel = () => {
-    switch (scope.type) {
-      case 'platform':
-        return 'All Organizations';
-      case 'organization':
-        return scope.organization_name || 'Organization';
-      case 'client':
-        return scope.client_name || 'Client';
-    }
+  // Get available organizations
+  const organizations = userScope.organizations;
+
+  // Get clients for the currently selected organization
+  const getAvailableClients = (): Client[] => {
+    if (!scope.organization_id) return [];
+    return userScope.clients.filter(c => c.organization_id === scope.organization_id);
   };
 
-  const getScopeIcon = () => {
-    switch (scope.type) {
-      case 'platform':
-        return <PlatformIcon />;
-      case 'organization':
-        return <OrgIcon />;
-      case 'client':
-        return <ClientIcon />;
-    }
-  };
+  const availableClients = getAvailableClients();
 
-  // Get clients for a specific organization
-  const getClientsForOrg = (orgId: string): Client[] => {
-    return userScope.clients.filter(c => c.organization_id === orgId);
-  };
-
-  const handleSelectPlatform = () => {
-    setScopeToPlatform();
-    setIsOpen(false);
-  };
+  // Current selection display values
+  const selectedOrgName = scope.organization_name || 'None';
+  const selectedClientName = scope.client_name || 'None';
 
   const handleSelectOrganization = (org: Organization) => {
     setScopeToOrganization(org);
-    setIsOpen(false);
+    setOrgDropdownOpen(false);
+  };
+
+  const handleClearOrganization = () => {
+    clearOrganization();
+    setOrgDropdownOpen(false);
   };
 
   const handleSelectClient = (client: Client) => {
@@ -113,132 +166,99 @@ export function ScopePicker() {
     if (org) {
       setScopeToClient(client, org);
     }
-    setIsOpen(false);
+    setClientDropdownOpen(false);
   };
 
-  const toggleOrgExpand = (orgId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setExpandedOrg(expandedOrg === orgId ? null : orgId);
+  const handleClearClient = () => {
+    clearClient();
+    setClientDropdownOpen(false);
   };
+
+  // Determine if user can clear organization (platform users can)
+  const canClearOrg = canViewPlatform();
+
+  // Client dropdown is disabled if no organization is selected
+  const clientDropdownDisabled = !scope.organization_id;
 
   return (
-    <div className="relative px-4 py-3 border-b border-sidebar-hover" ref={dropdownRef}>
-      {/* Trigger button */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between gap-2 px-3 py-2 text-sm text-sidebar-text hover:text-white hover:bg-sidebar-hover rounded-lg transition-colors"
+    <div className="px-4 py-3 border-b border-sidebar-hover space-y-3">
+      {/* Organization Selector */}
+      <Dropdown
+        label="Organization"
+        value={selectedOrgName}
+        icon={scope.organization_id ? <OrgIcon /> : <NoneIcon />}
+        isOpen={orgDropdownOpen}
+        onToggle={() => setOrgDropdownOpen(!orgDropdownOpen)}
+        onClose={() => setOrgDropdownOpen(false)}
       >
-        <div className="flex items-center gap-2 min-w-0">
-          {getScopeIcon()}
-          <span className="truncate font-medium">{getScopeLabel()}</span>
-        </div>
-        <ChevronIcon open={isOpen} />
-      </button>
+        {/* None option for platform users */}
+        {canClearOrg && (
+          <DropdownItem
+            icon={<NoneIcon />}
+            label="None"
+            selected={!scope.organization_id}
+            onClick={handleClearOrganization}
+          />
+        )}
 
-      {/* Dropdown menu */}
-      {isOpen && (
-        <div className="absolute left-4 right-4 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-50 max-h-80 overflow-y-auto">
-          {/* Platform option */}
-          {canViewPlatform() && (
-            <button
-              onClick={handleSelectPlatform}
-              className={`w-full flex items-center justify-between px-3 py-2.5 text-sm hover:bg-gray-700 transition-colors ${
-                scope.type === 'platform' ? 'text-white bg-gray-700' : 'text-gray-300'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <PlatformIcon />
-                <span>All Organizations</span>
-              </div>
-              {scope.type === 'platform' && <CheckIcon />}
-            </button>
-          )}
+        {/* Divider */}
+        {canClearOrg && organizations.length > 0 && (
+          <div className="border-t border-gray-700 my-1"></div>
+        )}
 
-          {/* Divider */}
-          {canViewPlatform() && userScope.organizations.length > 0 && (
-            <div className="border-t border-gray-700 my-1"></div>
-          )}
+        {/* Organizations list */}
+        {organizations.map(org => (
+          <DropdownItem
+            key={org.id}
+            icon={<OrgIcon />}
+            label={org.name}
+            selected={scope.organization_id === org.id}
+            onClick={() => handleSelectOrganization(org)}
+          />
+        ))}
+      </Dropdown>
 
-          {/* Organizations and their clients */}
-          {userScope.organizations.map(org => {
-            const clients = getClientsForOrg(org.id);
-            const isExpanded = expandedOrg === org.id;
-            const isOrgSelected = scope.type === 'organization' && scope.organization_id === org.id;
+      {/* Client Selector */}
+      <Dropdown
+        label="Client"
+        value={clientDropdownDisabled ? 'Select org first' : selectedClientName}
+        icon={scope.client_id ? <ClientIcon /> : <NoneIcon />}
+        isOpen={clientDropdownOpen}
+        onToggle={() => !clientDropdownDisabled && setClientDropdownOpen(!clientDropdownOpen)}
+        onClose={() => setClientDropdownOpen(false)}
+        disabled={clientDropdownDisabled}
+      >
+        {/* None option - always available when org is selected */}
+        <DropdownItem
+          icon={<NoneIcon />}
+          label="None"
+          selected={!scope.client_id}
+          onClick={handleClearClient}
+        />
 
-            return (
-              <div key={org.id}>
-                <div className="flex items-center">
-                  {/* Expand button if org has clients */}
-                  {clients.length > 0 && (
-                    <button
-                      onClick={(e) => toggleOrgExpand(org.id, e)}
-                      className="p-2 text-gray-400 hover:text-white"
-                    >
-                      <svg className={`w-3 h-3 transition-transform ${isExpanded ? 'rotate-90' : ''}`} fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                      </svg>
-                    </button>
-                  )}
+        {/* Divider */}
+        {availableClients.length > 0 && (
+          <div className="border-t border-gray-700 my-1"></div>
+        )}
 
-                  {/* Organization button */}
-                  <button
-                    onClick={() => handleSelectOrganization(org)}
-                    className={`flex-1 flex items-center justify-between px-3 py-2.5 text-sm hover:bg-gray-700 transition-colors ${
-                      isOrgSelected ? 'text-white bg-gray-700' : 'text-gray-300'
-                    } ${clients.length === 0 ? 'pl-8' : ''}`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <OrgIcon />
-                      <span>{org.name}</span>
-                    </div>
-                    {isOrgSelected && <CheckIcon />}
-                  </button>
-                </div>
+        {/* Clients list */}
+        {availableClients.map(client => (
+          <DropdownItem
+            key={client.id}
+            icon={<ClientIcon />}
+            label={client.name}
+            selected={scope.client_id === client.id}
+            onClick={() => handleSelectClient(client)}
+          />
+        ))}
 
-                {/* Clients under this org */}
-                {isExpanded && clients.map(client => {
-                  const isClientSelected = scope.type === 'client' && scope.client_id === client.id;
-                  return (
-                    <button
-                      key={client.id}
-                      onClick={() => handleSelectClient(client)}
-                      className={`w-full flex items-center justify-between pl-12 pr-3 py-2 text-sm hover:bg-gray-700 transition-colors ${
-                        isClientSelected ? 'text-white bg-gray-700' : 'text-gray-400'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <ClientIcon />
-                        <span>{client.name}</span>
-                      </div>
-                      {isClientSelected && <CheckIcon />}
-                    </button>
-                  );
-                })}
-              </div>
-            );
-          })}
-
-          {/* Direct client list for non-platform users */}
-          {userScope.max_tier === 'client' && userScope.clients.map(client => {
-            const isClientSelected = scope.type === 'client' && scope.client_id === client.id;
-            return (
-              <button
-                key={client.id}
-                onClick={() => handleSelectClient(client)}
-                className={`w-full flex items-center justify-between px-3 py-2.5 text-sm hover:bg-gray-700 transition-colors ${
-                  isClientSelected ? 'text-white bg-gray-700' : 'text-gray-300'
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <ClientIcon />
-                  <span>{client.name}</span>
-                </div>
-                {isClientSelected && <CheckIcon />}
-              </button>
-            );
-          })}
-        </div>
-      )}
+        {/* Empty state */}
+        {availableClients.length === 0 && (
+          <div className="px-3 py-2 text-sm text-gray-500 italic">
+            No clients in this organization
+          </div>
+        )}
+      </Dropdown>
     </div>
   );
 }

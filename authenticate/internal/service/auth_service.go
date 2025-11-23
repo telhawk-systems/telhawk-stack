@@ -267,6 +267,12 @@ func (s *AuthService) GetUserByID(ctx context.Context, userID string) (*models.U
 	return s.repo.GetUserByID(ctx, userID)
 }
 
+// GetUserWithRoles retrieves a user with their full RBAC data (UserRoles -> Role -> Permissions)
+// Use this for permission checking in middleware
+func (s *AuthService) GetUserWithRoles(ctx context.Context, userID string) (*models.User, error) {
+	return s.repo.GetUserWithRoles(ctx, userID)
+}
+
 func (s *AuthService) ValidateHECToken(ctx context.Context, token, ipAddress, userAgent string) (*models.HECToken, error) {
 	hecToken, err := s.repo.GetHECToken(ctx, token)
 	if err != nil {

@@ -61,3 +61,14 @@ body {
 .sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #a0aec0;
 }
+
+/* Logo sway animation for login page */
+@keyframes sway {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(10deg); }
+  75% { transform: rotate(-10deg); }
+}
+
+.animate-sway {
+  animation: sway 4s ease-in-out infinite;
+}

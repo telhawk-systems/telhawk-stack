@@ -452,7 +452,7 @@ class ApiClient {
   }
 
   // HEC Token Management API
-  async createHECToken(name: string): Promise<HECToken> {
+  async createHECToken(name: string, clientId: string, expiresIn?: string): Promise<HECToken> {
     // Get CSRF token if not already set
     if (!this.csrfToken) {
       await this.getCSRFToken();
@@ -465,7 +465,11 @@ class ApiClient {
         'X-CSRF-Token': this.csrfToken!,
       },
       credentials: 'include',
-      body: JSON.stringify({ name }),
+      body: JSON.stringify({
+        name,
+        client_id: clientId,
+        ...(expiresIn && { expires_in: expiresIn }),
+      }),
     });
 
     if (!response.ok) {

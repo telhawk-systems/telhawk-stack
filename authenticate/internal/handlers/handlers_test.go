@@ -65,6 +65,11 @@ func (r *testRepo) GetUserByID(ctx context.Context, id string) (*models.User, er
 	return nil, repository.ErrUserNotFound
 }
 
+func (r *testRepo) GetUserWithRoles(ctx context.Context, id string) (*models.User, error) {
+	// For tests, just delegate to GetUserByID (no RBAC data loaded)
+	return r.GetUserByID(ctx, id)
+}
+
 func (r *testRepo) GetUserPermissionsVersion(ctx context.Context, userID string) (int, error) {
 	if user, ok := r.users[userID]; ok {
 		return user.PermissionsVersion, nil

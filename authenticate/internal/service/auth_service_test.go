@@ -83,6 +83,11 @@ func (m *mockRepository) GetUserByID(ctx context.Context, id string) (*models.Us
 	return user, nil
 }
 
+func (m *mockRepository) GetUserWithRoles(ctx context.Context, id string) (*models.User, error) {
+	// For tests, just delegate to GetUserByID (no RBAC data loaded)
+	return m.GetUserByID(ctx, id)
+}
+
 func (m *mockRepository) GetUserPermissionsVersion(ctx context.Context, userID string) (int, error) {
 	user, exists := m.users[userID]
 	if !exists {

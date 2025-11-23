@@ -60,6 +60,12 @@ func (r *InMemoryRepository) GetUserByID(ctx context.Context, id string) (*model
 	return user, nil
 }
 
+// GetUserWithRoles returns a user with their roles loaded (stub for in-memory)
+// In-memory repository doesn't support full RBAC, returns user without roles
+func (r *InMemoryRepository) GetUserWithRoles(ctx context.Context, id string) (*models.User, error) {
+	return r.GetUserByID(ctx, id)
+}
+
 func (r *InMemoryRepository) GetUserPermissionsVersion(ctx context.Context, userID string) (int, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()

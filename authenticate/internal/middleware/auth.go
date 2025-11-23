@@ -12,7 +12,6 @@ type contextKey string
 
 const (
 	UserIDKey             contextKey = "user_id"
-	RolesKey              contextKey = "roles"
 	PermissionsVersionKey contextKey = "permissions_version"
 	PermissionsStaleKey   contextKey = "permissions_stale"
 )
@@ -48,49 +47,19 @@ func (m *AuthMiddleware) RequireAuth(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		// Always load the full user with roles and permissions for RBAC checks
-		// This is needed for scope-aware permission checking
-		user, err := m.authService.GetUserByID(r.Context(), resp.UserID)
+		// Load the full user with roles and permissions for RBAC checks
+		// GetUserWithRoles loads UserRoles -> Role -> Permissions for permission checking
+		user, err := m.authService.GetUserWithRoles(r.Context(), resp.UserID)
 		if err != nil {
 			http.Error(w, "Failed to load user data", http.StatusInternalServerError)
 			return
 		}
 
-		roles := user.Roles
-
 		ctx := context.WithValue(r.Context(), UserIDKey, resp.UserID)
-		ctx = context.WithValue(ctx, RolesKey, roles)
 		ctx = context.WithValue(ctx, PermissionsVersionKey, resp.PermissionsVersion)
 		ctx = context.WithValue(ctx, PermissionsStaleKey, resp.PermissionsStale)
 		ctx = context.WithValue(ctx, UserKey, user) // Store full user for RBAC checks
 
 		next.ServeHTTP(w, r.WithContext(ctx))
-	}
-}
-
-func (m *AuthMiddleware) RequireRole(role string) func(http.HandlerFunc) http.HandlerFunc {
-	return func(next http.HandlerFunc) http.HandlerFunc {
-		return m.RequireAuth(func(w http.ResponseWriter, r *http.Request) {
-			roles, ok := r.Context().Value(RolesKey).([]string)
-			if !ok {
-				http.Error(w, "Forbidden", http.StatusForbidden)
-				return
-			}
-
-			hasRole := false
-			for _, r := range roles {
-				if r == role {
-					hasRole = true
-					break
-				}
-			}
-
-			if !hasRole {
-				http.Error(w, "Forbidden", http.StatusForbidden)
-				return
-			}
-
-			next.ServeHTTP(w, r)
-		})
 	}
 }
