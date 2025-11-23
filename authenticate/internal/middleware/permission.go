@@ -157,6 +157,68 @@ type PermissionError struct {
 	Permission string `json:"permission,omitempty"`
 }
 
+// ScopeExtractor is a function type that extracts target org/client IDs from a request.
+// Return nil for IDs that don't apply to the operation.
+type ScopeExtractor func(r *http.Request) (targetOrgID, targetClientID *string)
+
+// ClientOrgVerifier is a function type that verifies a client belongs to an organization.
+type ClientOrgVerifier func(clientID, orgID string) bool
+
+// RequirePermissionInScope middleware checks if the user has a specific permission
+// AND can act within the scope extracted from the request.
+//
+// Use this for operations where the target scope is determined by request parameters.
+// For example, creating a user in a specific organization or managing a client.
+func (m *AuthMiddleware) RequirePermissionInScope(permission string, extractScope ScopeExtractor, verifyClientOrg ClientOrgVerifier) func(http.HandlerFunc) http.HandlerFunc {
+	return func(next http.HandlerFunc) http.HandlerFunc {
+		return m.RequireAuth(func(w http.ResponseWriter, r *http.Request) {
+			user := UserFromContext(r.Context())
+			if user == nil {
+				writePermissionError(w, http.StatusUnauthorized, "authentication required", "")
+				return
+			}
+
+			// Extract target scope from request
+			targetOrgID, targetClientID := extractScope(r)
+
+			// Check permission with scope
+			if !user.CanActInScope(permission, targetOrgID, targetClientID, verifyClientOrg) {
+				writePermissionError(w, http.StatusForbidden,
+					fmt.Sprintf("%s permission required in target scope", permission),
+					permission,
+				)
+				return
+			}
+
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+// RequirePlatformPermission middleware checks if the user has a platform-level permission.
+// Only platform-tier users can perform these operations (e.g., creating organizations).
+func (m *AuthMiddleware) RequirePlatformPermission(permission string) func(http.HandlerFunc) http.HandlerFunc {
+	return func(next http.HandlerFunc) http.HandlerFunc {
+		return m.RequireAuth(func(w http.ResponseWriter, r *http.Request) {
+			user := UserFromContext(r.Context())
+			if user == nil {
+				writePermissionError(w, http.StatusUnauthorized, "authentication required", "")
+				return
+			}
+
+			if !user.CanActAtPlatformLevel(permission) {
+				writePermissionError(w, http.StatusForbidden,
+					fmt.Sprintf("%s permission required at platform level", permission),
+					permission,
+				)
+				return
+			}
+
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
 // writePermissionError writes a JSON:API style error response
 func writePermissionError(w http.ResponseWriter, status int, detail string, permission string) {
 	code := "forbidden"

@@ -246,9 +246,11 @@ func (u *User) HighestOrdinal() int {
 // Rules:
 // 1. Cannot manage protected users (ordinal 0)
 // 2. Must have users:update permission
-// 3. Must be in same tier tree (platform can manage all, org can manage org+clients, etc.)
+// 3. Must be in same scope tree (platform can manage all, org can manage org+clients, client can manage same client)
 // 4. Can only manage users with ordinal >= own ordinal (same or higher number = same or less powerful)
-func (u *User) CanManageUser(target *User) bool {
+//
+// The clientBelongsToOrg function is needed to verify client-org relationships for org-tier users.
+func (u *User) CanManageUser(target *User, clientBelongsToOrg func(clientID, orgID string) bool) bool {
 	// Cannot manage protected users
 	if target.HasProtectedRole() {
 		return false
@@ -260,20 +262,21 @@ func (u *User) CanManageUser(target *User) bool {
 	}
 
 	// Check ordinal (can manage same or higher ordinal only)
-	// Using lowest ordinal for both: if actor's most powerful role can manage target's most powerful role
 	if u.LowestOrdinal() > target.LowestOrdinal() {
 		return false
 	}
 
-	// Tier tree check would need hierarchy info - for now, allow if permissions pass
-	// Full implementation requires loading org/client tree and checking scope
+	// Scope check: can user act on target's scope?
+	if !u.CanActInScope("users:update", target.PrimaryOrganizationID, target.PrimaryClientID, clientBelongsToOrg) {
+		return false
+	}
 
 	return true
 }
 
 // CanResetPassword checks if this user can reset the target user's password
-// Same rules as CanManageUser
-func (u *User) CanResetPassword(target *User) bool {
+// Same rules as CanManageUser but with users:reset_password permission
+func (u *User) CanResetPassword(target *User, clientBelongsToOrg func(clientID, orgID string) bool) bool {
 	// Cannot reset password for protected users
 	if target.HasProtectedRole() {
 		return false
@@ -286,6 +289,11 @@ func (u *User) CanResetPassword(target *User) bool {
 
 	// Check ordinal
 	if u.LowestOrdinal() > target.LowestOrdinal() {
+		return false
+	}
+
+	// Scope check
+	if !u.CanActInScope("users:reset_password", target.PrimaryOrganizationID, target.PrimaryClientID, clientBelongsToOrg) {
 		return false
 	}
 
@@ -345,4 +353,99 @@ func (u *User) GetPermissions() []string {
 	}
 
 	return permissions
+}
+
+// =============================================================================
+// Scope-Aware Permission Checking
+// =============================================================================
+
+// CanActInScope checks if user has permission AND can act within the target scope.
+//
+// Scope rules:
+//   - Platform user (both primary IDs NULL) → can act anywhere
+//   - Org user (org set, client NULL) → can act on their org and clients within it
+//   - Client user (both set) → can only act within their specific client
+//
+// Parameters:
+//   - permission: the permission string (e.g., "users:create")
+//   - targetOrgID: the organization being acted upon (nil for platform-level operations)
+//   - targetClientID: the client being acted upon (nil for org/platform-level operations)
+//   - clientBelongsToOrg: function to verify client belongs to org (needed for org users acting on clients)
+//
+// For platform-level operations (creating orgs), pass nil for both target IDs.
+// For org-level operations (creating clients), pass targetOrgID only.
+// For client-level operations (creating HEC tokens), pass both IDs.
+func (u *User) CanActInScope(permission string, targetOrgID, targetClientID *string, clientBelongsToOrg func(clientID, orgID string) bool) bool {
+	// First check: does user have the permission at all?
+	if !u.Can(permission) {
+		return false
+	}
+
+	// Determine user's scope tier
+	userTier := u.GetScopeTier()
+
+	// Platform users can act anywhere
+	if userTier == ScopeTierPlatform {
+		return true
+	}
+
+	// Org users can act on their org and its clients
+	if userTier == ScopeTierOrganization {
+		// If no target scope specified, this is a platform-only operation
+		if targetOrgID == nil && targetClientID == nil {
+			return false // Org users can't do platform-level operations
+		}
+
+		// Check org match
+		if targetOrgID != nil && *targetOrgID != *u.PrimaryOrganizationID {
+			return false // Wrong organization
+		}
+
+		// If targeting a client, verify it belongs to user's org
+		if targetClientID != nil {
+			if clientBelongsToOrg == nil {
+				return false // Can't verify without the lookup function
+			}
+			if !clientBelongsToOrg(*targetClientID, *u.PrimaryOrganizationID) {
+				return false // Client doesn't belong to user's org
+			}
+		}
+
+		return true
+	}
+
+	// Client users can only act within their specific client
+	if userTier == ScopeTierClient {
+		// Must have a target client that matches
+		if targetClientID == nil || *targetClientID != *u.PrimaryClientID {
+			return false
+		}
+
+		// If org is specified, it must match too
+		if targetOrgID != nil && *targetOrgID != *u.PrimaryOrganizationID {
+			return false
+		}
+
+		return true
+	}
+
+	return false
+}
+
+// CanActOnOrganization checks if user can perform an action on a specific organization.
+// This is a convenience wrapper around CanActInScope for org-level operations.
+func (u *User) CanActOnOrganization(permission string, targetOrgID string) bool {
+	return u.CanActInScope(permission, &targetOrgID, nil, nil)
+}
+
+// CanActOnClient checks if user can perform an action on a specific client.
+// Requires a lookup function to verify client belongs to the expected org.
+func (u *User) CanActOnClient(permission string, targetOrgID, targetClientID string, clientBelongsToOrg func(clientID, orgID string) bool) bool {
+	return u.CanActInScope(permission, &targetOrgID, &targetClientID, clientBelongsToOrg)
+}
+
+// CanActAtPlatformLevel checks if user can perform a platform-level operation.
+// Only platform-tier users can perform these operations.
+func (u *User) CanActAtPlatformLevel(permission string) bool {
+	return u.CanActInScope(permission, nil, nil, nil)
 }

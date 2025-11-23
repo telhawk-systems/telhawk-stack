@@ -641,3 +641,19 @@ func (s *AuthService) GetUserScope(ctx context.Context, userID string, roles []s
 
 	return response, nil
 }
+
+// ClientBelongsToOrg checks if a client belongs to a specific organization.
+// This is used for scope-aware permission checking.
+func (s *AuthService) ClientBelongsToOrg(clientID, orgID string) bool {
+	client, err := s.repo.GetClient(context.Background(), clientID)
+	if err != nil {
+		return false
+	}
+	return client.OrganizationID == orgID
+}
+
+// ClientBelongsToOrgFunc returns a function suitable for passing to User.CanActInScope.
+// This allows the service to provide the lookup capability to the model layer.
+func (s *AuthService) ClientBelongsToOrgFunc() func(clientID, orgID string) bool {
+	return s.ClientBelongsToOrg
+}

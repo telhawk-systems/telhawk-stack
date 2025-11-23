@@ -18,6 +18,7 @@ import (
 	"github.com/telhawk-systems/telhawk-stack/authenticate/internal/audit"
 	"github.com/telhawk-systems/telhawk-stack/authenticate/internal/config"
 	"github.com/telhawk-systems/telhawk-stack/authenticate/internal/handlers"
+	"github.com/telhawk-systems/telhawk-stack/authenticate/internal/middleware"
 	"github.com/telhawk-systems/telhawk-stack/authenticate/internal/repository"
 	"github.com/telhawk-systems/telhawk-stack/authenticate/internal/server"
 	"github.com/telhawk-systems/telhawk-stack/authenticate/internal/service"
@@ -120,9 +121,10 @@ func main() {
 
 	authService := service.NewAuthService(repo, ingestClient, &cfg.Auth)
 
-	// Initialize HTTP handlers
+	// Initialize HTTP handlers and middleware
 	handler := handlers.NewAuthHandler(authService)
-	router := server.NewRouter(handler)
+	authMiddleware := middleware.NewAuthMiddleware(authService)
+	router := server.NewRouter(handler, authMiddleware)
 
 	// Create server with config values
 	srv := &http.Server{

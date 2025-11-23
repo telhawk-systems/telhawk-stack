@@ -48,22 +48,21 @@ func (m *AuthMiddleware) RequireAuth(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		roles := resp.Roles
-
-		// If permissions are stale (roles changed since token was issued),
-		// reload fresh user data from the database
-		if resp.PermissionsStale {
-			user, err := m.authService.GetUserByID(r.Context(), resp.UserID)
-			if err == nil && user != nil {
-				roles = user.Roles
-			}
-			// If we can't load fresh data, fall back to JWT roles (better than failing)
+		// Always load the full user with roles and permissions for RBAC checks
+		// This is needed for scope-aware permission checking
+		user, err := m.authService.GetUserByID(r.Context(), resp.UserID)
+		if err != nil {
+			http.Error(w, "Failed to load user data", http.StatusInternalServerError)
+			return
 		}
+
+		roles := user.Roles
 
 		ctx := context.WithValue(r.Context(), UserIDKey, resp.UserID)
 		ctx = context.WithValue(ctx, RolesKey, roles)
 		ctx = context.WithValue(ctx, PermissionsVersionKey, resp.PermissionsVersion)
 		ctx = context.WithValue(ctx, PermissionsStaleKey, resp.PermissionsStale)
+		ctx = context.WithValue(ctx, UserKey, user) // Store full user for RBAC checks
 
 		next.ServeHTTP(w, r.WithContext(ctx))
 	}
