@@ -5,28 +5,27 @@ import (
 	"time"
 )
 
-// TenantType represents the tier of a tenant in the hierarchy
-type TenantType string
+// ScopeTier represents the tier in the hierarchy for scoping
+// Determined by: client_id NOT NULL → client, organization_id NOT NULL → org, both NULL → platform
+type ScopeTier string
 
 const (
-	TenantTypePlatform     TenantType = "platform"
-	TenantTypeOrganization TenantType = "organization"
-	TenantTypeClient       TenantType = "client"
+	ScopeTierPlatform     ScopeTier = "platform"
+	ScopeTierOrganization ScopeTier = "organization"
+	ScopeTierClient       ScopeTier = "client"
 )
 
-// Tenant represents a multi-tenant entity (platform, organization, or client)
+// Organization represents an organization owned by the platform
 // Uses immutable versioning: ID (UUIDv7) = created_at, VersionID (UUIDv7) = updated_at
-type Tenant struct {
-	ID        string     `json:"id"`         // Stable entity ID (UUIDv7 timestamp = created_at)
-	VersionID string     `json:"version_id"` // Row version ID (UUIDv7 timestamp = updated_at)
-	Type      TenantType `json:"type"`
-	ParentID  *string    `json:"parent_id,omitempty"`
-	Name      string     `json:"name"`
-	Slug      string     `json:"slug"`
-	Settings  string     `json:"settings"` // JSON string
+type Organization struct {
+	ID        string `json:"id"`         // Stable entity ID (UUIDv7 timestamp = created_at)
+	VersionID string `json:"version_id"` // Row version ID (UUIDv7 timestamp = updated_at)
+	Name      string `json:"name"`
+	Slug      string `json:"slug"`
+	Settings  string `json:"settings"` // JSON string
 
 	// Audit (version_id timestamp = when, these fields = who)
-	CreatedBy *string `json:"created_by,omitempty"` // NULL for platform (bootstrap)
+	CreatedBy *string `json:"created_by,omitempty"` // NULL for seed data
 	UpdatedBy *string `json:"updated_by,omitempty"` // Who created this version
 
 	// Lifecycle (immutable pattern)
@@ -36,32 +35,76 @@ type Tenant struct {
 	DeletedBy  *string    `json:"deleted_by,omitempty"`
 }
 
-// IsActive returns true if tenant is not disabled or deleted
-func (t *Tenant) IsActive() bool {
-	return t.DisabledAt == nil && t.DeletedAt == nil
+// IsActive returns true if organization is not disabled or deleted
+func (o *Organization) IsActive() bool {
+	return o.DisabledAt == nil && o.DeletedAt == nil
 }
 
-// TenantResponse is the API response format for tenants
-type TenantResponse struct {
-	ID        string     `json:"id"`
-	VersionID string     `json:"version_id"`
-	Type      TenantType `json:"type"`
-	ParentID  *string    `json:"parent_id,omitempty"`
-	Name      string     `json:"name"`
-	Slug      string     `json:"slug"`
-	Enabled   bool       `json:"enabled"`
+// OrganizationResponse is the API response format for organizations
+type OrganizationResponse struct {
+	ID        string `json:"id"`
+	VersionID string `json:"version_id"`
+	Name      string `json:"name"`
+	Slug      string `json:"slug"`
+	Enabled   bool   `json:"enabled"`
 }
 
-// ToResponse converts a Tenant to an API response format
-func (t *Tenant) ToResponse() *TenantResponse {
-	return &TenantResponse{
-		ID:        t.ID,
-		VersionID: t.VersionID,
-		Type:      t.Type,
-		ParentID:  t.ParentID,
-		Name:      t.Name,
-		Slug:      t.Slug,
-		Enabled:   t.IsActive(),
+// ToResponse converts an Organization to an API response format
+func (o *Organization) ToResponse() *OrganizationResponse {
+	return &OrganizationResponse{
+		ID:        o.ID,
+		VersionID: o.VersionID,
+		Name:      o.Name,
+		Slug:      o.Slug,
+		Enabled:   o.IsActive(),
+	}
+}
+
+// Client represents a client owned by an organization
+// Uses immutable versioning: ID (UUIDv7) = created_at, VersionID (UUIDv7) = updated_at
+type Client struct {
+	ID             string `json:"id"`              // Stable entity ID (UUIDv7 timestamp = created_at)
+	VersionID      string `json:"version_id"`      // Row version ID (UUIDv7 timestamp = updated_at)
+	OrganizationID string `json:"organization_id"` // Parent organization
+	Name           string `json:"name"`
+	Slug           string `json:"slug"`
+	Settings       string `json:"settings"` // JSON string
+
+	// Audit (version_id timestamp = when, these fields = who)
+	CreatedBy *string `json:"created_by,omitempty"` // NULL for seed data
+	UpdatedBy *string `json:"updated_by,omitempty"` // Who created this version
+
+	// Lifecycle (immutable pattern)
+	DisabledAt *time.Time `json:"disabled_at,omitempty"`
+	DisabledBy *string    `json:"disabled_by,omitempty"`
+	DeletedAt  *time.Time `json:"deleted_at,omitempty"`
+	DeletedBy  *string    `json:"deleted_by,omitempty"`
+}
+
+// IsActive returns true if client is not disabled or deleted
+func (c *Client) IsActive() bool {
+	return c.DisabledAt == nil && c.DeletedAt == nil
+}
+
+// ClientResponse is the API response format for clients
+type ClientResponse struct {
+	ID             string `json:"id"`
+	VersionID      string `json:"version_id"`
+	OrganizationID string `json:"organization_id"`
+	Name           string `json:"name"`
+	Slug           string `json:"slug"`
+	Enabled        bool   `json:"enabled"`
+}
+
+// ToResponse converts a Client to an API response format
+func (c *Client) ToResponse() *ClientResponse {
+	return &ClientResponse{
+		ID:             c.ID,
+		VersionID:      c.VersionID,
+		OrganizationID: c.OrganizationID,
+		Name:           c.Name,
+		Slug:           c.Slug,
+		Enabled:        c.IsActive(),
 	}
 }
 
@@ -82,7 +125,7 @@ type Role struct {
 	Description    *string `json:"description,omitempty"`
 	IsSystem       bool    `json:"is_system"`
 	IsProtected    bool    `json:"is_protected"`
-	IsTemplate     bool    `json:"is_template"` // Template roles copied on tenant creation
+	IsTemplate     bool    `json:"is_template"` // Template roles copied on org/client creation
 
 	// Audit (version_id timestamp = when, these fields = who)
 	CreatedBy *string `json:"created_by,omitempty"` // NULL for seed data
@@ -101,15 +144,15 @@ func (r *Role) IsActive() bool {
 	return r.DeletedAt == nil
 }
 
-// Tier returns the tenant tier this role belongs to, derived from org/client IDs
-func (r *Role) Tier() TenantType {
+// Tier returns the scope tier this role belongs to, derived from org/client IDs
+func (r *Role) Tier() ScopeTier {
 	if r.ClientID != nil {
-		return TenantTypeClient
+		return ScopeTierClient
 	}
 	if r.OrganizationID != nil {
-		return TenantTypeOrganization
+		return ScopeTierOrganization
 	}
-	return TenantTypePlatform
+	return ScopeTierPlatform
 }
 
 // IsPlatformRole returns true if this is a platform-level role
@@ -148,18 +191,18 @@ func (r *Role) HasPermissionString(permission string) bool {
 
 // RoleResponse is the API response format for roles
 type RoleResponse struct {
-	ID             string     `json:"id"`
-	VersionID      string     `json:"version_id"`
-	Tier           TenantType `json:"tier"` // Derived from organization_id/client_id
-	OrganizationID *string    `json:"organization_id,omitempty"`
-	ClientID       *string    `json:"client_id,omitempty"`
-	Name           string     `json:"name"`
-	Slug           string     `json:"slug"`
-	Ordinal        int        `json:"ordinal"`
-	Description    *string    `json:"description,omitempty"`
-	IsSystem       bool       `json:"is_system"`
-	IsProtected    bool       `json:"is_protected"`
-	IsTemplate     bool       `json:"is_template"`
+	ID             string    `json:"id"`
+	VersionID      string    `json:"version_id"`
+	Tier           ScopeTier `json:"tier"` // Derived from organization_id/client_id
+	OrganizationID *string   `json:"organization_id,omitempty"`
+	ClientID       *string   `json:"client_id,omitempty"`
+	Name           string    `json:"name"`
+	Slug           string    `json:"slug"`
+	Ordinal        int       `json:"ordinal"`
+	Description    *string   `json:"description,omitempty"`
+	IsSystem       bool      `json:"is_system"`
+	IsProtected    bool      `json:"is_protected"`
+	IsTemplate     bool      `json:"is_template"`
 }
 
 // ToResponse converts a Role to an API response format
@@ -212,13 +255,15 @@ func (p *Permission) ToResponse() *PermissionResponse {
 	}
 }
 
-// UserRole represents a user's role assignment within a tenant
+// UserRole represents a user's role assignment within a scope (platform/org/client)
 // Uses ID (UUIDv7) for created_at timestamp (append-only with revocation)
+// Scope determined by: client_id NOT NULL → client, organization_id NOT NULL → org, both NULL → platform
 type UserRole struct {
 	ID                   string   `json:"id"` // UUIDv7 timestamp = created_at (granted_at)
 	UserID               string   `json:"user_id"`
 	RoleID               string   `json:"role_id"`
-	TenantID             string   `json:"tenant_id"`
+	OrganizationID       *string  `json:"organization_id,omitempty"` // NULL for platform-level
+	ClientID             *string  `json:"client_id,omitempty"`       // NULL for org/platform-level
 	ScopeOrganizationIDs []string `json:"scope_organization_ids,omitempty"`
 	ScopeClientIDs       []string `json:"scope_client_ids,omitempty"`
 	GrantedBy            *string  `json:"granted_by,omitempty"`
@@ -228,8 +273,9 @@ type UserRole struct {
 	RevokedBy *string    `json:"revoked_by,omitempty"`
 
 	// Loaded via join
-	Role   *Role   `json:"role,omitempty"`
-	Tenant *Tenant `json:"tenant,omitempty"`
+	Role         *Role         `json:"role,omitempty"`
+	Organization *Organization `json:"organization,omitempty"`
+	Client       *Client       `json:"client,omitempty"`
 }
 
 // IsActive returns true if user role assignment is not revoked
@@ -237,22 +283,37 @@ func (ur *UserRole) IsActive() bool {
 	return ur.RevokedAt == nil
 }
 
+// Tier returns the scope tier of this role assignment
+func (ur *UserRole) Tier() ScopeTier {
+	if ur.ClientID != nil {
+		return ScopeTierClient
+	}
+	if ur.OrganizationID != nil {
+		return ScopeTierOrganization
+	}
+	return ScopeTierPlatform
+}
+
 // UserRoleResponse is the API response format for user role assignments
 type UserRoleResponse struct {
-	ID       string        `json:"id"` // UUIDv7 timestamp = granted_at
-	UserID   string        `json:"user_id"`
-	RoleID   string        `json:"role_id"`
-	TenantID string        `json:"tenant_id"`
-	Role     *RoleResponse `json:"role,omitempty"`
+	ID             string        `json:"id"` // UUIDv7 timestamp = granted_at
+	UserID         string        `json:"user_id"`
+	RoleID         string        `json:"role_id"`
+	OrganizationID *string       `json:"organization_id,omitempty"`
+	ClientID       *string       `json:"client_id,omitempty"`
+	Tier           ScopeTier     `json:"tier"`
+	Role           *RoleResponse `json:"role,omitempty"`
 }
 
 // ToResponse converts a UserRole to an API response format
 func (ur *UserRole) ToResponse() *UserRoleResponse {
 	resp := &UserRoleResponse{
-		ID:       ur.ID,
-		UserID:   ur.UserID,
-		RoleID:   ur.RoleID,
-		TenantID: ur.TenantID,
+		ID:             ur.ID,
+		UserID:         ur.UserID,
+		RoleID:         ur.RoleID,
+		OrganizationID: ur.OrganizationID,
+		ClientID:       ur.ClientID,
+		Tier:           ur.Tier(),
 	}
 	if ur.Role != nil {
 		resp.Role = ur.Role.ToResponse()
@@ -289,11 +350,10 @@ const (
 	RoleIDDefaultClientAnalyst = "00000000-0000-0000-0011-000000000030"
 )
 
-// Well-known tenant IDs
+// Well-known organization and client IDs
 const (
-	TenantIDPlatform      = "00000000-0000-0000-0000-000000000001"
-	TenantIDDefaultOrg    = "00000000-0000-0000-0000-000000000010"
-	TenantIDDefaultClient = "00000000-0000-0000-0000-000000000011"
+	DefaultOrganizationID = "00000000-0000-0000-0000-000000000010"
+	DefaultClientID       = "00000000-0000-0000-0000-000000000011"
 )
 
 // Well-known user IDs

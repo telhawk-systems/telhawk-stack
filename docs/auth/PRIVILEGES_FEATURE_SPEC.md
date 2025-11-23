@@ -350,7 +350,7 @@ Users can only search indexes they have explicit access to:
   },
   "default_index": "app-logs-prod",
   "enforced_filters": {
-    "tenant_id": "tenant-abc"
+    "client_id": "client-abc"
   }
 }
 ```
@@ -367,12 +367,12 @@ Automatically injected into queries based on role/user:
 
 ```
 Original Query: error status:500
-Enforced Filter: tenant_id="customer-123" AND region="us-west"
-Final Query: (error status:500) AND (tenant_id="customer-123" AND region="us-west")
+Enforced Filter: client_id="client-123" AND region="us-west"
+Final Query: (error status:500) AND (client_id="client-123" AND region="us-west")
 ```
 
 **Use Cases:**
-- Multi-tenant isolation
+- Client data isolation
 - Geographic restrictions
 - Department/team isolation
 - Compliance boundaries
@@ -837,7 +837,7 @@ Content-Type: application/json
   "allowed_patterns": ["security-*", "firewall-*"],
   "denied_patterns": ["*-archive"],
   "enforced_filters": {
-    "tenant_id": "tenant-abc"
+    "client_id": "client-abc"
   }
 }
 ```

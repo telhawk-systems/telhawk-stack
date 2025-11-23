@@ -141,7 +141,7 @@ func TestGenerateAccessToken(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			token, err := tg.GenerateAccessToken(tt.userID, tt.roles)
+			token, err := tg.GenerateAccessToken(tt.userID, tt.roles, 1)
 
 			if tt.expectError {
 				if err == nil {
@@ -166,7 +166,7 @@ func TestGenerateAccessTokenClaims(t *testing.T) {
 	userID := "test-user-123"
 	roles := []string{"admin", "viewer"}
 
-	tokenString, err := tg.GenerateAccessToken(userID, roles)
+	tokenString, err := tg.GenerateAccessToken(userID, roles, 1)
 	if err != nil {
 		t.Fatalf("Failed to generate token: %v", err)
 	}
@@ -225,11 +225,11 @@ func TestValidateAccessToken(t *testing.T) {
 	tg := NewTokenGenerator("test-secret-key-that-is-long-enough", "refresh-secret-key")
 
 	// Generate a valid token
-	validToken, _ := tg.GenerateAccessToken("user-123", []string{"admin"})
+	validToken, _ := tg.GenerateAccessToken("user-123", []string{"admin"}, 1)
 
 	// Generate token with different secret (will be invalid)
 	tgDifferent := NewTokenGenerator("different-secret-key-that-is-long", "refresh-secret-key")
-	invalidSecretToken, _ := tgDifferent.GenerateAccessToken("user-456", []string{"viewer"})
+	invalidSecretToken, _ := tgDifferent.GenerateAccessToken("user-456", []string{"viewer"}, 1)
 
 	tests := []struct {
 		name         string
@@ -569,7 +569,7 @@ func TestTokenGeneratorWithEmptySecret(t *testing.T) {
 	tg := NewTokenGenerator("", "")
 
 	// Should still generate token (though not secure)
-	token, err := tg.GenerateAccessToken("user-123", []string{"admin"})
+	token, err := tg.GenerateAccessToken("user-123", []string{"admin"}, 1)
 	if err != nil {
 		t.Fatalf("Failed to generate token with empty secret: %v", err)
 	}
@@ -584,7 +584,7 @@ func TestValidateTokenWithDifferentSecret(t *testing.T) {
 	tg2 := NewTokenGenerator("secret-2", "refresh-2")
 
 	// Generate token with tg1
-	token, err := tg1.GenerateAccessToken("user-123", []string{"admin"})
+	token, err := tg1.GenerateAccessToken("user-123", []string{"admin"}, 1)
 	if err != nil {
 		t.Fatalf("Failed to generate token: %v", err)
 	}
@@ -602,7 +602,7 @@ func TestClaimsWithSpecialCharacters(t *testing.T) {
 	specialUserID := "user-with-special-chars-!@#$%^&*()"
 	specialRoles := []string{"role-with-unicode-🔒", "role/with/slashes", "role with spaces"}
 
-	token, err := tg.GenerateAccessToken(specialUserID, specialRoles)
+	token, err := tg.GenerateAccessToken(specialUserID, specialRoles, 1)
 	if err != nil {
 		t.Fatalf("Failed to generate token with special characters: %v", err)
 	}
@@ -633,7 +633,7 @@ func TestConcurrentTokenGeneration(t *testing.T) {
 	// Generate tokens concurrently
 	for i := 0; i < iterations; i++ {
 		go func(id int) {
-			token, err := tg.GenerateAccessToken("user-concurrent", []string{"admin"})
+			token, err := tg.GenerateAccessToken("user-concurrent", []string{"admin"}, 1)
 			if err != nil {
 				t.Errorf("Concurrent generation failed: %v", err)
 			}

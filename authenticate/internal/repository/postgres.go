@@ -54,13 +54,13 @@ func (r *PostgresRepository) CreateUser(ctx context.Context, user *models.User) 
 	defer cancel()
 
 	query := `
-		INSERT INTO users (id, version_id, username, email, password_hash, roles, primary_tenant_id)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		INSERT INTO users (id, version_id, username, email, password_hash, roles, primary_organization_id, primary_client_id)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 	`
 
 	_, err := r.pool.Exec(ctx, query,
 		user.ID, user.VersionID, user.Username, user.Email, user.PasswordHash,
-		user.Roles, user.PrimaryTenantID,
+		user.Roles, user.PrimaryOrganizationID, user.PrimaryClientID,
 	)
 
 	if err != nil {
@@ -81,8 +81,10 @@ func (r *PostgresRepository) GetUserByUsername(ctx context.Context, username str
 
 	// Get the latest version of the user by username
 	query := `
-		SELECT id, version_id, username, email, password_hash, roles, primary_tenant_id,
-		       disabled_at, disabled_by, deleted_at, deleted_by
+		SELECT id, version_id, username, email, password_hash, roles,
+		       primary_organization_id, primary_client_id,
+		       disabled_at, disabled_by, deleted_at, deleted_by,
+		       permissions_version
 		FROM users
 		WHERE username = $1 AND deleted_at IS NULL
 		ORDER BY version_id DESC
@@ -92,8 +94,9 @@ func (r *PostgresRepository) GetUserByUsername(ctx context.Context, username str
 	var user models.User
 	err := r.pool.QueryRow(ctx, query, username).Scan(
 		&user.ID, &user.VersionID, &user.Username, &user.Email, &user.PasswordHash,
-		&user.Roles, &user.PrimaryTenantID,
+		&user.Roles, &user.PrimaryOrganizationID, &user.PrimaryClientID,
 		&user.DisabledAt, &user.DisabledBy, &user.DeletedAt, &user.DeletedBy,
+		&user.PermissionsVersion,
 	)
 
 	if err != nil {
@@ -112,8 +115,10 @@ func (r *PostgresRepository) GetUserByID(ctx context.Context, id string) (*model
 
 	// Get the latest version of the user by stable ID
 	query := `
-		SELECT id, version_id, username, email, password_hash, roles, primary_tenant_id,
-		       disabled_at, disabled_by, deleted_at, deleted_by
+		SELECT id, version_id, username, email, password_hash, roles,
+		       primary_organization_id, primary_client_id,
+		       disabled_at, disabled_by, deleted_at, deleted_by,
+		       permissions_version
 		FROM users
 		WHERE id = $1 AND deleted_at IS NULL
 		ORDER BY version_id DESC
@@ -123,8 +128,9 @@ func (r *PostgresRepository) GetUserByID(ctx context.Context, id string) (*model
 	var user models.User
 	err := r.pool.QueryRow(ctx, query, id).Scan(
 		&user.ID, &user.VersionID, &user.Username, &user.Email, &user.PasswordHash,
-		&user.Roles, &user.PrimaryTenantID,
+		&user.Roles, &user.PrimaryOrganizationID, &user.PrimaryClientID,
 		&user.DisabledAt, &user.DisabledBy, &user.DeletedAt, &user.DeletedBy,
+		&user.PermissionsVersion,
 	)
 
 	if err != nil {
@@ -137,6 +143,31 @@ func (r *PostgresRepository) GetUserByID(ctx context.Context, id string) (*model
 	return &user, nil
 }
 
+// GetUserPermissionsVersion returns just the permissions_version for efficient JWT validation
+func (r *PostgresRepository) GetUserPermissionsVersion(ctx context.Context, userID string) (int, error) {
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+
+	query := `
+		SELECT permissions_version
+		FROM users
+		WHERE id = $1 AND deleted_at IS NULL
+		ORDER BY version_id DESC
+		LIMIT 1
+	`
+
+	var version int
+	err := r.pool.QueryRow(ctx, query, userID).Scan(&version)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return 0, ErrUserNotFound
+		}
+		return 0, fmt.Errorf("failed to get permissions version: %w", err)
+	}
+
+	return version, nil
+}
+
 func (r *PostgresRepository) UpdateUser(ctx context.Context, user *models.User) error {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
@@ -147,12 +178,14 @@ func (r *PostgresRepository) UpdateUser(ctx context.Context, user *models.User) 
 	// caller should generate new version_id and insert
 	query := `
 		UPDATE users
-		SET username = $2, email = $3, password_hash = $4, roles = $5, primary_tenant_id = $6
+		SET username = $2, email = $3, password_hash = $4, roles = $5,
+		    primary_organization_id = $6, primary_client_id = $7
 		WHERE version_id = $1
 	`
 
 	result, err := r.pool.Exec(ctx, query,
-		user.VersionID, user.Username, user.Email, user.PasswordHash, user.Roles, user.PrimaryTenantID,
+		user.VersionID, user.Username, user.Email, user.PasswordHash, user.Roles,
+		user.PrimaryOrganizationID, user.PrimaryClientID,
 	)
 
 	if err != nil {
@@ -172,8 +205,10 @@ func (r *PostgresRepository) ListUsers(ctx context.Context) ([]*models.User, err
 
 	// Get latest version of each user, ordered by id (created_at via UUIDv7)
 	query := `
-		SELECT DISTINCT ON (id) id, version_id, username, email, password_hash, roles, primary_tenant_id,
-		       disabled_at, disabled_by, deleted_at, deleted_by
+		SELECT DISTINCT ON (id) id, version_id, username, email, password_hash, roles,
+		       primary_organization_id, primary_client_id,
+		       disabled_at, disabled_by, deleted_at, deleted_by,
+		       permissions_version
 		FROM users
 		WHERE deleted_at IS NULL
 		ORDER BY id DESC, version_id DESC
@@ -190,8 +225,9 @@ func (r *PostgresRepository) ListUsers(ctx context.Context) ([]*models.User, err
 		var user models.User
 		err := rows.Scan(
 			&user.ID, &user.VersionID, &user.Username, &user.Email, &user.PasswordHash,
-			&user.Roles, &user.PrimaryTenantID,
+			&user.Roles, &user.PrimaryOrganizationID, &user.PrimaryClientID,
 			&user.DisabledAt, &user.DisabledBy, &user.DeletedAt, &user.DeletedBy,
+			&user.PermissionsVersion,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan user: %w", err)
@@ -530,4 +566,183 @@ func (r *PostgresRepository) LogAudit(ctx context.Context, entry *models.AuditLo
 	}
 
 	return nil
+}
+
+// =============================================================================
+// ORGANIZATIONS (read-only queries for scope picker)
+// =============================================================================
+
+func (r *PostgresRepository) GetOrganization(ctx context.Context, id string) (*models.Organization, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	query := `
+		SELECT DISTINCT ON (id) id, version_id, name, slug, settings,
+		       created_by, updated_by, disabled_at, disabled_by, deleted_at, deleted_by
+		FROM organizations
+		WHERE id = $1 AND deleted_at IS NULL
+		ORDER BY id, version_id DESC
+	`
+
+	var org models.Organization
+	err := r.pool.QueryRow(ctx, query, id).Scan(
+		&org.ID, &org.VersionID, &org.Name, &org.Slug, &org.Settings,
+		&org.CreatedBy, &org.UpdatedBy,
+		&org.DisabledAt, &org.DisabledBy,
+		&org.DeletedAt, &org.DeletedBy,
+	)
+
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrOrganizationNotFound
+		}
+		return nil, fmt.Errorf("failed to get organization: %w", err)
+	}
+
+	return &org, nil
+}
+
+func (r *PostgresRepository) ListOrganizations(ctx context.Context) ([]*models.Organization, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	query := `
+		SELECT DISTINCT ON (id) id, version_id, name, slug, settings,
+		       created_by, updated_by, disabled_at, disabled_by, deleted_at, deleted_by
+		FROM organizations
+		WHERE deleted_at IS NULL AND disabled_at IS NULL
+		ORDER BY id, version_id DESC
+	`
+
+	rows, err := r.pool.Query(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list organizations: %w", err)
+	}
+	defer rows.Close()
+
+	var orgs []*models.Organization
+	for rows.Next() {
+		var org models.Organization
+		err := rows.Scan(
+			&org.ID, &org.VersionID, &org.Name, &org.Slug, &org.Settings,
+			&org.CreatedBy, &org.UpdatedBy,
+			&org.DisabledAt, &org.DisabledBy,
+			&org.DeletedAt, &org.DeletedBy,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan organization: %w", err)
+		}
+		orgs = append(orgs, &org)
+	}
+
+	return orgs, nil
+}
+
+// =============================================================================
+// CLIENTS (read-only queries for scope picker)
+// =============================================================================
+
+func (r *PostgresRepository) GetClient(ctx context.Context, id string) (*models.Client, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	query := `
+		SELECT DISTINCT ON (id) id, version_id, organization_id, name, slug, settings,
+		       created_by, updated_by, disabled_at, disabled_by, deleted_at, deleted_by
+		FROM clients
+		WHERE id = $1 AND deleted_at IS NULL
+		ORDER BY id, version_id DESC
+	`
+
+	var client models.Client
+	err := r.pool.QueryRow(ctx, query, id).Scan(
+		&client.ID, &client.VersionID, &client.OrganizationID,
+		&client.Name, &client.Slug, &client.Settings,
+		&client.CreatedBy, &client.UpdatedBy,
+		&client.DisabledAt, &client.DisabledBy,
+		&client.DeletedAt, &client.DeletedBy,
+	)
+
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrClientNotFound
+		}
+		return nil, fmt.Errorf("failed to get client: %w", err)
+	}
+
+	return &client, nil
+}
+
+func (r *PostgresRepository) ListClients(ctx context.Context) ([]*models.Client, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	query := `
+		SELECT DISTINCT ON (id) id, version_id, organization_id, name, slug, settings,
+		       created_by, updated_by, disabled_at, disabled_by, deleted_at, deleted_by
+		FROM clients
+		WHERE deleted_at IS NULL AND disabled_at IS NULL
+		ORDER BY id, version_id DESC
+	`
+
+	rows, err := r.pool.Query(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list clients: %w", err)
+	}
+	defer rows.Close()
+
+	var clients []*models.Client
+	for rows.Next() {
+		var client models.Client
+		err := rows.Scan(
+			&client.ID, &client.VersionID, &client.OrganizationID,
+			&client.Name, &client.Slug, &client.Settings,
+			&client.CreatedBy, &client.UpdatedBy,
+			&client.DisabledAt, &client.DisabledBy,
+			&client.DeletedAt, &client.DeletedBy,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan client: %w", err)
+		}
+		clients = append(clients, &client)
+	}
+
+	return clients, nil
+}
+
+func (r *PostgresRepository) ListClientsByOrganization(ctx context.Context, orgID string) ([]*models.Client, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	query := `
+		SELECT DISTINCT ON (id) id, version_id, organization_id, name, slug, settings,
+		       created_by, updated_by, disabled_at, disabled_by, deleted_at, deleted_by
+		FROM clients
+		WHERE organization_id = $1 AND deleted_at IS NULL AND disabled_at IS NULL
+		ORDER BY id, version_id DESC
+	`
+
+	rows, err := r.pool.Query(ctx, query, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list clients: %w", err)
+	}
+	defer rows.Close()
+
+	var clients []*models.Client
+	for rows.Next() {
+		var client models.Client
+		err := rows.Scan(
+			&client.ID, &client.VersionID, &client.OrganizationID,
+			&client.Name, &client.Slug, &client.Settings,
+			&client.CreatedBy, &client.UpdatedBy,
+			&client.DisabledAt, &client.DisabledBy,
+			&client.DeletedAt, &client.DeletedBy,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan client: %w", err)
+		}
+		clients = append(clients, &client)
+	}
+
+	return clients, nil
 }

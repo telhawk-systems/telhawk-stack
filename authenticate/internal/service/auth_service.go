@@ -145,7 +145,7 @@ func (s *AuthService) Login(ctx context.Context, req *models.LoginRequest, ipAdd
 		return nil, ErrInvalidCredentials
 	}
 
-	accessToken, err := s.tokenGen.GenerateAccessToken(user.ID, user.Roles)
+	accessToken, err := s.tokenGen.GenerateAccessToken(user.ID, user.Roles, user.PermissionsVersion)
 	if err != nil {
 		s.auditLog.Log(
 			models.ActorTypeUser, user.ID, user.Username,
@@ -209,7 +209,7 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*m
 		return nil, err
 	}
 
-	accessToken, err := s.tokenGen.GenerateAccessToken(user.ID, user.Roles)
+	accessToken, err := s.tokenGen.GenerateAccessToken(user.ID, user.Roles, user.PermissionsVersion)
 	if err != nil {
 		return nil, err
 	}
@@ -241,15 +241,30 @@ func (s *AuthService) ValidateToken(ctx context.Context, tokenString string) (*m
 		return &models.ValidateTokenResponse{Valid: false}, nil
 	}
 
+	// Check if JWT permissions version matches current DB version
+	// This detects stale permissions when roles have changed since token was issued
+	currentVersion, err := s.repo.GetUserPermissionsVersion(ctx, claims.UserID)
+	permissionsStale := false
+	if err == nil && currentVersion != claims.PermissionsVersion {
+		permissionsStale = true
+	}
+
 	return &models.ValidateTokenResponse{
-		Valid:  true,
-		UserID: claims.UserID,
-		Roles:  claims.Roles,
+		Valid:              true,
+		UserID:             claims.UserID,
+		Roles:              claims.Roles,
+		PermissionsVersion: currentVersion,
+		PermissionsStale:   permissionsStale,
 	}, nil
 }
 
 func (s *AuthService) RevokeToken(ctx context.Context, refreshToken string) error {
 	return s.repo.RevokeSession(ctx, refreshToken)
+}
+
+// GetUserByID retrieves a user by their ID (used for refreshing stale permission data)
+func (s *AuthService) GetUserByID(ctx context.Context, userID string) (*models.User, error) {
+	return s.repo.GetUserByID(ctx, userID)
 }
 
 func (s *AuthService) ValidateHECToken(ctx context.Context, token, ipAddress, userAgent string) (*models.HECToken, error) {
@@ -546,4 +561,83 @@ func (s *AuthService) RevokeHECTokenByID(ctx context.Context, tokenID, userID, i
 	)
 
 	return nil
+}
+
+// UserScopeResponse contains the user's accessible organizations and clients
+type UserScopeResponse struct {
+	MaxTier       string                         `json:"max_tier"` // platform, organization, or client
+	Organizations []*models.OrganizationResponse `json:"organizations"`
+	Clients       []*ClientWithOrgResponse       `json:"clients"`
+}
+
+// ClientWithOrgResponse is a client with its parent organization ID
+type ClientWithOrgResponse struct {
+	*models.ClientResponse
+}
+
+// GetUserScope returns the organizations and clients accessible to the user
+// For now, this returns all active organizations and clients (admin gets everything)
+// TODO: Filter based on user's role assignments when full RBAC is implemented
+func (s *AuthService) GetUserScope(ctx context.Context, userID string, roles []string) (*UserScopeResponse, error) {
+	// Determine max tier from roles
+	// Platform users (admin role) can see everything
+	// Others are client-scoped for now
+	maxTier := "client"
+	isAdmin := false
+	for _, role := range roles {
+		if role == "admin" {
+			maxTier = "platform"
+			isAdmin = true
+			break
+		}
+	}
+
+	response := &UserScopeResponse{
+		MaxTier:       maxTier,
+		Organizations: []*models.OrganizationResponse{},
+		Clients:       []*ClientWithOrgResponse{},
+	}
+
+	// Get organizations (only for platform-tier users)
+	if isAdmin {
+		orgs, err := s.repo.ListOrganizations(ctx)
+		if err != nil {
+			return nil, err
+		}
+		for _, org := range orgs {
+			response.Organizations = append(response.Organizations, org.ToResponse())
+		}
+	}
+
+	// Get clients for each organization
+	if isAdmin {
+		// Admin sees all clients
+		for _, org := range response.Organizations {
+			clients, err := s.repo.ListClientsByOrganization(ctx, org.ID)
+			if err != nil {
+				return nil, err
+			}
+			for _, client := range clients {
+				response.Clients = append(response.Clients, &ClientWithOrgResponse{
+					ClientResponse: client.ToResponse(),
+				})
+			}
+		}
+	} else {
+		// Non-admin: get client from user's primary client_id
+		user, err := s.repo.GetUserByID(ctx, userID)
+		if err != nil {
+			return nil, err
+		}
+		if user.PrimaryClientID != nil {
+			client, err := s.repo.GetClient(ctx, *user.PrimaryClientID)
+			if err == nil {
+				response.Clients = append(response.Clients, &ClientWithOrgResponse{
+					ClientResponse: client.ToResponse(),
+				})
+			}
+		}
+	}
+
+	return response, nil
 }

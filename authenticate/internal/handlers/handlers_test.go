@@ -65,6 +65,13 @@ func (r *testRepo) GetUserByID(ctx context.Context, id string) (*models.User, er
 	return nil, repository.ErrUserNotFound
 }
 
+func (r *testRepo) GetUserPermissionsVersion(ctx context.Context, userID string) (int, error) {
+	if user, ok := r.users[userID]; ok {
+		return user.PermissionsVersion, nil
+	}
+	return 0, repository.ErrUserNotFound
+}
+
 func (r *testRepo) UpdateUser(ctx context.Context, user *models.User) error {
 	if _, exists := r.users[user.ID]; !exists {
 		return repository.ErrUserNotFound
@@ -172,6 +179,28 @@ func (r *testRepo) RevokeHECToken(ctx context.Context, token string) error {
 
 func (r *testRepo) LogAudit(ctx context.Context, entry *models.AuditLogEntry) error {
 	return nil
+}
+
+// Organization operations
+func (r *testRepo) GetOrganization(ctx context.Context, id string) (*models.Organization, error) {
+	return nil, repository.ErrOrganizationNotFound
+}
+
+func (r *testRepo) ListOrganizations(ctx context.Context) ([]*models.Organization, error) {
+	return []*models.Organization{}, nil
+}
+
+// Client operations
+func (r *testRepo) GetClient(ctx context.Context, id string) (*models.Client, error) {
+	return nil, repository.ErrClientNotFound
+}
+
+func (r *testRepo) ListClients(ctx context.Context) ([]*models.Client, error) {
+	return []*models.Client{}, nil
+}
+
+func (r *testRepo) ListClientsByOrganization(ctx context.Context, orgID string) ([]*models.Client, error) {
+	return []*models.Client{}, nil
 }
 
 func setupHandler() *AuthHandler {

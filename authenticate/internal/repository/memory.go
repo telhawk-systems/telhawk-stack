@@ -60,6 +60,17 @@ func (r *InMemoryRepository) GetUserByID(ctx context.Context, id string) (*model
 	return user, nil
 }
 
+func (r *InMemoryRepository) GetUserPermissionsVersion(ctx context.Context, userID string) (int, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	user, exists := r.users[userID]
+	if !exists {
+		return 0, ErrUserNotFound
+	}
+	return user.PermissionsVersion, nil
+}
+
 func (r *InMemoryRepository) UpdateUser(ctx context.Context, user *models.User) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -217,4 +228,26 @@ func (r *InMemoryRepository) DeleteUser(ctx context.Context, id string) error {
 	delete(r.users, id)
 	delete(r.usersByName, user.Username)
 	return nil
+}
+
+// Organization methods - stub implementations for in-memory repository
+func (r *InMemoryRepository) GetOrganization(ctx context.Context, id string) (*models.Organization, error) {
+	return nil, ErrOrganizationNotFound
+}
+
+func (r *InMemoryRepository) ListOrganizations(ctx context.Context) ([]*models.Organization, error) {
+	return nil, nil
+}
+
+// Client methods - stub implementations for in-memory repository
+func (r *InMemoryRepository) GetClient(ctx context.Context, id string) (*models.Client, error) {
+	return nil, ErrClientNotFound
+}
+
+func (r *InMemoryRepository) ListClients(ctx context.Context) ([]*models.Client, error) {
+	return nil, nil
+}
+
+func (r *InMemoryRepository) ListClientsByOrganization(ctx context.Context, orgID string) ([]*models.Client, error) {
+	return nil, nil
 }

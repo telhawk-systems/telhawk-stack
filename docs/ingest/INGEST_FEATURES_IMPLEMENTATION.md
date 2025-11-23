@@ -195,7 +195,7 @@ Created comprehensive documentation:
 - [ ] Redis Sentinel/Cluster support
 - [ ] Distributed tracing integration
 - [ ] Custom histogram buckets tuning
-- [ ] Rate limit configuration per tenant
+- [ ] Rate limit configuration per client
 
 ## Testing Recommendations
 

@@ -20,6 +20,9 @@ func NewRouter(h *handlers.AuthHandler) http.Handler {
 	mux.HandleFunc("/api/v1/auth/validate-hec", h.ValidateHECToken)
 	mux.HandleFunc("/api/v1/auth/revoke", h.RevokeToken)
 
+	// User scope endpoint (for scope picker)
+	mux.HandleFunc("GET /api/v1/auth/scope", h.GetUserScope)
+
 	// User management endpoints (admin-only, requires authentication)
 	// Use Go 1.22+ method routing for explicit path matching
 	mux.HandleFunc("POST /api/v1/users/create", h.CreateUser)

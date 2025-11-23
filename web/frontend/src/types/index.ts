@@ -47,3 +47,41 @@ export interface HECToken {
   created_at: string;
   expires_at?: string;
 }
+
+// Scope types for multi-organization data isolation
+export type ScopeType = 'platform' | 'organization' | 'client';
+
+export interface Organization {
+  id: string;
+  name: string;
+  slug: string;
+  enabled: boolean;
+}
+
+export interface Client {
+  id: string;
+  name: string;
+  slug: string;
+  organization_id: string;
+  enabled: boolean;
+}
+
+// Current viewing scope - determines what data the user sees
+export interface ViewingScope {
+  type: ScopeType;
+  organization_id?: string;  // Set when type is 'organization' or 'client'
+  client_id?: string;        // Set when type is 'client'
+  // Display info (for UI)
+  organization_name?: string;
+  client_name?: string;
+}
+
+// User's accessible scope - what they're allowed to see
+export interface UserScope {
+  // Highest tier the user can access
+  max_tier: ScopeType;
+  // Organizations the user can access (empty = all for platform users)
+  organizations: Organization[];
+  // Clients the user can access (empty = all within their org scope)
+  clients: Client[];
+}

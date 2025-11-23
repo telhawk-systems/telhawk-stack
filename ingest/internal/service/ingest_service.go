@@ -278,7 +278,7 @@ func (s *IngestService) normalizeEvent(event *models.Event) (map[string]interfac
 		return nil, fmt.Errorf("failed to convert OCSF event: %w", err)
 	}
 
-	// Add client_id for data isolation (critical for multi-tenant)
+	// Add client_id for data isolation (critical for multi-organization)
 	if event.ClientID != "" {
 		eventMap["client_id"] = event.ClientID
 	}

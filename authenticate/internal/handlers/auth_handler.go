@@ -565,3 +565,27 @@ func (h *AuthHandler) RevokeHECTokenByIDHandler(w http.ResponseWriter, r *http.R
 
 	w.WriteHeader(http.StatusNoContent)
 }
+
+// GetUserScope returns the user's accessible organizations and clients for the scope picker
+func (h *AuthHandler) GetUserScope(w http.ResponseWriter, r *http.Request) {
+	userID := r.Header.Get("X-User-ID")
+	if userID == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	rolesHeader := r.Header.Get("X-User-Roles")
+	var roles []string
+	if rolesHeader != "" {
+		roles = strings.Split(rolesHeader, ",")
+	}
+
+	scope, err := h.service.GetUserScope(r.Context(), userID, roles)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(scope)
+}

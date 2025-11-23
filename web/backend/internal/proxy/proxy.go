@@ -70,6 +70,18 @@ func (p *Proxy) Handler() http.Handler {
 			proxyReq.Header.Set("X-User-Roles", rolesStr)
 		}
 
+		// Forward scope headers for multi-organization data isolation
+		// These headers are set by the frontend ScopeProvider
+		if scopeType := r.Header.Get("X-Scope-Type"); scopeType != "" {
+			proxyReq.Header.Set("X-Scope-Type", scopeType)
+		}
+		if orgID := r.Header.Get("X-Organization-ID"); orgID != "" {
+			proxyReq.Header.Set("X-Organization-ID", orgID)
+		}
+		if clientID := r.Header.Get("X-Client-ID"); clientID != "" {
+			proxyReq.Header.Set("X-Client-ID", clientID)
+		}
+
 		resp, err := p.httpClient.Do(proxyReq)
 		if err != nil {
 			log.Printf("Proxy request error: %v", err)

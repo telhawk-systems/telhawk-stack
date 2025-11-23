@@ -15,7 +15,20 @@ CREATE TABLE IF NOT EXISTS detection_schemas (
     disabled_at TIMESTAMP,            -- Rule won't be evaluated (NULL = active)
     disabled_by UUID,                 -- References users(id) in auth DB
     hidden_at TIMESTAMP,              -- Soft delete, hidden from UI (NULL = visible)
-    hidden_by UUID                    -- References users(id) in auth DB
+    hidden_by UUID,                   -- References users(id) in auth DB
+
+    -- Constraints to prevent JSON null values
+    CONSTRAINT model_not_json_null CHECK (model::text != 'null'),
+    CONSTRAINT view_not_json_null CHECK (view::text != 'null'),
+    CONSTRAINT controller_not_json_null CHECK (controller::text != 'null'),
+
+    -- Correlation type constraint
+    CONSTRAINT valid_correlation_type CHECK (
+      model->>'correlation_type' IN (
+        'event_count', 'value_count', 'temporal', 'temporal_ordered',
+        'join', 'suppression', 'baseline_deviation', 'missing_event'
+      ) OR model->>'correlation_type' IS NULL
+    )
 );
 
 CREATE INDEX idx_schemas_id_created ON detection_schemas(id, created_at DESC);
@@ -30,10 +43,23 @@ CREATE INDEX idx_schemas_model ON detection_schemas USING GIN (model);
 CREATE INDEX idx_schemas_view ON detection_schemas USING GIN (view);
 CREATE INDEX idx_schemas_controller ON detection_schemas USING GIN (controller);
 
+-- Correlation indexes
+CREATE INDEX idx_detection_schemas_correlation_type
+ON detection_schemas ((model->>'correlation_type'))
+WHERE disabled_at IS NULL;
+
+CREATE INDEX idx_detection_schemas_active_params
+ON detection_schemas ((model->>'active_parameter_set'))
+WHERE disabled_at IS NULL;
+
+CREATE INDEX idx_detection_schemas_corr_severity
+ON detection_schemas ((model->>'correlation_type'), (view->>'severity'))
+WHERE disabled_at IS NULL;
+
 COMMENT ON TABLE detection_schemas IS 'Versioned detection rule schemas with immutable pattern';
 COMMENT ON COLUMN detection_schemas.id IS 'Stable identifier grouping all versions of the same logical rule';
 COMMENT ON COLUMN detection_schemas.version_id IS 'Version-specific UUID (UUID v7, time-ordered)';
-COMMENT ON COLUMN detection_schemas.model IS 'Data model: fields, aggregation, time windows, thresholds';
+COMMENT ON COLUMN detection_schemas.model IS 'Detection model configuration including optional correlation_type, parameters, parameter_sets, and active_parameter_set for advanced multi-event correlation';
 COMMENT ON COLUMN detection_schemas.view IS 'Display config: title, severity, description templates, MITRE ATT&CK';
 COMMENT ON COLUMN detection_schemas.controller IS 'Detection logic: query, conditions, evaluation intervals';
 COMMENT ON COLUMN detection_schemas.disabled_at IS 'When rule was disabled (NULL = active, still evaluated)';

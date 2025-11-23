@@ -83,6 +83,14 @@ func (m *mockRepository) GetUserByID(ctx context.Context, id string) (*models.Us
 	return user, nil
 }
 
+func (m *mockRepository) GetUserPermissionsVersion(ctx context.Context, userID string) (int, error) {
+	user, exists := m.users[userID]
+	if !exists {
+		return 0, repository.ErrUserNotFound
+	}
+	return user.PermissionsVersion, nil
+}
+
 func (m *mockRepository) UpdateUser(ctx context.Context, user *models.User) error {
 	if m.updateUserErr != nil {
 		return m.updateUserErr
@@ -222,6 +230,28 @@ func (m *mockRepository) RevokeHECToken(ctx context.Context, token string) error
 	now := time.Now()
 	hecToken.RevokedAt = &now
 	return nil
+}
+
+// Organization operations
+func (m *mockRepository) GetOrganization(ctx context.Context, id string) (*models.Organization, error) {
+	return nil, repository.ErrOrganizationNotFound
+}
+
+func (m *mockRepository) ListOrganizations(ctx context.Context) ([]*models.Organization, error) {
+	return []*models.Organization{}, nil
+}
+
+// Client operations
+func (m *mockRepository) GetClient(ctx context.Context, id string) (*models.Client, error) {
+	return nil, repository.ErrClientNotFound
+}
+
+func (m *mockRepository) ListClients(ctx context.Context) ([]*models.Client, error) {
+	return []*models.Client{}, nil
+}
+
+func (m *mockRepository) ListClientsByOrganization(ctx context.Context, orgID string) ([]*models.Client, error) {
+	return []*models.Client{}, nil
 }
 
 // Audit operations (implements audit.Repository interface)
@@ -611,7 +641,7 @@ func TestValidateToken(t *testing.T) {
 	ctx := context.Background()
 
 	// Generate a valid token for testing
-	validToken, err := service.tokenGen.GenerateAccessToken("user-123", []string{"admin"})
+	validToken, err := service.tokenGen.GenerateAccessToken("user-123", []string{"admin"}, 1)
 	if err != nil {
 		t.Fatalf("Failed to generate test token: %v", err)
 	}
@@ -677,7 +707,7 @@ func TestValidateToken_NoSession(t *testing.T) {
 	ctx := context.Background()
 
 	// Generate a valid JWT token but don't create a session
-	validToken, err := service.tokenGen.GenerateAccessToken("user-123", []string{"admin"})
+	validToken, err := service.tokenGen.GenerateAccessToken("user-123", []string{"admin"}, 1)
 	if err != nil {
 		t.Fatalf("Failed to generate test token: %v", err)
 	}
@@ -698,7 +728,7 @@ func TestValidateToken_RevokedSession(t *testing.T) {
 	ctx := context.Background()
 
 	// Generate a valid token and create a revoked session
-	validToken, err := service.tokenGen.GenerateAccessToken("user-123", []string{"admin"})
+	validToken, err := service.tokenGen.GenerateAccessToken("user-123", []string{"admin"}, 1)
 	if err != nil {
 		t.Fatalf("Failed to generate test token: %v", err)
 	}

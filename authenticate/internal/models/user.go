@@ -5,13 +5,17 @@ import "time"
 // User represents a user account
 // Uses immutable versioning: ID (UUIDv7) = created_at, VersionID (UUIDv7) = updated_at
 type User struct {
-	ID              string   `json:"id"`         // Stable entity ID (UUIDv7 timestamp = created_at)
-	VersionID       string   `json:"version_id"` // Row version ID (UUIDv7 timestamp = updated_at)
-	Username        string   `json:"username"`
-	Email           string   `json:"email"`
-	PasswordHash    string   `json:"-"`
-	Roles           []string `json:"roles"`             // Legacy: simple role strings
-	PrimaryTenantID *string  `json:"primary_tenant_id"` // New RBAC: user's home tenant
+	ID           string   `json:"id"`         // Stable entity ID (UUIDv7 timestamp = created_at)
+	VersionID    string   `json:"version_id"` // Row version ID (UUIDv7 timestamp = updated_at)
+	Username     string   `json:"username"`
+	Email        string   `json:"email"`
+	PasswordHash string   `json:"-"`
+	Roles        []string `json:"roles"` // Legacy: simple role strings
+
+	// Primary scope (determines default data visibility)
+	// Scope: client_id NOT NULL → client, organization_id NOT NULL → org, both NULL → platform
+	PrimaryOrganizationID *string `json:"primary_organization_id,omitempty"`
+	PrimaryClientID       *string `json:"primary_client_id,omitempty"`
 
 	// Audit (version_id timestamp = when, these fields = who)
 	CreatedBy *string `json:"created_by,omitempty"` // NULL for root user (bootstrap)
@@ -23,6 +27,10 @@ type User struct {
 	DeletedAt  *time.Time `json:"deleted_at,omitempty"`
 	DeletedBy  *string    `json:"deleted_by,omitempty"`
 
+	// Permission version - incremented when roles/permissions change
+	// Used for JWT validation: if JWT version != DB version, reload permissions
+	PermissionsVersion int `json:"permissions_version"`
+
 	// Loaded via join (not stored directly in users table)
 	UserRoles []*UserRole `json:"user_roles,omitempty"`
 }
@@ -30,6 +38,18 @@ type User struct {
 // IsActive returns true if user is not disabled or deleted
 func (u *User) IsActive() bool {
 	return u.DisabledAt == nil && u.DeletedAt == nil
+}
+
+// GetScopeTier returns the scope tier of user's primary scope
+// Determined by: client_id NOT NULL → client, organization_id NOT NULL → org, both NULL → platform
+func (u *User) GetScopeTier() ScopeTier {
+	if u.PrimaryClientID != nil {
+		return ScopeTierClient
+	}
+	if u.PrimaryOrganizationID != nil {
+		return ScopeTierOrganization
+	}
+	return ScopeTierPlatform
 }
 
 // UserResponse is the API response format that includes the computed enabled field
@@ -222,17 +242,6 @@ func (u *User) HighestOrdinal() int {
 	return highest
 }
 
-// GetPrimaryTenantType returns the tenant type of user's primary tenant
-// Returns empty string if no primary tenant is set
-func (u *User) GetPrimaryTenantType() TenantType {
-	for _, ur := range u.UserRoles {
-		if ur.Tenant != nil && ur.TenantID == *u.PrimaryTenantID {
-			return ur.Tenant.Type
-		}
-	}
-	return ""
-}
-
 // CanManageUser checks if this user can manage (edit/delete) the target user
 // Rules:
 // 1. Cannot manage protected users (ordinal 0)
@@ -256,8 +265,8 @@ func (u *User) CanManageUser(target *User) bool {
 		return false
 	}
 
-	// Tier tree check would need tenant hierarchy info - for now, allow if permissions pass
-	// Full implementation requires loading tenant tree and checking IsInTierTreeOf
+	// Tier tree check would need hierarchy info - for now, allow if permissions pass
+	// Full implementation requires loading org/client tree and checking scope
 
 	return true
 }

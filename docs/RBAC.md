@@ -1,35 +1,45 @@
-# Role-Based Access Control (RBAC) & Multi-Tenancy
+# Role-Based Access Control (RBAC) & Multi-Organization Access
 
-This document describes TelHawk's permission system, designed for MSSP/MDR multi-tenant deployments.
+This document describes TelHawk's permission system, designed for MSSP/MDR deployments with multiple organizations and clients.
 
 ## Overview
 
-TelHawk uses a tiered, multi-tenant RBAC model with:
+TelHawk uses a tiered RBAC model with:
 
-- **Three tenant tiers**: Platform → Organization → Client
+- **Three scope tiers**: Platform → Organization → Client
 - **Role ordinals**: Power levels within each tier (lower = more powerful)
 - **Resource:action permissions**: Fine-grained permission gates
 - **Scoped access**: Higher-tier users can be limited to specific lower-tier entities
 
-## Tenant Hierarchy
+## Scope Hierarchy
 
 ```
 Platform (singleton - the TelHawk operator)
 │
 ├── Organization A (customer, e.g., "Acme Corp")
-│   ├── Client A1 (sub-tenant, e.g., "Acme West")
-│   └── Client A2 (sub-tenant, e.g., "Acme East")
+│   ├── Client A1 (e.g., "Acme West")
+│   └── Client A2 (e.g., "Acme East")
 │
 └── Organization B (another customer)
     ├── Client B1
     └── Client B2
 ```
 
+### Scope Determination
+
+Scope is determined by which IDs are populated:
+
+| Condition | Scope |
+|-----------|-------|
+| `client_id IS NOT NULL` | Client-scoped |
+| `organization_id IS NOT NULL AND client_id IS NULL` | Organization-scoped |
+| Both NULL | Platform-scoped |
+
 ### Data Isolation
 
-| User Tier | Data Visibility |
-|-----------|-----------------|
-| Platform  | All organizations and all clients |
+| User Scope | Data Visibility |
+|------------|-----------------|
+| Platform | All organizations and all clients |
 | Organization | Their organization + all their clients |
 | Client | Their client only |
 
@@ -145,10 +155,14 @@ Permissions follow the `resource:action` format.
 | `system:configure` | Modify system settings |
 | `system:view_audit` | View audit logs |
 | `system:manage_integrations` | Configure integrations |
-| `tenants:create` | Create organizations/clients |
-| `tenants:read` | View tenant information |
-| `tenants:update` | Modify tenant settings |
-| `tenants:delete` | Delete tenants |
+| `organizations:create` | Create organizations |
+| `organizations:read` | View organization information |
+| `organizations:update` | Modify organization settings |
+| `organizations:delete` | Delete organizations |
+| `clients:create` | Create clients |
+| `clients:read` | View client information |
+| `clients:update` | Modify client settings |
+| `clients:delete` | Delete clients |
 
 ### Usage Pattern
 
@@ -299,75 +313,70 @@ Higher-tier users **scoped to your entity** (visible but not editable).
 
 ## Database Schema (Reference)
 
-> **Note**: This is the target schema design. Implementation may vary.
+> **Note**: This reflects the current schema. See `authenticate/migrations/001_init.up.sql` for the full implementation.
 
-### Tenants
+### Organizations
 
 ```sql
-CREATE TABLE tenants (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
-    type VARCHAR(20) NOT NULL,  -- 'platform', 'organization', 'client'
-    parent_id UUID REFERENCES tenants(id),
+CREATE TABLE organizations (
+    id UUID NOT NULL,                    -- UUIDv7: timestamp = created_at
+    version_id UUID PRIMARY KEY,         -- UUIDv7: timestamp = updated_at
     name VARCHAR(255) NOT NULL,
-    slug VARCHAR(100) UNIQUE NOT NULL,
-    settings JSONB DEFAULT '{}',
-    created_at TIMESTAMPTZ DEFAULT NOW(),
+    slug VARCHAR(100) NOT NULL,
+    settings JSONB NOT NULL DEFAULT '{}',
+    created_by UUID,
+    updated_by UUID,
     disabled_at TIMESTAMPTZ,
+    disabled_by UUID,
     deleted_at TIMESTAMPTZ,
-
-    CONSTRAINT valid_type CHECK (type IN ('platform', 'organization', 'client')),
-    CONSTRAINT platform_no_parent CHECK (
-        (type = 'platform' AND parent_id IS NULL) OR
-        (type != 'platform' AND parent_id IS NOT NULL)
-    )
+    deleted_by UUID
 );
+```
 
--- Ensure only one platform tenant exists
-CREATE UNIQUE INDEX one_platform ON tenants ((true)) WHERE type = 'platform';
+### Clients
+
+```sql
+CREATE TABLE clients (
+    id UUID NOT NULL,                    -- UUIDv7: timestamp = created_at
+    version_id UUID PRIMARY KEY,         -- UUIDv7: timestamp = updated_at
+    organization_id UUID NOT NULL,       -- References organizations(id)
+    name VARCHAR(255) NOT NULL,
+    slug VARCHAR(100) NOT NULL,
+    settings JSONB NOT NULL DEFAULT '{}',
+    created_by UUID,
+    updated_by UUID,
+    disabled_at TIMESTAMPTZ,
+    disabled_by UUID,
+    deleted_at TIMESTAMPTZ,
+    deleted_by UUID
+);
 ```
 
 ### Roles
 
 ```sql
 CREATE TABLE roles (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
-    tenant_type VARCHAR(20) NOT NULL,  -- which tier this role belongs to
+    id UUID NOT NULL,
+    version_id UUID PRIMARY KEY,
+    organization_id UUID,                -- NULL = platform/template role
+    client_id UUID,                      -- NULL = org/platform role
     name VARCHAR(100) NOT NULL,
     slug VARCHAR(50) NOT NULL,
     ordinal SMALLINT NOT NULL DEFAULT 50,
     description TEXT,
-    is_system BOOLEAN DEFAULT FALSE,  -- true = cannot delete
-    is_protected BOOLEAN DEFAULT FALSE,  -- true = ordinal 0, immutable
-    created_at TIMESTAMPTZ DEFAULT NOW(),
+    is_system BOOLEAN NOT NULL DEFAULT FALSE,
+    is_protected BOOLEAN NOT NULL DEFAULT FALSE,
+    is_template BOOLEAN NOT NULL DEFAULT FALSE,
+    created_by UUID,
+    updated_by UUID,
+    deleted_at TIMESTAMPTZ,
+    deleted_by UUID,
 
     CONSTRAINT valid_ordinal CHECK (ordinal >= 0 AND ordinal <= 99),
-    CONSTRAINT protected_slug CHECK (
-        (is_protected = TRUE AND slug IN ('root', 'admin')) OR
-        (is_protected = FALSE AND slug NOT IN ('root', 'admin'))
-    ),
-    UNIQUE (tenant_type, slug)
-);
-```
-
-### Permissions
-
-```sql
-CREATE TABLE permissions (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
-    resource VARCHAR(50) NOT NULL,
-    action VARCHAR(50) NOT NULL,
-    description TEXT,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-
-    UNIQUE (resource, action)
-);
-
-CREATE TABLE role_permissions (
-    role_id UUID REFERENCES roles(id) ON DELETE CASCADE,
-    permission_id UUID REFERENCES permissions(id) ON DELETE CASCADE,
-    is_locked BOOLEAN DEFAULT FALSE,  -- locked for protected roles
-
-    PRIMARY KEY (role_id, permission_id)
+    CONSTRAINT client_requires_org CHECK (
+        (client_id IS NOT NULL AND organization_id IS NOT NULL) OR
+        (client_id IS NULL)
+    )
 );
 ```
 
@@ -375,20 +384,22 @@ CREATE TABLE role_permissions (
 
 ```sql
 CREATE TABLE user_roles (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
-    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-    role_id UUID REFERENCES roles(id) ON DELETE CASCADE,
-    tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
-
-    -- Scope restrictions (NULL = unrestricted within tenant)
-    scope_organization_ids UUID[],  -- for platform users
-    scope_client_ids UUID[],        -- for org users
-
-    granted_by UUID REFERENCES users(id),
-    granted_at TIMESTAMPTZ DEFAULT NOW(),
+    id UUID PRIMARY KEY,                 -- UUIDv7: timestamp = granted_at
+    user_id UUID NOT NULL,
+    role_id UUID NOT NULL,
+    organization_id UUID,                -- NULL = platform-level
+    client_id UUID,                      -- NULL = org/platform-level
+    scope_organization_ids UUID[],       -- For platform users: limit to these orgs
+    scope_client_ids UUID[],             -- For org users: limit to these clients
+    granted_by UUID,
+    granted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     revoked_at TIMESTAMPTZ,
+    revoked_by UUID,
 
-    UNIQUE (user_id, role_id, tenant_id)
+    CONSTRAINT client_requires_org CHECK (
+        (client_id IS NOT NULL AND organization_id IS NOT NULL) OR
+        (client_id IS NULL)
+    )
 );
 ```
 
@@ -447,7 +458,7 @@ func (u *User) HasProtectedRole() bool {
 }
 ```
 
-### Tenant-Scoped Operations
+### Scoped Operations
 
 ```go
 func (u *User) CanManageUser(target *User) bool {
@@ -462,7 +473,7 @@ func (u *User) CanManageUser(target *User) bool {
     }
 
     // Check tier relationship
-    if !u.IsInTierTreeOf(target) {
+    if !u.IsInScopeTreeOf(target) {
         return false
     }
 
@@ -481,23 +492,23 @@ func (u *User) CanManageUser(target *User) bool {
 
 On first deployment, the system creates:
 
-1. **Platform tenant** (singleton)
+1. **Default organization** and **default client**
 2. **root role** (ordinal 0, protected, all permissions)
-3. **admin user** with root role
+3. **admin user** with root role at platform level
 
 ### New Organization
 
 When an organization is created:
 
 1. Org Owner role assigned to creating user (or specified owner)
-2. Default Org Admin and Org Analyst roles available
+2. Default Org Admin and Org Analyst roles copied from templates
 
 ### New Client
 
 When a client is created:
 
 1. Client Owner role assigned to creating user (or specified owner)
-2. Default Client Admin and Client Analyst roles available
+2. Default Client Admin and Client Analyst roles copied from templates
 
 ## Security Considerations
 
@@ -530,9 +541,10 @@ When a user's roles change:
 
 | Concept | Rule |
 |---------|------|
-| **Tier hierarchy** | Platform → Organization → Client |
+| **Scope hierarchy** | Platform → Organization → Client |
+| **Scope determination** | `client_id` NOT NULL → client, `organization_id` NOT NULL → org, both NULL → platform |
 | **Ordinal** | Lower number = more powerful (0-99) |
 | **Protected** | `root`/`admin` at ordinal 0, immutable |
 | **Management** | Can manage ≥ ordinal in same tier or below |
-| **Scope** | Higher-tier users can be limited to specific lower entities |
+| **Scope restrictions** | Higher-tier users can be limited to specific lower entities |
 | **Visibility** | Scoped external users visible but not editable |

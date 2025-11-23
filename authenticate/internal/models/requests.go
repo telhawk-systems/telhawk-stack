@@ -32,9 +32,11 @@ type LoginResponse struct {
 }
 
 type ValidateTokenResponse struct {
-	Valid  bool     `json:"valid"`
-	UserID string   `json:"user_id,omitempty"`
-	Roles  []string `json:"roles,omitempty"`
+	Valid              bool     `json:"valid"`
+	UserID             string   `json:"user_id,omitempty"`
+	Roles              []string `json:"roles,omitempty"`
+	PermissionsVersion int      `json:"permissions_version,omitempty"`
+	PermissionsStale   bool     `json:"permissions_stale,omitempty"` // True if JWT version != DB version
 }
 
 type ValidateHECTokenRequest struct {

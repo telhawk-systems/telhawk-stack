@@ -1,10 +1,37 @@
-import { User, UserDetails, LoginRequest, LoginResponse, HECToken } from '../types';
+import { User, UserDetails, LoginRequest, LoginResponse, HECToken, ViewingScope, UserScope } from '../types';
 import { Query, QueryResponse } from '../types/query';
 import { Alert, AlertDetails, AlertsListResponse, AlertUpdateRequest, Case, CaseDetails, CasesListResponse, CreateCaseRequest } from '../types/alerts';
 
 class ApiClient {
   private baseUrl = '/api';
   private csrfToken: string | null = null;
+  private currentScope: ViewingScope | null = null;
+
+  // Set the current viewing scope - called by ScopeProvider when scope changes
+  setScope(scope: ViewingScope | null) {
+    this.currentScope = scope;
+  }
+
+  // Get scope headers to include in requests
+  private getScopeHeaders(): Record<string, string> {
+    if (!this.currentScope) {
+      return {};
+    }
+
+    const headers: Record<string, string> = {
+      'X-Scope-Type': this.currentScope.type,
+    };
+
+    if (this.currentScope.organization_id) {
+      headers['X-Organization-ID'] = this.currentScope.organization_id;
+    }
+
+    if (this.currentScope.client_id) {
+      headers['X-Client-ID'] = this.currentScope.client_id;
+    }
+
+    return headers;
+  }
 
   async getCSRFToken(): Promise<string> {
     const response = await fetch(`${this.baseUrl}/auth/csrf-token`, {
@@ -77,6 +104,18 @@ class ApiClient {
     return response.json();
   }
 
+  async getUserScope(): Promise<UserScope> {
+    const response = await fetch(`${this.baseUrl}/auth/api/v1/auth/scope`, {
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch user scope');
+    }
+
+    return response.json();
+  }
+
   async search(query: string, size = 50, aggregations?: any, searchAfter?: any[]): Promise<any> {
     // Get CSRF token if not already set
     if (!this.csrfToken) {
@@ -89,6 +128,7 @@ class ApiClient {
         'Accept': 'application/vnd.api+json',
         'Content-Type': 'application/vnd.api+json',
         'X-CSRF-Token': this.csrfToken!,
+        ...this.getScopeHeaders(),
       },
       credentials: 'include',
       body: JSON.stringify({
@@ -130,6 +170,7 @@ class ApiClient {
         'Accept': 'application/vnd.api+json',
         'Content-Type': 'application/vnd.api+json',
         'X-CSRF-Token': this.csrfToken!,
+        ...this.getScopeHeaders(),
       },
       credentials: 'include',
       body: JSON.stringify({ data: { type: 'event-query', attributes: query } }),
@@ -165,7 +206,7 @@ class ApiClient {
     }
     const response = await fetch(`${this.baseUrl}/search/api/v1/saved-searches?${params.toString()}`, {
       credentials: 'include',
-      headers: { 'Accept': 'application/vnd.api+json' },
+      headers: { 'Accept': 'application/vnd.api+json', ...this.getScopeHeaders() },
     });
     if (!response.ok) throw new Error('Failed to list saved searches');
     return response.json();
@@ -229,6 +270,7 @@ class ApiClient {
     // Cached endpoint - no CSRF token needed for GET
     const response = await fetch(`${this.baseUrl}/dashboard/metrics`, {
       method: 'GET',
+      headers: { ...this.getScopeHeaders() },
       credentials: 'include',
     });
 
@@ -276,7 +318,7 @@ class ApiClient {
     }
     const response = await fetch(`${this.baseUrl}/search/api/v1/events?${search.toString()}`, {
       method: 'GET',
-      headers: { 'Accept': 'application/vnd.api+json' },
+      headers: { 'Accept': 'application/vnd.api+json', ...this.getScopeHeaders() },
       credentials: 'include',
     });
     if (!response.ok) {
@@ -498,6 +540,7 @@ class ApiClient {
     }
 
     const response = await fetch(`${this.baseUrl}/alerting/api/v1/alerts?${queryParams}`, {
+      headers: { ...this.getScopeHeaders() },
       credentials: 'include',
     });
 

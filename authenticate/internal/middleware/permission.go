@@ -121,8 +121,9 @@ func (m *AuthMiddleware) RequireOrdinal(maxOrdinal int) func(http.HandlerFunc) h
 	}
 }
 
-// RequireTenantType middleware ensures user belongs to a tenant of the specified type(s)
-func (m *AuthMiddleware) RequireTenantType(allowedTypes ...models.TenantType) func(http.HandlerFunc) http.HandlerFunc {
+// RequireScopeTier middleware ensures user belongs to one of the specified scope tiers
+// Scope tier is determined by: client_id NOT NULL → client, organization_id NOT NULL → org, both NULL → platform
+func (m *AuthMiddleware) RequireScopeTier(allowedTiers ...models.ScopeTier) func(http.HandlerFunc) http.HandlerFunc {
 	return func(next http.HandlerFunc) http.HandlerFunc {
 		return m.RequireAuth(func(w http.ResponseWriter, r *http.Request) {
 			user := UserFromContext(r.Context())
@@ -131,16 +132,16 @@ func (m *AuthMiddleware) RequireTenantType(allowedTypes ...models.TenantType) fu
 				return
 			}
 
-			userTenantType := user.GetPrimaryTenantType()
-			for _, allowed := range allowedTypes {
-				if userTenantType == allowed {
+			userScopeTier := user.GetScopeTier()
+			for _, allowed := range allowedTiers {
+				if userScopeTier == allowed {
 					next.ServeHTTP(w, r)
 					return
 				}
 			}
 
 			writePermissionError(w, http.StatusForbidden,
-				fmt.Sprintf("tenant type %s not authorized for this operation", userTenantType),
+				fmt.Sprintf("scope tier %s not authorized for this operation", userScopeTier),
 				"",
 			)
 		})

@@ -472,11 +472,11 @@ All customization uses **OCSF field paths** (e.g., `user.name`, `src_endpoint.ip
 }
 ```
 
-**MSP/MSSP (multi-tenant):**
+**MSP/MSSP (multi-organization):**
 ```json
 {
   "card_fields": [
-    "tenant_id",
+    "client_id",
     "customer_name",
     "user.name",
     "billing_code"

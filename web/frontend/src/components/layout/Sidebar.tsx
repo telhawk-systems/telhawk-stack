@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../AuthProvider';
+import { ScopePicker } from '../ScopePicker';
 import logo from '../../assets/logo.svg';
 
 interface NavItem {
@@ -115,6 +116,9 @@ export function Sidebar() {
           <p className="text-xs text-sidebar-text">Security Intelligence</p>
         </div>
       </div>
+
+      {/* Scope Picker */}
+      <ScopePicker />
 
       {/* Primary Navigation */}
       <nav className="flex-1 py-4 overflow-y-auto sidebar-scrollbar">

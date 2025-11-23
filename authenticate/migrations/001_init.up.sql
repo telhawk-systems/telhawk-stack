@@ -6,6 +6,11 @@
 -- - version_id: Row version identifier (UUIDv7 - timestamp encodes updated_at)
 -- - Content changes create new rows with same id but new version_id
 -- - Lifecycle changes (disable/delete) UPDATE existing rows (no new version)
+--
+-- Scope Determination:
+-- - client_id IS NOT NULL → client-scoped
+-- - organization_id IS NOT NULL AND client_id IS NULL → organization-scoped
+-- - Both NULL → platform-scoped
 
 -- ============================================================================
 -- EXTENSIONS
@@ -14,69 +19,100 @@
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";  -- For gen_random_uuid() fallback
 
 -- ============================================================================
--- TENANTS (Multi-tenant hierarchy: Platform -> Organization -> Client)
+-- ORGANIZATIONS (Platform owns Organizations)
 -- ============================================================================
 
-CREATE TABLE IF NOT EXISTS tenants (
+CREATE TABLE IF NOT EXISTS organizations (
     -- Identity (UUIDv7: timestamp = created_at)
     id UUID NOT NULL,
     -- Version (UUIDv7: timestamp = updated_at, PRIMARY KEY)
     version_id UUID PRIMARY KEY,
 
-    -- Tenant hierarchy
-    type VARCHAR(20) NOT NULL,
-    parent_id UUID,  -- References tenants(id), NULL only for platform
+    -- Organization data
     name VARCHAR(255) NOT NULL,
     slug VARCHAR(100) NOT NULL,
     settings JSONB NOT NULL DEFAULT '{}',
 
     -- Audit (version_id UUIDv7 timestamp = when, these fields = who)
-    created_by UUID,  -- References users(id), NULL only for platform (bootstrap)
+    created_by UUID,  -- References users(id), NULL for seed data
     updated_by UUID,  -- References users(id), who created this version
 
     -- Lifecycle (immutable pattern)
     disabled_at TIMESTAMPTZ,
     disabled_by UUID,
     deleted_at TIMESTAMPTZ,
-    deleted_by UUID,
-
-    -- Constraints
-    CONSTRAINT valid_tenant_type CHECK (type IN ('platform', 'organization', 'client')),
-    CONSTRAINT platform_no_parent CHECK (
-        (type = 'platform' AND parent_id IS NULL) OR
-        (type != 'platform' AND parent_id IS NOT NULL)
-    ),
-    CONSTRAINT platform_bootstrap CHECK (
-        (type = 'platform' AND created_by IS NULL) OR
-        (type != 'platform' AND created_by IS NOT NULL)
-    )
+    deleted_by UUID
 );
 
--- Get latest version of each tenant
-CREATE INDEX idx_tenants_id ON tenants(id);
-CREATE INDEX idx_tenants_latest ON tenants(id, version_id DESC);
+-- Get latest version of each organization
+CREATE INDEX idx_organizations_id ON organizations(id);
+CREATE INDEX idx_organizations_latest ON organizations(id, version_id DESC);
 
--- Ensure only one platform tenant exists (among non-deleted)
-CREATE UNIQUE INDEX one_platform_tenant ON tenants ((true))
-    WHERE type = 'platform' AND deleted_at IS NULL;
-
--- Unique slug per tenant type (active only)
-CREATE UNIQUE INDEX idx_tenants_type_slug ON tenants(type, slug)
+-- Unique slug (active only)
+CREATE UNIQUE INDEX idx_organizations_slug ON organizations(slug)
     WHERE deleted_at IS NULL;
 
--- Parent lookups
-CREATE INDEX idx_tenants_parent ON tenants(parent_id)
-    WHERE deleted_at IS NULL;
-
--- Active tenants by type
-CREATE INDEX idx_tenants_type_active ON tenants(type)
+-- Active organizations
+CREATE INDEX idx_organizations_active ON organizations(id)
     WHERE disabled_at IS NULL AND deleted_at IS NULL;
 
-COMMENT ON TABLE tenants IS 'Multi-tenant hierarchy: Platform (singleton) -> Organization -> Client';
-COMMENT ON COLUMN tenants.id IS 'Stable entity ID (UUIDv7 timestamp = created_at)';
-COMMENT ON COLUMN tenants.version_id IS 'Row version ID (UUIDv7 timestamp = updated_at)';
-COMMENT ON COLUMN tenants.created_by IS 'User who created this tenant (NULL for platform bootstrap)';
-COMMENT ON COLUMN tenants.updated_by IS 'User who created this version row';
+COMMENT ON TABLE organizations IS 'Organizations owned by the platform';
+COMMENT ON COLUMN organizations.id IS 'Stable entity ID (UUIDv7 timestamp = created_at)';
+COMMENT ON COLUMN organizations.version_id IS 'Row version ID (UUIDv7 timestamp = updated_at)';
+COMMENT ON COLUMN organizations.created_by IS 'User who created this organization (NULL for seed data)';
+COMMENT ON COLUMN organizations.updated_by IS 'User who created this version row';
+
+-- ============================================================================
+-- CLIENTS (Organizations own Clients)
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS clients (
+    -- Identity (UUIDv7: timestamp = created_at)
+    id UUID NOT NULL,
+    -- Version (UUIDv7: timestamp = updated_at, PRIMARY KEY)
+    version_id UUID PRIMARY KEY,
+
+    -- Parent organization
+    organization_id UUID NOT NULL,  -- References organizations(id)
+
+    -- Client data
+    name VARCHAR(255) NOT NULL,
+    slug VARCHAR(100) NOT NULL,
+    settings JSONB NOT NULL DEFAULT '{}',
+
+    -- Audit (version_id UUIDv7 timestamp = when, these fields = who)
+    created_by UUID,  -- References users(id), NULL for seed data
+    updated_by UUID,  -- References users(id), who created this version
+
+    -- Lifecycle (immutable pattern)
+    disabled_at TIMESTAMPTZ,
+    disabled_by UUID,
+    deleted_at TIMESTAMPTZ,
+    deleted_by UUID
+);
+
+-- Get latest version of each client
+CREATE INDEX idx_clients_id ON clients(id);
+CREATE INDEX idx_clients_latest ON clients(id, version_id DESC);
+
+-- Unique slug per organization (active only)
+CREATE UNIQUE INDEX idx_clients_org_slug ON clients(organization_id, slug)
+    WHERE deleted_at IS NULL;
+
+-- Clients by organization
+CREATE INDEX idx_clients_org ON clients(organization_id)
+    WHERE deleted_at IS NULL;
+
+-- Active clients
+CREATE INDEX idx_clients_active ON clients(id)
+    WHERE disabled_at IS NULL AND deleted_at IS NULL;
+
+COMMENT ON TABLE clients IS 'Clients owned by organizations';
+COMMENT ON COLUMN clients.id IS 'Stable entity ID (UUIDv7 timestamp = created_at)';
+COMMENT ON COLUMN clients.version_id IS 'Row version ID (UUIDv7 timestamp = updated_at)';
+COMMENT ON COLUMN clients.organization_id IS 'Parent organization that owns this client';
+COMMENT ON COLUMN clients.created_by IS 'User who created this client (NULL for seed data)';
+COMMENT ON COLUMN clients.updated_by IS 'User who created this version row';
 
 -- ============================================================================
 -- USERS
@@ -93,7 +129,13 @@ CREATE TABLE IF NOT EXISTS users (
     email VARCHAR(255) NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     roles TEXT[] NOT NULL DEFAULT '{}',  -- Legacy roles (kept for backward compat)
-    primary_tenant_id UUID,  -- References tenants(id)
+
+    -- Permissions version (for JWT validation)
+    permissions_version INTEGER NOT NULL DEFAULT 1,
+
+    -- Primary scope (determines default data visibility)
+    primary_organization_id UUID,  -- References organizations(id)
+    primary_client_id UUID,        -- References clients(id)
 
     -- Audit (version_id UUIDv7 timestamp = when, these fields = who)
     created_by UUID,  -- References users(id), NULL for root user (bootstrap)
@@ -107,7 +149,12 @@ CREATE TABLE IF NOT EXISTS users (
 
     -- Self-action constraints (compare against id, not version_id)
     CONSTRAINT users_not_self_disable CHECK (id != disabled_by),
-    CONSTRAINT users_not_self_delete CHECK (id != deleted_by)
+    CONSTRAINT users_not_self_delete CHECK (id != deleted_by),
+    -- Client requires organization
+    CONSTRAINT users_client_requires_org CHECK (
+        (primary_client_id IS NOT NULL AND primary_organization_id IS NOT NULL) OR
+        (primary_client_id IS NULL)
+    )
 );
 
 -- Get latest version of each user
@@ -124,15 +171,25 @@ CREATE UNIQUE INDEX idx_users_email ON users(email)
 CREATE INDEX idx_users_active ON users(username)
     WHERE disabled_at IS NULL AND deleted_at IS NULL;
 
--- Users by tenant
-CREATE INDEX idx_users_tenant ON users(primary_tenant_id)
+-- Users by organization
+CREATE INDEX idx_users_org ON users(primary_organization_id)
+    WHERE deleted_at IS NULL AND primary_organization_id IS NOT NULL;
+
+-- Users by client
+CREATE INDEX idx_users_client ON users(primary_client_id)
+    WHERE deleted_at IS NULL AND primary_client_id IS NOT NULL;
+
+-- Index for efficient permissions version lookups (used during token validation)
+CREATE INDEX idx_users_permissions_version ON users(id, permissions_version)
     WHERE deleted_at IS NULL;
 
 COMMENT ON TABLE users IS 'User accounts for TelHawk system';
 COMMENT ON COLUMN users.id IS 'Stable entity ID (UUIDv7 timestamp = created_at)';
 COMMENT ON COLUMN users.version_id IS 'Row version ID (UUIDv7 timestamp = updated_at)';
 COMMENT ON COLUMN users.roles IS 'Legacy role array (use user_roles table for RBAC)';
-COMMENT ON COLUMN users.primary_tenant_id IS 'User home tenant - determines base tier';
+COMMENT ON COLUMN users.permissions_version IS 'Incremented on role/permission changes - used for JWT validation';
+COMMENT ON COLUMN users.primary_organization_id IS 'User home organization (NULL for platform users)';
+COMMENT ON COLUMN users.primary_client_id IS 'User home client (NULL for org/platform users)';
 COMMENT ON COLUMN users.created_by IS 'User who created this account (NULL for root bootstrap)';
 COMMENT ON COLUMN users.updated_by IS 'User who created this version row';
 
@@ -176,7 +233,7 @@ CREATE TABLE IF NOT EXISTS hec_tokens (
     token VARCHAR(255) NOT NULL UNIQUE,
     name VARCHAR(255) NOT NULL,
     user_id UUID NOT NULL,  -- References users(id) - token owner
-    client_id UUID NOT NULL,  -- References tenants(id) - client for data isolation
+    client_id UUID NOT NULL,  -- References clients(id) - client for data isolation
     expires_at TIMESTAMPTZ,
 
     -- Audit
@@ -211,9 +268,12 @@ CREATE TABLE IF NOT EXISTS roles (
     -- Version (UUIDv7: timestamp = updated_at, PRIMARY KEY)
     version_id UUID PRIMARY KEY,
 
-    -- Role scope (tier derived: NULL/NULL=platform, org/NULL=org, org/client=client)
-    organization_id UUID,  -- Which org owns this role (NULL for platform/templates)
-    client_id UUID,        -- Which client this role is for (NULL for org-level roles)
+    -- Role scope (determines tier)
+    -- client_id NOT NULL → client-scoped
+    -- organization_id NOT NULL AND client_id IS NULL → organization-scoped
+    -- Both NULL → platform-scoped (or template)
+    organization_id UUID,  -- References organizations(id)
+    client_id UUID,        -- References clients(id)
 
     -- Role data
     name VARCHAR(100) NOT NULL,
@@ -292,7 +352,7 @@ COMMENT ON COLUMN roles.version_id IS 'Row version ID (UUIDv7 timestamp = update
 COMMENT ON COLUMN roles.organization_id IS 'Owning org (NULL = platform/template)';
 COMMENT ON COLUMN roles.client_id IS 'Specific client (NULL = org-level or platform)';
 COMMENT ON COLUMN roles.ordinal IS 'Power level 0-99 (lower = more powerful)';
-COMMENT ON COLUMN roles.is_template IS 'TRUE for template roles copied on tenant creation';
+COMMENT ON COLUMN roles.is_template IS 'TRUE for template roles copied on org/client creation';
 COMMENT ON COLUMN roles.created_by IS 'User who created this role (NULL for seed data)';
 COMMENT ON COLUMN roles.updated_by IS 'User who created this version row';
 
@@ -344,11 +404,17 @@ CREATE TABLE IF NOT EXISTS user_roles (
     -- Assignment
     user_id UUID NOT NULL,    -- References users(id)
     role_id UUID NOT NULL,    -- References roles(id)
-    tenant_id UUID NOT NULL,  -- References tenants(id)
 
-    -- Scope restrictions (NULL = unrestricted within tenant)
-    scope_organization_ids UUID[],  -- For platform users
-    scope_client_ids UUID[],        -- For org users
+    -- Scope (determines where this role assignment applies)
+    -- client_id NOT NULL → role applies at client level
+    -- organization_id NOT NULL AND client_id IS NULL → role applies at org level
+    -- Both NULL → role applies at platform level
+    organization_id UUID,     -- References organizations(id)
+    client_id UUID,           -- References clients(id)
+
+    -- Scope restrictions (NULL = unrestricted within scope)
+    scope_organization_ids UUID[],  -- For platform users: limit to these orgs
+    scope_client_ids UUID[],        -- For org users: limit to these clients
 
     -- Audit
     granted_by UUID,  -- References users(id)
@@ -356,11 +422,17 @@ CREATE TABLE IF NOT EXISTS user_roles (
 
     -- Lifecycle (revocation only)
     revoked_at TIMESTAMPTZ,
-    revoked_by UUID  -- References users(id)
+    revoked_by UUID,  -- References users(id)
+
+    -- Constraints
+    CONSTRAINT user_roles_client_requires_org CHECK (
+        (client_id IS NOT NULL AND organization_id IS NOT NULL) OR
+        (client_id IS NULL)
+    )
 );
 
--- Unique active assignment per user/role/tenant
-CREATE UNIQUE INDEX idx_user_roles_unique_active ON user_roles(user_id, role_id, tenant_id)
+-- Unique active assignment per user/role/scope
+CREATE UNIQUE INDEX idx_user_roles_unique_active ON user_roles(user_id, role_id, COALESCE(organization_id, '00000000-0000-0000-0000-000000000000'), COALESCE(client_id, '00000000-0000-0000-0000-000000000000'))
     WHERE revoked_at IS NULL;
 
 -- User's roles
@@ -371,16 +443,26 @@ CREATE INDEX idx_user_roles_user ON user_roles(user_id)
 CREATE INDEX idx_user_roles_role ON user_roles(role_id)
     WHERE revoked_at IS NULL;
 
--- Users in a tenant
-CREATE INDEX idx_user_roles_tenant ON user_roles(tenant_id)
-    WHERE revoked_at IS NULL;
+-- Users in an organization
+CREATE INDEX idx_user_roles_org ON user_roles(organization_id)
+    WHERE revoked_at IS NULL AND organization_id IS NOT NULL;
 
--- User-tenant combinations
-CREATE INDEX idx_user_roles_user_tenant ON user_roles(user_id, tenant_id)
-    WHERE revoked_at IS NULL;
+-- Users in a client
+CREATE INDEX idx_user_roles_client ON user_roles(client_id)
+    WHERE revoked_at IS NULL AND client_id IS NOT NULL;
 
-COMMENT ON TABLE user_roles IS 'User role assignments within tenants';
+-- User-organization combinations
+CREATE INDEX idx_user_roles_user_org ON user_roles(user_id, organization_id)
+    WHERE revoked_at IS NULL AND organization_id IS NOT NULL;
+
+-- User-client combinations
+CREATE INDEX idx_user_roles_user_client ON user_roles(user_id, client_id)
+    WHERE revoked_at IS NULL AND client_id IS NOT NULL;
+
+COMMENT ON TABLE user_roles IS 'User role assignments within organizations/clients';
 COMMENT ON COLUMN user_roles.id IS 'Assignment ID (UUIDv7 timestamp = created_at)';
+COMMENT ON COLUMN user_roles.organization_id IS 'Organization scope (NULL for platform-level)';
+COMMENT ON COLUMN user_roles.client_id IS 'Client scope (NULL for org/platform-level)';
 COMMENT ON COLUMN user_roles.scope_organization_ids IS 'Limit platform user to these orgs';
 COMMENT ON COLUMN user_roles.scope_client_ids IS 'Limit org user to these clients';
 
@@ -413,25 +495,75 @@ CREATE INDEX idx_audit_log_ip_address ON audit_log(ip_address);
 COMMENT ON TABLE audit_log IS 'Audit trail of all authentication and authorization events';
 
 -- ============================================================================
+-- PERMISSIONS VERSION TRIGGER FUNCTIONS
+-- ============================================================================
+
+-- Function to increment permissions_version
+-- Called when user_roles are added/revoked or when role permissions change
+CREATE OR REPLACE FUNCTION increment_user_permissions_version(user_uuid UUID)
+RETURNS void AS $$
+BEGIN
+    UPDATE users
+    SET permissions_version = permissions_version + 1
+    WHERE id = user_uuid AND deleted_at IS NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger function for user_roles changes
+CREATE OR REPLACE FUNCTION trigger_user_permissions_changed()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- On INSERT or UPDATE (grant/revoke), increment the user's permissions_version
+    IF TG_OP = 'INSERT' THEN
+        PERFORM increment_user_permissions_version(NEW.user_id);
+    ELSIF TG_OP = 'UPDATE' THEN
+        -- Only if revoked_at changed (role was revoked)
+        IF OLD.revoked_at IS NULL AND NEW.revoked_at IS NOT NULL THEN
+            PERFORM increment_user_permissions_version(NEW.user_id);
+        END IF;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create trigger on user_roles
+CREATE TRIGGER user_roles_permissions_changed
+    AFTER INSERT OR UPDATE ON user_roles
+    FOR EACH ROW
+    EXECUTE FUNCTION trigger_user_permissions_changed();
+
+-- ============================================================================
 -- SEED DATA
 -- ============================================================================
 
--- Platform tenant (singleton, bootstrap - created_by is NULL)
-INSERT INTO tenants (id, version_id, type, parent_id, name, slug, settings, created_by, updated_by)
+-- Default Organization (seed data - created_by is NULL)
+INSERT INTO organizations (id, version_id, name, slug, settings, created_by, updated_by)
 VALUES (
-    '00000000-0000-0000-0000-000000000001',
-    '00000000-0000-0000-0000-000000000001',
-    'platform',
-    NULL,
-    'TelHawk Platform',
-    'platform',
-    '{"description": "Root platform tenant"}'::jsonb,
-    NULL,  -- bootstrap: platform creates itself
+    '00000000-0000-0000-0000-000000000010',
+    '00000000-0000-0000-0000-000000000010',
+    'Default Organization',
+    'default-org',
+    '{"description": "Default organization for initial setup"}'::jsonb,
+    NULL,  -- seed data
+    NULL
+) ON CONFLICT DO NOTHING;
+
+-- Default Client (seed data, under Default Organization)
+INSERT INTO clients (id, version_id, organization_id, name, slug, settings, created_by, updated_by)
+VALUES (
+    '00000000-0000-0000-0000-000000000011',
+    '00000000-0000-0000-0000-000000000011',
+    '00000000-0000-0000-0000-000000000010',  -- parent = default org
+    'Default Client',
+    'default-client',
+    '{"description": "Default client for initial setup"}'::jsonb,
+    NULL,  -- seed data
     NULL
 ) ON CONFLICT DO NOTHING;
 
 -- Root/Admin user (password: admin123, bootstrap - created_by is NULL)
-INSERT INTO users (id, version_id, username, email, password_hash, roles, primary_tenant_id, created_by, updated_by)
+-- Platform user: no primary_organization_id or primary_client_id
+INSERT INTO users (id, version_id, username, email, password_hash, roles, primary_organization_id, primary_client_id, created_by, updated_by)
 VALUES (
     '00000000-0000-0000-0000-000000000002',
     '00000000-0000-0000-0000-000000000002',
@@ -439,37 +571,10 @@ VALUES (
     'admin@telhawk.local',
     '$2a$10$UslOjaejNBYO2PTBjrahduCEA/RM4x3nj0HXEtIGnsTDcPHnEWOva',
     ARRAY['admin'],
-    '00000000-0000-0000-0000-000000000001',
+    NULL,  -- platform user
+    NULL,  -- platform user
     NULL,  -- bootstrap: root creates itself
     NULL
-) ON CONFLICT DO NOTHING;
-
--- Default Organization (created by root)
-INSERT INTO tenants (id, version_id, type, parent_id, name, slug, settings, created_by, updated_by)
-VALUES (
-    '00000000-0000-0000-0000-000000000010',
-    '00000000-0000-0000-0000-000000000010',
-    'organization',
-    '00000000-0000-0000-0000-000000000001',  -- parent = platform
-    'Default Organization',
-    'default-org',
-    '{"description": "Default organization for initial setup"}'::jsonb,
-    '00000000-0000-0000-0000-000000000002',  -- created by root
-    '00000000-0000-0000-0000-000000000002'
-) ON CONFLICT DO NOTHING;
-
--- Default Client (created by root, under Default Organization)
-INSERT INTO tenants (id, version_id, type, parent_id, name, slug, settings, created_by, updated_by)
-VALUES (
-    '00000000-0000-0000-0000-000000000011',
-    '00000000-0000-0000-0000-000000000011',
-    'client',
-    '00000000-0000-0000-0000-000000000010',  -- parent = default org
-    'Default Client',
-    'default-client',
-    '{"description": "Default client for initial setup"}'::jsonb,
-    '00000000-0000-0000-0000-000000000002',  -- created by root
-    '00000000-0000-0000-0000-000000000002'
 ) ON CONFLICT DO NOTHING;
 
 -- ============================================================================
@@ -524,10 +629,14 @@ INSERT INTO permissions (id, resource, action, description) VALUES
     ('00000000-0000-0001-0008-000000000001', 'system', 'configure', 'Modify system settings'),
     ('00000000-0000-0001-0008-000000000002', 'system', 'view_audit', 'View audit logs'),
     ('00000000-0000-0001-0008-000000000003', 'system', 'manage_integrations', 'Configure integrations'),
-    ('00000000-0000-0001-0009-000000000001', 'tenants', 'create', 'Create organizations/clients'),
-    ('00000000-0000-0001-0009-000000000002', 'tenants', 'read', 'View tenant information'),
-    ('00000000-0000-0001-0009-000000000003', 'tenants', 'update', 'Modify tenant settings'),
-    ('00000000-0000-0001-0009-000000000004', 'tenants', 'delete', 'Delete tenants')
+    ('00000000-0000-0001-0009-000000000001', 'organizations', 'create', 'Create organizations'),
+    ('00000000-0000-0001-0009-000000000002', 'organizations', 'read', 'View organization information'),
+    ('00000000-0000-0001-0009-000000000003', 'organizations', 'update', 'Modify organization settings'),
+    ('00000000-0000-0001-0009-000000000004', 'organizations', 'delete', 'Delete organizations'),
+    ('00000000-0000-0001-0010-000000000001', 'clients', 'create', 'Create clients'),
+    ('00000000-0000-0001-0010-000000000002', 'clients', 'read', 'View client information'),
+    ('00000000-0000-0001-0010-000000000003', 'clients', 'update', 'Modify client settings'),
+    ('00000000-0000-0001-0010-000000000004', 'clients', 'delete', 'Delete clients')
 ON CONFLICT (resource, action) DO NOTHING;
 
 -- ============================================================================
@@ -561,17 +670,17 @@ ON CONFLICT DO NOTHING;
 -- Default Organization Roles (copied from org templates)
 -- organization_id = default org, client_id = NULL
 INSERT INTO roles (id, version_id, organization_id, client_id, name, slug, ordinal, description, is_system, is_protected, is_template, created_by, updated_by) VALUES
-    ('00000000-0000-0000-0010-000000000010', '00000000-0000-0000-0010-000000000010', '00000000-0000-0000-0000-000000000010', NULL, 'Organization Owner', 'org-owner', 10, 'Full organization + client control', false, false, false, '00000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000002'),
-    ('00000000-0000-0000-0010-000000000020', '00000000-0000-0000-0010-000000000020', '00000000-0000-0000-0000-000000000010', NULL, 'Organization Admin', 'org-admin', 20, 'Organization administration', false, false, false, '00000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000002'),
-    ('00000000-0000-0000-0010-000000000030', '00000000-0000-0000-0010-000000000030', '00000000-0000-0000-0000-000000000010', NULL, 'Organization Analyst', 'org-analyst', 30, 'Organization data visibility', false, false, false, '00000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000002')
+    ('00000000-0000-0000-0010-000000000010', '00000000-0000-0000-0010-000000000010', '00000000-0000-0000-0000-000000000010', NULL, 'Organization Owner', 'org-owner', 10, 'Full organization + client control', false, false, false, NULL, NULL),
+    ('00000000-0000-0000-0010-000000000020', '00000000-0000-0000-0010-000000000020', '00000000-0000-0000-0000-000000000010', NULL, 'Organization Admin', 'org-admin', 20, 'Organization administration', false, false, false, NULL, NULL),
+    ('00000000-0000-0000-0010-000000000030', '00000000-0000-0000-0010-000000000030', '00000000-0000-0000-0000-000000000010', NULL, 'Organization Analyst', 'org-analyst', 30, 'Organization data visibility', false, false, false, NULL, NULL)
 ON CONFLICT DO NOTHING;
 
 -- Default Client Roles (copied from client templates)
 -- organization_id = default org, client_id = default client
 INSERT INTO roles (id, version_id, organization_id, client_id, name, slug, ordinal, description, is_system, is_protected, is_template, created_by, updated_by) VALUES
-    ('00000000-0000-0000-0011-000000000010', '00000000-0000-0000-0011-000000000010', '00000000-0000-0000-0000-000000000010', '00000000-0000-0000-0000-000000000011', 'Client Owner', 'client-owner', 10, 'Full client control', false, false, false, '00000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000002'),
-    ('00000000-0000-0000-0011-000000000020', '00000000-0000-0000-0011-000000000020', '00000000-0000-0000-0000-000000000010', '00000000-0000-0000-0000-000000000011', 'Client Admin', 'client-admin', 20, 'Client administration', false, false, false, '00000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000002'),
-    ('00000000-0000-0000-0011-000000000030', '00000000-0000-0000-0011-000000000030', '00000000-0000-0000-0000-000000000010', '00000000-0000-0000-0000-000000000011', 'Client Analyst', 'client-analyst', 30, 'Client data visibility', false, false, false, '00000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000002')
+    ('00000000-0000-0000-0011-000000000010', '00000000-0000-0000-0011-000000000010', '00000000-0000-0000-0000-000000000010', '00000000-0000-0000-0000-000000000011', 'Client Owner', 'client-owner', 10, 'Full client control', false, false, false, NULL, NULL),
+    ('00000000-0000-0000-0011-000000000020', '00000000-0000-0000-0011-000000000020', '00000000-0000-0000-0000-000000000010', '00000000-0000-0000-0000-000000000011', 'Client Admin', 'client-admin', 20, 'Client administration', false, false, false, NULL, NULL),
+    ('00000000-0000-0000-0011-000000000030', '00000000-0000-0000-0011-000000000030', '00000000-0000-0000-0000-000000000010', '00000000-0000-0000-0000-000000000011', 'Client Analyst', 'client-analyst', 30, 'Client data visibility', false, false, false, NULL, NULL)
 ON CONFLICT DO NOTHING;
 
 -- ============================================================================
@@ -595,7 +704,7 @@ ON CONFLICT DO NOTHING;
 INSERT INTO role_permissions (role_id, permission_id, is_locked)
 SELECT '00000000-0000-0000-0001-000000000020'::uuid, p.id, false
 FROM permissions p
-WHERE p.resource IN ('users', 'tokens', 'rules', 'alerts', 'cases', 'search', 'events', 'tenants')
+WHERE p.resource IN ('users', 'tokens', 'rules', 'alerts', 'cases', 'search', 'events', 'organizations', 'clients')
    OR (p.resource = 'system' AND p.action IN ('view_audit', 'manage_integrations'))
 ON CONFLICT DO NOTHING;
 
@@ -611,15 +720,16 @@ INSERT INTO role_permissions (role_id, permission_id, is_locked)
 SELECT '00000000-0000-0000-0002-000000000010'::uuid, p.id, false
 FROM permissions p
 WHERE p.resource IN ('users', 'tokens', 'rules', 'alerts', 'cases', 'search', 'events')
-   OR (p.resource = 'tenants' AND p.action IN ('create', 'read', 'update'))
+   OR (p.resource = 'clients' AND p.action IN ('create', 'read', 'update'))
+   OR (p.resource = 'organizations' AND p.action = 'read')
 ON CONFLICT DO NOTHING;
 
--- Organization Admin gets management permissions (no tenant create)
+-- Organization Admin gets management permissions (no client create)
 INSERT INTO role_permissions (role_id, permission_id, is_locked)
 SELECT '00000000-0000-0000-0002-000000000020'::uuid, p.id, false
 FROM permissions p
 WHERE p.resource IN ('users', 'tokens', 'rules', 'alerts', 'cases', 'search', 'events')
-   OR (p.resource = 'tenants' AND p.action = 'read')
+   OR (p.resource IN ('organizations', 'clients') AND p.action = 'read')
 ON CONFLICT DO NOTHING;
 
 -- Organization Analyst gets read permissions
@@ -635,6 +745,7 @@ SELECT '00000000-0000-0000-0003-000000000010'::uuid, p.id, false
 FROM permissions p
 WHERE (p.resource IN ('users', 'tokens', 'alerts', 'cases', 'search', 'events'))
    OR (p.resource = 'rules' AND p.action = 'read')
+   OR (p.resource = 'clients' AND p.action = 'read')
 ON CONFLICT DO NOTHING;
 
 -- Client Admin gets limited management permissions
@@ -644,6 +755,7 @@ FROM permissions p
 WHERE (p.resource IN ('users', 'tokens') AND p.action IN ('read', 'create'))
    OR (p.resource IN ('alerts', 'cases', 'search', 'events') AND p.action IN ('read', 'execute', 'acknowledge', 'assign', 'close'))
    OR (p.resource = 'rules' AND p.action = 'read')
+   OR (p.resource = 'clients' AND p.action = 'read')
 ON CONFLICT DO NOTHING;
 
 -- Client Analyst gets read-only permissions
@@ -651,7 +763,7 @@ INSERT INTO role_permissions (role_id, permission_id, is_locked)
 SELECT '00000000-0000-0000-0003-000000000030'::uuid, p.id, false
 FROM permissions p
 WHERE p.action IN ('read', 'execute', 'acknowledge')
-  AND p.resource IN ('alerts', 'cases', 'search', 'events', 'rules')
+  AND p.resource IN ('alerts', 'cases', 'search', 'events', 'rules', 'clients')
 ON CONFLICT DO NOTHING;
 
 -- ============================================================================
@@ -660,37 +772,37 @@ ON CONFLICT DO NOTHING;
 
 -- Default Org Owner (copy from org-owner template)
 INSERT INTO role_permissions (role_id, permission_id, is_locked, granted_by)
-SELECT '00000000-0000-0000-0010-000000000010'::uuid, rp.permission_id, false, '00000000-0000-0000-0000-000000000002'::uuid
+SELECT '00000000-0000-0000-0010-000000000010'::uuid, rp.permission_id, false, NULL
 FROM role_permissions rp WHERE rp.role_id = '00000000-0000-0000-0002-000000000010'::uuid
 ON CONFLICT DO NOTHING;
 
 -- Default Org Admin (copy from org-admin template)
 INSERT INTO role_permissions (role_id, permission_id, is_locked, granted_by)
-SELECT '00000000-0000-0000-0010-000000000020'::uuid, rp.permission_id, false, '00000000-0000-0000-0000-000000000002'::uuid
+SELECT '00000000-0000-0000-0010-000000000020'::uuid, rp.permission_id, false, NULL
 FROM role_permissions rp WHERE rp.role_id = '00000000-0000-0000-0002-000000000020'::uuid
 ON CONFLICT DO NOTHING;
 
 -- Default Org Analyst (copy from org-analyst template)
 INSERT INTO role_permissions (role_id, permission_id, is_locked, granted_by)
-SELECT '00000000-0000-0000-0010-000000000030'::uuid, rp.permission_id, false, '00000000-0000-0000-0000-000000000002'::uuid
+SELECT '00000000-0000-0000-0010-000000000030'::uuid, rp.permission_id, false, NULL
 FROM role_permissions rp WHERE rp.role_id = '00000000-0000-0000-0002-000000000030'::uuid
 ON CONFLICT DO NOTHING;
 
 -- Default Client Owner (copy from client-owner template)
 INSERT INTO role_permissions (role_id, permission_id, is_locked, granted_by)
-SELECT '00000000-0000-0000-0011-000000000010'::uuid, rp.permission_id, false, '00000000-0000-0000-0000-000000000002'::uuid
+SELECT '00000000-0000-0000-0011-000000000010'::uuid, rp.permission_id, false, NULL
 FROM role_permissions rp WHERE rp.role_id = '00000000-0000-0000-0003-000000000010'::uuid
 ON CONFLICT DO NOTHING;
 
 -- Default Client Admin (copy from client-admin template)
 INSERT INTO role_permissions (role_id, permission_id, is_locked, granted_by)
-SELECT '00000000-0000-0000-0011-000000000020'::uuid, rp.permission_id, false, '00000000-0000-0000-0000-000000000002'::uuid
+SELECT '00000000-0000-0000-0011-000000000020'::uuid, rp.permission_id, false, NULL
 FROM role_permissions rp WHERE rp.role_id = '00000000-0000-0000-0003-000000000020'::uuid
 ON CONFLICT DO NOTHING;
 
 -- Default Client Analyst (copy from client-analyst template)
 INSERT INTO role_permissions (role_id, permission_id, is_locked, granted_by)
-SELECT '00000000-0000-0000-0011-000000000030'::uuid, rp.permission_id, false, '00000000-0000-0000-0000-000000000002'::uuid
+SELECT '00000000-0000-0000-0011-000000000030'::uuid, rp.permission_id, false, NULL
 FROM role_permissions rp WHERE rp.role_id = '00000000-0000-0000-0003-000000000030'::uuid
 ON CONFLICT DO NOTHING;
 
@@ -698,12 +810,13 @@ ON CONFLICT DO NOTHING;
 -- ADMIN USER ROLE ASSIGNMENT
 -- ============================================================================
 
--- Grant admin user the root role on platform tenant
-INSERT INTO user_roles (id, user_id, role_id, tenant_id, granted_by)
+-- Grant admin user the root role at platform level (both org and client NULL)
+INSERT INTO user_roles (id, user_id, role_id, organization_id, client_id, granted_by)
 VALUES (
     '00000000-0000-0000-0000-000000000003',
     '00000000-0000-0000-0000-000000000002',  -- admin user
     '00000000-0000-0000-0001-000000000001',  -- root role
-    '00000000-0000-0000-0000-000000000001',  -- platform tenant
-    '00000000-0000-0000-0000-000000000002'   -- self-granted (bootstrap)
+    NULL,  -- platform level
+    NULL,  -- platform level
+    NULL   -- seed data
 ) ON CONFLICT DO NOTHING;
