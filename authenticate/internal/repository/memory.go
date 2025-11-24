@@ -222,6 +222,35 @@ func (r *InMemoryRepository) ListUsers(ctx context.Context) ([]*models.User, err
 	return users, nil
 }
 
+func (r *InMemoryRepository) ListUsersByScope(ctx context.Context, scopeType string, orgID, clientID *string) ([]*models.User, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	var users []*models.User
+	for _, user := range r.users {
+		switch scopeType {
+		case "platform":
+			// Platform scope: only users with no org/client
+			if user.PrimaryOrganizationID == nil && user.PrimaryClientID == nil {
+				users = append(users, user)
+			}
+		case "organization":
+			// Organization scope: users in this org
+			if orgID != nil && user.PrimaryOrganizationID != nil && *user.PrimaryOrganizationID == *orgID {
+				users = append(users, user)
+			}
+		case "client":
+			// Client scope: users assigned to this client
+			if clientID != nil && user.PrimaryClientID != nil && *user.PrimaryClientID == *clientID {
+				users = append(users, user)
+			}
+		default:
+			users = append(users, user)
+		}
+	}
+	return users, nil
+}
+
 func (r *InMemoryRepository) DeleteUser(ctx context.Context, id string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()

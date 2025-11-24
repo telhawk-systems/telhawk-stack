@@ -36,7 +36,7 @@ func (m *mockIngestService) QueryAcks(ackIDs []string) map[string]bool {
 
 func TestNewRouter(t *testing.T) {
 	mockService := &mockIngestService{}
-	handler := handlers.NewHECHandler(mockService, nil)
+	handler := handlers.NewHECHandler(mockService, nil, nil)
 
 	router := NewRouter(handler)
 
@@ -47,7 +47,7 @@ func TestNewRouter(t *testing.T) {
 
 func TestRouter_EventEndpoint(t *testing.T) {
 	mockService := &mockIngestService{}
-	handler := handlers.NewHECHandler(mockService, nil)
+	handler := handlers.NewHECHandler(mockService, nil, nil)
 	router := NewRouter(handler)
 
 	req := httptest.NewRequest(http.MethodPost, "/services/collector/event", nil)
@@ -63,7 +63,7 @@ func TestRouter_EventEndpoint(t *testing.T) {
 
 func TestRouter_RawEndpoint(t *testing.T) {
 	mockService := &mockIngestService{}
-	handler := handlers.NewHECHandler(mockService, nil)
+	handler := handlers.NewHECHandler(mockService, nil, nil)
 	router := NewRouter(handler)
 
 	req := httptest.NewRequest(http.MethodPost, "/services/collector/raw", nil)
@@ -78,7 +78,7 @@ func TestRouter_RawEndpoint(t *testing.T) {
 
 func TestRouter_HealthEndpoint(t *testing.T) {
 	mockService := &mockIngestService{}
-	handler := handlers.NewHECHandler(mockService, nil)
+	handler := handlers.NewHECHandler(mockService, nil, nil)
 	router := NewRouter(handler)
 
 	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
@@ -93,7 +93,7 @@ func TestRouter_HealthEndpoint(t *testing.T) {
 
 func TestRouter_ReadyEndpoint(t *testing.T) {
 	mockService := &mockIngestService{}
-	handler := handlers.NewHECHandler(mockService, nil)
+	handler := handlers.NewHECHandler(mockService, nil, nil)
 	router := NewRouter(handler)
 
 	req := httptest.NewRequest(http.MethodGet, "/readyz", nil)
@@ -108,7 +108,7 @@ func TestRouter_ReadyEndpoint(t *testing.T) {
 
 func TestRouter_CollectorHealthEndpoint(t *testing.T) {
 	mockService := &mockIngestService{}
-	handler := handlers.NewHECHandler(mockService, nil)
+	handler := handlers.NewHECHandler(mockService, nil, nil)
 	router := NewRouter(handler)
 
 	req := httptest.NewRequest(http.MethodGet, "/services/collector/health", nil)
@@ -123,7 +123,7 @@ func TestRouter_CollectorHealthEndpoint(t *testing.T) {
 
 func TestRouter_AckEndpoint(t *testing.T) {
 	mockService := &mockIngestService{}
-	handler := handlers.NewHECHandler(mockService, nil)
+	handler := handlers.NewHECHandler(mockService, nil, nil)
 	router := NewRouter(handler)
 
 	req := httptest.NewRequest(http.MethodPost, "/services/collector/ack", nil)
@@ -138,7 +138,7 @@ func TestRouter_AckEndpoint(t *testing.T) {
 
 func TestRouter_MetricsEndpoint(t *testing.T) {
 	mockService := &mockIngestService{}
-	handler := handlers.NewHECHandler(mockService, nil)
+	handler := handlers.NewHECHandler(mockService, nil, nil)
 	router := NewRouter(handler)
 
 	req := httptest.NewRequest(http.MethodGet, "/metrics", nil)
@@ -159,7 +159,7 @@ func TestRouter_MetricsEndpoint(t *testing.T) {
 
 func TestRouter_NotFoundEndpoint(t *testing.T) {
 	mockService := &mockIngestService{}
-	handler := handlers.NewHECHandler(mockService, nil)
+	handler := handlers.NewHECHandler(mockService, nil, nil)
 	router := NewRouter(handler)
 
 	req := httptest.NewRequest(http.MethodGet, "/nonexistent", nil)
@@ -174,7 +174,7 @@ func TestRouter_NotFoundEndpoint(t *testing.T) {
 
 func TestRouter_RequestIDMiddleware(t *testing.T) {
 	mockService := &mockIngestService{}
-	handler := handlers.NewHECHandler(mockService, nil)
+	handler := handlers.NewHECHandler(mockService, nil, nil)
 	router := NewRouter(handler)
 
 	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)

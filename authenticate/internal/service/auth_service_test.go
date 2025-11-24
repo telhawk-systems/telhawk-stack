@@ -116,6 +116,11 @@ func (m *mockRepository) ListUsers(ctx context.Context) ([]*models.User, error) 
 	return users, nil
 }
 
+func (m *mockRepository) ListUsersByScope(ctx context.Context, scopeType string, orgID, clientID *string) ([]*models.User, error) {
+	// Simple mock implementation - just return all users (scope filtering not tested)
+	return m.ListUsers(ctx)
+}
+
 func (m *mockRepository) DeleteUser(ctx context.Context, id string) error {
 	if m.deleteUserErr != nil {
 		return m.deleteUserErr

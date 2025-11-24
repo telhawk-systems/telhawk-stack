@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useScope } from './ScopeProvider';
 import { Organization, Client } from '../types';
+import { ClientSelectorModal } from './ClientSelectorModal';
 
 // Icons
 const OrgIcon = () => (
@@ -121,7 +122,7 @@ export function ScopePicker() {
   } = useScope();
 
   const [orgDropdownOpen, setOrgDropdownOpen] = useState(false);
-  const [clientDropdownOpen, setClientDropdownOpen] = useState(false);
+  const [clientModalOpen, setClientModalOpen] = useState(false);
 
   if (loading || !userScope) {
     return (
@@ -166,12 +167,10 @@ export function ScopePicker() {
     if (org) {
       setScopeToClient(client, org);
     }
-    setClientDropdownOpen(false);
   };
 
   const handleClearClient = () => {
     clearClient();
-    setClientDropdownOpen(false);
   };
 
   // Determine if user can clear organization (platform users can)
@@ -218,47 +217,36 @@ export function ScopePicker() {
         ))}
       </Dropdown>
 
-      {/* Client Selector */}
-      <Dropdown
-        label="Client"
-        value={clientDropdownDisabled ? 'Select org first' : selectedClientName}
-        icon={scope.client_id ? <ClientIcon /> : <NoneIcon />}
-        isOpen={clientDropdownOpen}
-        onToggle={() => !clientDropdownDisabled && setClientDropdownOpen(!clientDropdownOpen)}
-        onClose={() => setClientDropdownOpen(false)}
-        disabled={clientDropdownDisabled}
-      >
-        {/* None option - always available when org is selected */}
-        <DropdownItem
-          icon={<NoneIcon />}
-          label="None"
-          selected={!scope.client_id}
-          onClick={handleClearClient}
-        />
-
-        {/* Divider */}
-        {availableClients.length > 0 && (
-          <div className="border-t border-gray-700 my-1"></div>
-        )}
-
-        {/* Clients list */}
-        {availableClients.map(client => (
-          <DropdownItem
-            key={client.id}
-            icon={<ClientIcon />}
-            label={client.name}
-            selected={scope.client_id === client.id}
-            onClick={() => handleSelectClient(client)}
-          />
-        ))}
-
-        {/* Empty state */}
-        {availableClients.length === 0 && (
-          <div className="px-3 py-2 text-sm text-gray-500 italic">
-            No clients in this organization
+      {/* Client Selector - Button that opens modal */}
+      <div>
+        <label className="block text-xs text-gray-400 mb-1 px-1">Client</label>
+        <button
+          onClick={() => !clientDropdownDisabled && setClientModalOpen(true)}
+          disabled={clientDropdownDisabled}
+          className={`w-full flex items-center justify-between gap-2 px-3 py-2 text-sm text-sidebar-text hover:text-white hover:bg-sidebar-hover rounded-lg transition-colors ${
+            clientDropdownDisabled ? 'opacity-50 cursor-not-allowed' : ''
+          }`}
+        >
+          <div className="flex items-center gap-2 min-w-0">
+            {scope.client_id ? <ClientIcon /> : <NoneIcon />}
+            <span className="truncate">
+              {clientDropdownDisabled ? 'Select org first' : selectedClientName}
+            </span>
           </div>
-        )}
-      </Dropdown>
+          <ChevronIcon open={false} />
+        </button>
+      </div>
+
+      {/* Client Selector Modal */}
+      <ClientSelectorModal
+        isOpen={clientModalOpen}
+        onClose={() => setClientModalOpen(false)}
+        clients={availableClients}
+        selectedClientId={scope.client_id || null}
+        onSelectClient={handleSelectClient}
+        onClearClient={handleClearClient}
+        organizationName={scope.organization_name}
+      />
     </div>
   );
 }

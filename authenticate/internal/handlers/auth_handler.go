@@ -207,7 +207,29 @@ func (h *AuthHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	users, err := h.service.ListUsers(r.Context())
+	// Get scope from headers
+	scopeType := r.Header.Get("X-Scope-Type")
+	orgIDStr := r.Header.Get("X-Organization-ID")
+	clientIDStr := r.Header.Get("X-Client-ID")
+
+	var users []*models.User
+	var err error
+
+	// If scope headers present, filter users by scope
+	if scopeType != "" {
+		var orgID, clientID *string
+		if orgIDStr != "" {
+			orgID = &orgIDStr
+		}
+		if clientIDStr != "" {
+			clientID = &clientIDStr
+		}
+		users, err = h.service.ListUsersByScope(r.Context(), scopeType, orgID, clientID)
+	} else {
+		// No scope specified - return all users (admin fallback)
+		users, err = h.service.ListUsers(r.Context())
+	}
+
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

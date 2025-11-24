@@ -12,6 +12,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/telhawk-systems/telhawk-stack/common/hecstats"
 	"github.com/telhawk-systems/telhawk-stack/common/logging"
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/ack"
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/authclient"
@@ -26,6 +27,8 @@ import (
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/service"
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/storage"
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/validator"
+
+	natsclient "github.com/telhawk-systems/telhawk-stack/common/messaging/nats"
 )
 
 func main() {
@@ -88,6 +91,26 @@ func main() {
 	}
 	defer rateLimiter.Close()
 
+	// Initialize HEC stats collector (uses same Redis as rate limiter)
+	var statsCollector *hecstats.Collector
+	if cfg.Redis.Enabled {
+		// Generate unique instance ID (hostname + process)
+		hostname, _ := os.Hostname()
+		instanceID := fmt.Sprintf("%s-%d", hostname, os.Getpid())
+
+		statsClient, err := hecstats.NewClient(cfg.Redis.URL, instanceID)
+		if err != nil {
+			log.Printf("WARNING: Failed to initialize HEC stats collector: %v", err)
+			log.Println("HEC token usage stats will not be collected")
+		} else {
+			statsCollector = hecstats.NewCollector(statsClient, 30*time.Second, logger.Logger)
+			log.Printf("HEC stats collector enabled (flush interval: 30s, instance: %s)", instanceID)
+			defer statsCollector.Stop()
+		}
+	} else {
+		log.Println("Redis disabled - HEC token usage stats will not be collected")
+	}
+
 	// Initialize ack manager
 	var ackManager *ack.Manager
 	if cfg.Ack.Enabled {
@@ -99,14 +122,35 @@ func main() {
 	}
 
 	// Initialize Dead Letter Queue
-	var dlqWriter *dlq.Queue
+	var dlqWriter dlq.Writer
 	if cfg.DLQ.Enabled {
-		var err error
-		dlqWriter, err = dlq.NewQueue(cfg.DLQ.BasePath)
-		if err != nil {
-			log.Fatalf("Failed to initialize DLQ: %v", err)
+		switch cfg.DLQ.Backend {
+		case "jetstream", "":
+			// JetStream backend (default, supports multiple instances)
+			jsClient, err := natsclient.NewJetStreamClient(natsclient.Config{
+				URL: cfg.DLQ.NatsURL,
+			})
+			if err != nil {
+				log.Fatalf("Failed to connect to NATS for DLQ: %v", err)
+			}
+			jsDLQ, err := dlq.NewJetStreamQueue(context.Background(), jsClient)
+			if err != nil {
+				log.Fatalf("Failed to initialize JetStream DLQ: %v", err)
+			}
+			dlqWriter = jsDLQ
+			log.Printf("Dead Letter Queue enabled (backend: jetstream, nats: %s)", cfg.DLQ.NatsURL)
+		case "file":
+			// File backend (single instance only, for development)
+			fileDLQ, err := dlq.NewQueue(cfg.DLQ.BasePath)
+			if err != nil {
+				log.Fatalf("Failed to initialize file DLQ: %v", err)
+			}
+			dlqWriter = fileDLQ
+			log.Printf("Dead Letter Queue enabled (backend: file, path: %s)", cfg.DLQ.BasePath)
+			log.Println("WARNING: File-based DLQ does not support multiple ingest instances")
+		default:
+			log.Fatalf("Unknown DLQ backend: %s (supported: jetstream, file)", cfg.DLQ.Backend)
 		}
-		log.Printf("Dead Letter Queue enabled at: %s", cfg.DLQ.BasePath)
 	} else {
 		log.Println("Dead Letter Queue disabled")
 	}
@@ -179,7 +223,7 @@ func main() {
 	}
 
 	// Initialize HTTP handlers
-	handler := handlers.NewHECHandler(ingestService, rateLimiter)
+	handler := handlers.NewHECHandler(ingestService, rateLimiter, statsCollector)
 	router := server.NewRouter(handler)
 
 	// Create server with config values

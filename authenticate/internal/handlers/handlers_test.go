@@ -93,6 +93,11 @@ func (r *testRepo) ListUsers(ctx context.Context) ([]*models.User, error) {
 	return users, nil
 }
 
+func (r *testRepo) ListUsersByScope(ctx context.Context, scopeType string, orgID, clientID *string) ([]*models.User, error) {
+	// Simple mock - return all users
+	return r.ListUsers(ctx)
+}
+
 func (r *testRepo) DeleteUser(ctx context.Context, id string) error {
 	user, ok := r.users[id]
 	if !ok {

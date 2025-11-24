@@ -1,10 +1,116 @@
 package httputil
 
 import (
+	"context"
+	"net"
 	"net/http"
 	"strconv"
 	"strings"
 )
+
+// SourceType represents how a request was made (web, CLI, API, etc.)
+type SourceType int
+
+const (
+	SourceTypeUnknown SourceType = 0
+	SourceTypeWeb     SourceType = 1
+	SourceTypeCLI     SourceType = 2
+	SourceTypeAPI     SourceType = 3
+	SourceTypeSystem  SourceType = 4
+)
+
+// String returns a human-readable representation of the source type.
+func (s SourceType) String() string {
+	switch s {
+	case SourceTypeWeb:
+		return "web"
+	case SourceTypeCLI:
+		return "cli"
+	case SourceTypeAPI:
+		return "api"
+	case SourceTypeSystem:
+		return "system"
+	default:
+		return "unknown"
+	}
+}
+
+// RequestContext holds audit context information about the HTTP request.
+// Used to populate audit fields (IP address, source type) in database records.
+type RequestContext struct {
+	IP         net.IP     // Client IP address
+	SourceType SourceType // How the request was made
+	UserAgent  string     // User-Agent header for additional context
+}
+
+// requestContextKey is the context key for RequestContext.
+type requestContextKey struct{}
+
+// NewRequestContext creates a RequestContext from an HTTP request.
+// Source type is determined from headers:
+//   - X-TelHawk-Source: "web", "cli", "api" (explicit)
+//   - User-Agent containing "thawk" or "TelHawk CLI" -> CLI
+//   - Default: Web (most requests come from the UI)
+func NewRequestContext(r *http.Request) *RequestContext {
+	ipStr := GetClientIP(r)
+	// Strip port if present (from RemoteAddr format "ip:port")
+	if host, _, err := net.SplitHostPort(ipStr); err == nil {
+		ipStr = host
+	}
+
+	ctx := &RequestContext{
+		IP:        net.ParseIP(ipStr),
+		UserAgent: r.Header.Get("User-Agent"),
+	}
+
+	// Determine source type
+	if source := r.Header.Get("X-TelHawk-Source"); source != "" {
+		switch strings.ToLower(source) {
+		case "web":
+			ctx.SourceType = SourceTypeWeb
+		case "cli":
+			ctx.SourceType = SourceTypeCLI
+		case "api":
+			ctx.SourceType = SourceTypeAPI
+		case "system":
+			ctx.SourceType = SourceTypeSystem
+		default:
+			ctx.SourceType = SourceTypeUnknown
+		}
+	} else if ua := ctx.UserAgent; ua != "" {
+		// Infer from User-Agent
+		uaLower := strings.ToLower(ua)
+		if strings.Contains(uaLower, "thawk") || strings.Contains(uaLower, "telhawk-cli") {
+			ctx.SourceType = SourceTypeCLI
+		} else {
+			ctx.SourceType = SourceTypeWeb // Default for browser-like requests
+		}
+	}
+
+	return ctx
+}
+
+// WithRequestContext adds RequestContext to the context.
+func WithRequestContext(ctx context.Context, reqCtx *RequestContext) context.Context {
+	return context.WithValue(ctx, requestContextKey{}, reqCtx)
+}
+
+// GetRequestContext retrieves RequestContext from the context.
+// Returns nil if not present.
+func GetRequestContext(ctx context.Context) *RequestContext {
+	if rc, ok := ctx.Value(requestContextKey{}).(*RequestContext); ok {
+		return rc
+	}
+	return nil
+}
+
+// IPString returns the IP address as a string, or empty string if nil.
+func (rc *RequestContext) IPString() string {
+	if rc == nil || rc.IP == nil {
+		return ""
+	}
+	return rc.IP.String()
+}
 
 // GetClientIP extracts the real client IP address from request headers.
 // It handles proxy scenarios by checking headers in this order:

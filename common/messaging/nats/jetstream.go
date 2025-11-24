@@ -240,4 +240,15 @@ var (
 		Retention: jetstream.InterestPolicy,
 		Storage:   jetstream.FileStorage,
 	}
+
+	// IngestDLQStream captures failed ingestion events for replay/analysis.
+	IngestDLQStream = StreamConfig{
+		Name:      "INGEST_DLQ",
+		Subjects:  []string{"ingest.dlq.>"},
+		MaxAge:    7 * 24 * time.Hour, // Keep for 7 days
+		MaxBytes:  500 * 1024 * 1024,  // 500MB
+		MaxMsgs:   100000,
+		Retention: jetstream.LimitsPolicy, // Keep messages until limits hit
+		Storage:   jetstream.FileStorage,
+	}
 )

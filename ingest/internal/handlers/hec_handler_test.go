@@ -60,7 +60,7 @@ func TestHandleEvent_WithAck(t *testing.T) {
 		ingestEventAckID: "test-ack-id-123",
 	}
 
-	handler := NewHECHandler(mockService, nil)
+	handler := NewHECHandler(mockService, nil, nil)
 
 	event := map[string]interface{}{
 		"event": "test event",
@@ -102,7 +102,7 @@ func TestHandleEvent_WithoutAck(t *testing.T) {
 		ingestEventAckID: "test-ack-id-123",
 	}
 
-	handler := NewHECHandler(mockService, nil)
+	handler := NewHECHandler(mockService, nil, nil)
 
 	event := map[string]interface{}{
 		"event": "test event",
@@ -144,7 +144,7 @@ func TestHandleRaw_WithAck(t *testing.T) {
 		ingestRawAckID: "raw-ack-id-456",
 	}
 
-	handler := NewHECHandler(mockService, nil)
+	handler := NewHECHandler(mockService, nil, nil)
 
 	rawData := []byte("test raw log line")
 
@@ -171,7 +171,7 @@ func TestHandleRaw_WithAck(t *testing.T) {
 
 func TestAckQuery(t *testing.T) {
 	mockService := &mockIngestService{}
-	handler := NewHECHandler(mockService, nil)
+	handler := NewHECHandler(mockService, nil, nil)
 
 	reqBody := map[string]interface{}{
 		"acks": []string{"ack-1", "ack-2"},
@@ -209,7 +209,7 @@ func TestAckQuery(t *testing.T) {
 
 func TestHandleEvent_InvalidJSON(t *testing.T) {
 	mockService := &mockIngestService{}
-	handler := NewHECHandler(mockService, nil)
+	handler := NewHECHandler(mockService, nil, nil)
 
 	// Invalid JSON
 	body := []byte("{invalid json}")
@@ -228,7 +228,7 @@ func TestHandleEvent_InvalidJSON(t *testing.T) {
 
 func TestHandleEvent_EmptyBody(t *testing.T) {
 	mockService := &mockIngestService{}
-	handler := NewHECHandler(mockService, nil)
+	handler := NewHECHandler(mockService, nil, nil)
 
 	req := httptest.NewRequest(http.MethodPost, "/services/collector/event", bytes.NewReader([]byte{}))
 	req.Header.Set("Authorization", "Telhawk test-token")
@@ -246,7 +246,7 @@ func TestHandleEvent_ServiceError(t *testing.T) {
 	mockService := &mockIngestService{
 		ingestEventErr: fmt.Errorf("service unavailable"),
 	}
-	handler := NewHECHandler(mockService, nil)
+	handler := NewHECHandler(mockService, nil, nil)
 
 	event := map[string]interface{}{
 		"event": "test event",
@@ -267,7 +267,7 @@ func TestHandleEvent_ServiceError(t *testing.T) {
 
 func TestHandleRaw_EmptyBody(t *testing.T) {
 	mockService := &mockIngestService{}
-	handler := NewHECHandler(mockService, nil)
+	handler := NewHECHandler(mockService, nil, nil)
 
 	req := httptest.NewRequest(http.MethodPost, "/services/collector/raw", bytes.NewReader([]byte{}))
 	req.Header.Set("Authorization", "Telhawk test-token")
@@ -284,7 +284,7 @@ func TestHandleRaw_ServiceError(t *testing.T) {
 	mockService := &mockIngestService{
 		ingestRawErr: fmt.Errorf("service unavailable"),
 	}
-	handler := NewHECHandler(mockService, nil)
+	handler := NewHECHandler(mockService, nil, nil)
 
 	rawData := []byte("test raw log line")
 
@@ -301,7 +301,7 @@ func TestHandleRaw_ServiceError(t *testing.T) {
 
 func TestHealth(t *testing.T) {
 	mockService := &mockIngestService{}
-	handler := NewHECHandler(mockService, nil)
+	handler := NewHECHandler(mockService, nil, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
 	rr := httptest.NewRecorder()
@@ -324,7 +324,7 @@ func TestHealth(t *testing.T) {
 
 func TestReady(t *testing.T) {
 	mockService := &mockIngestService{}
-	handler := NewHECHandler(mockService, nil)
+	handler := NewHECHandler(mockService, nil, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/readyz", nil)
 	rr := httptest.NewRecorder()
@@ -354,7 +354,7 @@ func TestReady(t *testing.T) {
 
 func TestAck_InvalidJSON(t *testing.T) {
 	mockService := &mockIngestService{}
-	handler := NewHECHandler(mockService, nil)
+	handler := NewHECHandler(mockService, nil, nil)
 
 	body := []byte("{invalid json}")
 
@@ -371,7 +371,7 @@ func TestAck_InvalidJSON(t *testing.T) {
 
 func TestHandleEvent_MissingToken(t *testing.T) {
 	mockService := &mockIngestService{}
-	handler := NewHECHandler(mockService, nil)
+	handler := NewHECHandler(mockService, nil, nil)
 
 	event := map[string]interface{}{"event": "test"}
 	body, _ := json.Marshal(event)
@@ -391,7 +391,7 @@ func TestHandleEvent_TokenValidationFailed(t *testing.T) {
 	mockService := &mockIngestService{
 		validateTokenErr: fmt.Errorf("invalid token"),
 	}
-	handler := NewHECHandler(mockService, nil)
+	handler := NewHECHandler(mockService, nil, nil)
 
 	event := map[string]interface{}{"event": "test"}
 	body, _ := json.Marshal(event)
@@ -410,7 +410,7 @@ func TestHandleEvent_TokenValidationFailed(t *testing.T) {
 
 func TestHandleEvent_WrongMethod(t *testing.T) {
 	mockService := &mockIngestService{}
-	handler := NewHECHandler(mockService, nil)
+	handler := NewHECHandler(mockService, nil, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/services/collector/event", nil)
 
@@ -424,7 +424,7 @@ func TestHandleEvent_WrongMethod(t *testing.T) {
 
 func TestHandleRaw_WrongMethod(t *testing.T) {
 	mockService := &mockIngestService{}
-	handler := NewHECHandler(mockService, nil)
+	handler := NewHECHandler(mockService, nil, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/services/collector/raw", nil)
 
@@ -438,7 +438,7 @@ func TestHandleRaw_WrongMethod(t *testing.T) {
 
 func TestHandleRaw_MissingToken(t *testing.T) {
 	mockService := &mockIngestService{}
-	handler := NewHECHandler(mockService, nil)
+	handler := NewHECHandler(mockService, nil, nil)
 
 	req := httptest.NewRequest(http.MethodPost, "/services/collector/raw", bytes.NewReader([]byte("raw data")))
 
@@ -454,7 +454,7 @@ func TestHandleRaw_TokenValidationFailed(t *testing.T) {
 	mockService := &mockIngestService{
 		validateTokenErr: fmt.Errorf("invalid token"),
 	}
-	handler := NewHECHandler(mockService, nil)
+	handler := NewHECHandler(mockService, nil, nil)
 
 	req := httptest.NewRequest(http.MethodPost, "/services/collector/raw", bytes.NewReader([]byte("raw data")))
 	req.Header.Set("Authorization", "Telhawk bad-token")
@@ -471,7 +471,7 @@ func TestHandleRaw_WithQueryParams(t *testing.T) {
 	mockService := &mockIngestService{
 		ingestRawAckID: "raw-ack-456",
 	}
-	handler := NewHECHandler(mockService, nil)
+	handler := NewHECHandler(mockService, nil, nil)
 
 	rawData := []byte("test raw log line")
 
@@ -490,7 +490,7 @@ func TestHandleRaw_WithHeaders(t *testing.T) {
 	mockService := &mockIngestService{
 		ingestRawAckID: "raw-ack-789",
 	}
-	handler := NewHECHandler(mockService, nil)
+	handler := NewHECHandler(mockService, nil, nil)
 
 	rawData := []byte("test raw log line")
 
@@ -512,7 +512,7 @@ func TestHandleEvent_NDJSONBatch(t *testing.T) {
 	mockService := &mockIngestService{
 		ingestEventAckID: "batch-ack-123",
 	}
-	handler := NewHECHandler(mockService, nil)
+	handler := NewHECHandler(mockService, nil, nil)
 
 	ndjson := `{"event":"event 1","source":"test"}
 {"event":"event 2","source":"test"}
@@ -534,7 +534,7 @@ func TestHandleEvent_NDJSONBatchWithEmptyLines(t *testing.T) {
 	mockService := &mockIngestService{
 		ingestEventAckID: "batch-ack-456",
 	}
-	handler := NewHECHandler(mockService, nil)
+	handler := NewHECHandler(mockService, nil, nil)
 
 	ndjson := `{"event":"event 1"}
 
@@ -556,7 +556,7 @@ func TestHandleEvent_NDJSONBatchWithEmptyLines(t *testing.T) {
 
 func TestHandleEvent_NDJSONInvalidLine(t *testing.T) {
 	mockService := &mockIngestService{}
-	handler := NewHECHandler(mockService, nil)
+	handler := NewHECHandler(mockService, nil, nil)
 
 	ndjson := `{"event":"event 1"}
 {invalid json}
@@ -618,7 +618,7 @@ func TestGetClientIP_Precedence(t *testing.T) {
 
 func TestAck_GetMethod(t *testing.T) {
 	mockService := &mockIngestService{}
-	handler := NewHECHandler(mockService, nil)
+	handler := NewHECHandler(mockService, nil, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/services/collector/ack", nil)
 	rr := httptest.NewRecorder()
@@ -655,7 +655,7 @@ func TestHandleEvent_RateLimitedByIP(t *testing.T) {
 			return true, nil
 		},
 	}
-	handler := NewHECHandler(mockService, rateLimiter)
+	handler := NewHECHandler(mockService, rateLimiter, nil)
 
 	event := map[string]interface{}{"event": "test"}
 	body, _ := json.Marshal(event)
@@ -682,7 +682,7 @@ func TestHandleEvent_RateLimitedByToken(t *testing.T) {
 			return true, nil
 		},
 	}
-	handler := NewHECHandler(mockService, rateLimiter)
+	handler := NewHECHandler(mockService, rateLimiter, nil)
 
 	event := map[string]interface{}{"event": "test"}
 	body, _ := json.Marshal(event)
@@ -706,7 +706,7 @@ func TestHandleEvent_RateLimitError(t *testing.T) {
 			return false, fmt.Errorf("rate limiter error")
 		},
 	}
-	handler := NewHECHandler(mockService, rateLimiter)
+	handler := NewHECHandler(mockService, rateLimiter, nil)
 
 	event := map[string]interface{}{"event": "test"}
 	body, _ := json.Marshal(event)
@@ -733,7 +733,7 @@ func TestHandleRaw_RateLimitedByIP(t *testing.T) {
 			return true, nil
 		},
 	}
-	handler := NewHECHandler(mockService, rateLimiter)
+	handler := NewHECHandler(mockService, rateLimiter, nil)
 
 	req := httptest.NewRequest(http.MethodPost, "/services/collector/raw", bytes.NewReader([]byte("raw data")))
 	req.Header.Set("Authorization", "Telhawk test-token")
@@ -756,7 +756,7 @@ func TestHandleRaw_RateLimitedByToken(t *testing.T) {
 			return true, nil
 		},
 	}
-	handler := NewHECHandler(mockService, rateLimiter)
+	handler := NewHECHandler(mockService, rateLimiter, nil)
 
 	req := httptest.NewRequest(http.MethodPost, "/services/collector/raw", bytes.NewReader([]byte("raw data")))
 	req.Header.Set("Authorization", "Telhawk test-token")

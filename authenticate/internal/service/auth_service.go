@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -12,6 +13,7 @@ import (
 	"github.com/telhawk-systems/telhawk-stack/authenticate/internal/models"
 	"github.com/telhawk-systems/telhawk-stack/authenticate/internal/repository"
 	"github.com/telhawk-systems/telhawk-stack/authenticate/pkg/tokens"
+	"github.com/telhawk-systems/telhawk-stack/common/httputil"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -26,6 +28,19 @@ func stringOrEmpty(s *string) string {
 		return ""
 	}
 	return *s
+}
+
+// inferSourceType determines the source type from User-Agent header.
+// Returns: 0=unknown, 1=web, 2=cli, 3=api, 4=system
+func inferSourceType(userAgent string) int {
+	if userAgent == "" {
+		return int(httputil.SourceTypeUnknown)
+	}
+	uaLower := strings.ToLower(userAgent)
+	if strings.Contains(uaLower, "thawk") || strings.Contains(uaLower, "telhawk-cli") {
+		return int(httputil.SourceTypeCLI)
+	}
+	return int(httputil.SourceTypeWeb) // Default for browser-like requests
 }
 
 type AuthService struct {
@@ -80,12 +95,14 @@ func (s *AuthService) CreateUser(ctx context.Context, req *models.CreateUserRequ
 	}
 
 	user := &models.User{
-		ID:           userID.String(),
-		VersionID:    userID.String(), // Same as ID for initial version
-		Username:     req.Username,
-		Email:        req.Email,
-		PasswordHash: string(hashedPassword),
-		Roles:        req.Roles,
+		ID:                userID.String(),
+		VersionID:         userID.String(), // Same as ID for initial version
+		Username:          req.Username,
+		Email:             req.Email,
+		PasswordHash:      string(hashedPassword),
+		Roles:             req.Roles,
+		CreatedFromIP:     &ipAddress,
+		CreatedSourceType: inferSourceType(userAgent),
 	}
 
 	if len(user.Roles) == 0 {
@@ -180,6 +197,9 @@ func (s *AuthService) Login(ctx context.Context, req *models.LoginRequest, ipAdd
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 		ExpiresAt:    time.Now().Add(7 * 24 * time.Hour),
+		IPAddress:    &ipAddress,
+		UserAgent:    &userAgent,
+		SourceType:   inferSourceType(userAgent),
 	}
 
 	if err := s.repo.CreateSession(ctx, session); err != nil {
@@ -339,6 +359,10 @@ func (s *AuthService) ListUsers(ctx context.Context) ([]*models.User, error) {
 	return s.repo.ListUsers(ctx)
 }
 
+func (s *AuthService) ListUsersByScope(ctx context.Context, scopeType string, orgID, clientID *string) ([]*models.User, error) {
+	return s.repo.ListUsersByScope(ctx, scopeType, orgID, clientID)
+}
+
 func (s *AuthService) GetUser(ctx context.Context, userID string) (*models.User, error) {
 	return s.repo.GetUserByID(ctx, userID)
 }
@@ -459,12 +483,14 @@ func (s *AuthService) CreateHECToken(ctx context.Context, userID, clientID, name
 
 	idUUID, _ := uuid.NewV7()
 	hecToken := &models.HECToken{
-		ID:        idUUID.String(),
-		UserID:    userID,
-		ClientID:  clientID,
-		CreatedBy: userID,
-		Token:     token,
-		Name:      name,
+		ID:                idUUID.String(),
+		UserID:            userID,
+		ClientID:          clientID,
+		CreatedBy:         userID,
+		Token:             token,
+		Name:              name,
+		CreatedFromIP:     &ipAddress,
+		CreatedSourceType: inferSourceType(userAgent),
 	}
 
 	if err := s.repo.CreateHECToken(ctx, hecToken); err != nil {

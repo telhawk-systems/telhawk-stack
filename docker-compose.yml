@@ -577,10 +577,11 @@ services:
       - INGEST_INGESTION_RATE_LIMIT_WINDOW=${INGEST_RATE_LIMIT_WINDOW:-1m}
       - INGEST_ACK_ENABLED=${INGEST_ACK_ENABLED:-true}
       - INGEST_ACK_TTL=${INGEST_ACK_TTL:-10m}
-      - INGEST_DLQ_ENABLED=false
+      - INGEST_DLQ_ENABLED=${INGEST_DLQ_ENABLED:-true}
+      - INGEST_DLQ_BACKEND=${INGEST_DLQ_BACKEND:-jetstream}
+      - INGEST_DLQ_NATS_URL=${INGEST_DLQ_NATS_URL:-nats://nats:4222}
     volumes:
       - telhawk-certs:/certs:ro
-      - ingest-dlq:/var/lib/telhawk
     networks:
       - telhawk
     depends_on:
@@ -588,6 +589,7 @@ services:
       - authenticate
       - opensearch
       - redis
+      - nats
     healthcheck:
       test: ["CMD", "/busybox/wget", "-q", "-O", "-", "http://localhost:8088/readyz"]
       interval: 30s
@@ -668,7 +670,7 @@ volumes:
   opensearch-data:
   opensearch-certs:
   telhawk-certs:
-  ingest-dlq:
+  # ingest-dlq: # DEPRECATED - DLQ now uses NATS JetStream
   auth-db-data:
     driver: local
   # DEPRECATED: Merged into respond-db-data

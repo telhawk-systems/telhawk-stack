@@ -41,8 +41,10 @@ logging:
 
 # Dead Letter Queue for failed events
 dlq:
-  enabled: false
-  base_path: /var/lib/telhawk/dlq
+  enabled: true
+  backend: jetstream  # jetstream (recommended) or file
+  nats_url: nats://nats:4222
+  base_path: /var/lib/telhawk/dlq  # Only used for file backend
 
 # HEC Acknowledgement channel
 ack:

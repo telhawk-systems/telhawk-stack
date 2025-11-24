@@ -33,6 +33,14 @@ type User struct {
 
 	// Loaded via join (not stored directly in users table)
 	UserRoles []*UserRole `json:"user_roles,omitempty"`
+
+	// Audit context (from migration 002)
+	CreatedFromIP      *string `json:"created_from_ip,omitempty"`
+	CreatedSourceType  int     `json:"created_source_type,omitempty"`
+	DisabledFromIP     *string `json:"disabled_from_ip,omitempty"`
+	DisabledSourceType int     `json:"disabled_source_type,omitempty"`
+	DeletedFromIP      *string `json:"deleted_from_ip,omitempty"`
+	DeletedSourceType  int     `json:"deleted_source_type,omitempty"`
 }
 
 // IsActive returns true if user is not disabled or deleted
@@ -89,6 +97,14 @@ type HECToken struct {
 	DisabledBy *string    `json:"disabled_by,omitempty"`
 	RevokedAt  *time.Time `json:"revoked_at,omitempty"`
 	RevokedBy  *string    `json:"revoked_by,omitempty"`
+
+	// Audit context (from migration 002)
+	CreatedFromIP      *string `json:"created_from_ip,omitempty"`
+	CreatedSourceType  int     `json:"created_source_type,omitempty"`
+	DisabledFromIP     *string `json:"disabled_from_ip,omitempty"`
+	DisabledSourceType int     `json:"disabled_source_type,omitempty"`
+	RevokedFromIP      *string `json:"revoked_from_ip,omitempty"`
+	RevokedSourceType  int     `json:"revoked_source_type,omitempty"`
 }
 
 // IsActive returns true if token is not disabled, revoked, or expired
@@ -170,6 +186,13 @@ type Session struct {
 	ExpiresAt    time.Time  `json:"expires_at"`
 	RevokedAt    *time.Time `json:"revoked_at,omitempty"`
 	RevokedBy    *string    `json:"revoked_by,omitempty"`
+
+	// Audit context (from migration 002)
+	IPAddress         *string `json:"ip_address,omitempty"` // Client IP at login
+	UserAgent         *string `json:"user_agent,omitempty"` // User-Agent at login
+	SourceType        int     `json:"source_type"`          // 0=unknown, 1=web, 2=cli, 3=api, 4=system
+	RevokedFromIP     *string `json:"revoked_from_ip,omitempty"`
+	RevokedSourceType int     `json:"revoked_source_type,omitempty"`
 }
 
 // IsActive returns true if session is not revoked or expired

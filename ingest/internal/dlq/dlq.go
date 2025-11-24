@@ -13,14 +13,19 @@ import (
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/models"
 )
 
+// Writer is the interface for dead-letter queue implementations.
+type Writer interface {
+	Write(ctx context.Context, envelope *models.RawEventEnvelope, err error, reason string) error
+}
+
 // FailedEvent captures normalization failure details for replay.
 type FailedEvent struct {
-	Timestamp   time.Time               `json:"timestamp"`
+	Timestamp   time.Time                `json:"timestamp"`
 	Envelope    *models.RawEventEnvelope `json:"envelope"`
-	Error       string                  `json:"error"`
-	Reason      string                  `json:"reason"`
-	Attempts    int                     `json:"attempts"`
-	LastAttempt time.Time               `json:"last_attempt"`
+	Error       string                   `json:"error"`
+	Reason      string                   `json:"reason"`
+	Attempts    int                      `json:"attempts"`
+	LastAttempt time.Time                `json:"last_attempt"`
 }
 
 // Queue writes failed normalization events to disk for later analysis/replay.

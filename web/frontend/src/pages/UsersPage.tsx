@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Layout } from '../components/Layout';
+import { useScope } from '../components/ScopeProvider';
 import { apiClient } from '../services/api';
 import { UserDetails } from '../types';
 
 export function UsersPage() {
+  const { scope } = useScope();
   const [users, setUsers] = useState<UserDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -18,9 +20,10 @@ export function UsersPage() {
     roles: ['viewer'] as string[],
   });
 
+  // Reload users when scope changes
   useEffect(() => {
     loadUsers();
-  }, []);
+  }, [scope.organization_id, scope.client_id]);
 
   const loadUsers = async () => {
     try {

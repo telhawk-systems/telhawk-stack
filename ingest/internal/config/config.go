@@ -70,7 +70,9 @@ type AckConfig struct {
 
 type DLQConfig struct {
 	Enabled  bool   `mapstructure:"enabled"`
-	BasePath string `mapstructure:"base_path"`
+	Backend  string `mapstructure:"backend"`   // "jetstream" (default) or "file"
+	BasePath string `mapstructure:"base_path"` // Only used for file backend
+	NatsURL  string `mapstructure:"nats_url"`  // Only used for jetstream backend
 }
 
 func Load(configPath string) (*Config, error) {
@@ -104,7 +106,9 @@ func Load(configPath string) (*Config, error) {
 	v.SetDefault("ack.enabled", true)
 	v.SetDefault("ack.ttl", "10m")
 	v.SetDefault("dlq.enabled", true)
+	v.SetDefault("dlq.backend", "jetstream")
 	v.SetDefault("dlq.base_path", "/var/lib/telhawk/dlq")
+	v.SetDefault("dlq.nats_url", "nats://localhost:4222")
 
 	// Read config file
 	if configPath != "" {

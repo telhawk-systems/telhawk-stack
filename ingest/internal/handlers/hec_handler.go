@@ -5,10 +5,12 @@ import (
 	"encoding/json"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"strings"
 	"time"
 
+	"github.com/telhawk-systems/telhawk-stack/common/hecstats"
 	"github.com/telhawk-systems/telhawk-stack/common/httputil"
 
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/metrics"
@@ -27,14 +29,16 @@ type IngestServiceInterface interface {
 }
 
 type HECHandler struct {
-	service     IngestServiceInterface
-	rateLimiter ratelimit.RateLimiter
+	service        IngestServiceInterface
+	rateLimiter    ratelimit.RateLimiter
+	statsCollector *hecstats.Collector
 }
 
-func NewHECHandler(service IngestServiceInterface, rateLimiter ratelimit.RateLimiter) *HECHandler {
+func NewHECHandler(service IngestServiceInterface, rateLimiter ratelimit.RateLimiter, statsCollector *hecstats.Collector) *HECHandler {
 	return &HECHandler{
-		service:     service,
-		rateLimiter: rateLimiter,
+		service:        service,
+		rateLimiter:    rateLimiter,
+		statsCollector: statsCollector,
 	}
 }
 
@@ -143,6 +147,11 @@ func (h *HECHandler) HandleEvent(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Record HEC token usage stats
+	if h.statsCollector != nil && tokenInfo != nil {
+		h.statsCollector.Record(tokenInfo.TokenID, int64(len(events)), net.ParseIP(sourceIP))
+	}
+
 	// Check if client requested acknowledgement
 	channelID := r.Header.Get("X-Splunk-Request-Channel")
 	if channelID != "" && ackID != "" {
@@ -242,6 +251,11 @@ func (h *HECHandler) HandleRaw(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		h.sendError(w, hec.ErrServerBusy, http.StatusServiceUnavailable)
 		return
+	}
+
+	// Record HEC token usage stats (raw endpoint = 1 event)
+	if h.statsCollector != nil && tokenInfo != nil {
+		h.statsCollector.Record(tokenInfo.TokenID, 1, net.ParseIP(sourceIP))
 	}
 
 	// Check if client requested acknowledgement

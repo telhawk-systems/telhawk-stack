@@ -25,7 +25,7 @@ type IngestService struct {
 	eventQueue    chan *models.Event
 	stopChan      chan struct{}
 	pipeline      *pipeline.Pipeline
-	dlq           *dlq.Queue
+	dlq           dlq.Writer
 	storageClient StorageClient
 	authClient    AuthClient
 	ackManager    *ack.Manager
@@ -40,7 +40,7 @@ type AuthClient interface {
 	ValidateHECToken(ctx context.Context, token string) (*authclient.ValidateHECTokenResponse, error)
 }
 
-func NewIngestService(pipeline *pipeline.Pipeline, dlq *dlq.Queue, storageClient StorageClient, authClient AuthClient) *IngestService {
+func NewIngestService(pipeline *pipeline.Pipeline, dlqWriter dlq.Writer, storageClient StorageClient, authClient AuthClient) *IngestService {
 	queueCap := 10000
 	s := &IngestService{
 		eventQueue:    make(chan *models.Event, queueCap),
@@ -50,7 +50,7 @@ func NewIngestService(pipeline *pipeline.Pipeline, dlq *dlq.Queue, storageClient
 			LastEvent: time.Now(),
 		},
 		pipeline:      pipeline,
-		dlq:           dlq,
+		dlq:           dlqWriter,
 		storageClient: storageClient,
 		authClient:    authClient,
 	}

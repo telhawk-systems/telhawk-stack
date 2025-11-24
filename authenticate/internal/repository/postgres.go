@@ -54,13 +54,14 @@ func (r *PostgresRepository) CreateUser(ctx context.Context, user *models.User) 
 	defer cancel()
 
 	query := `
-		INSERT INTO users (id, version_id, username, email, password_hash, roles, primary_organization_id, primary_client_id)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		INSERT INTO users (id, version_id, username, email, password_hash, roles, primary_organization_id, primary_client_id, created_from_ip, created_source_type)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 	`
 
 	_, err := r.pool.Exec(ctx, query,
 		user.ID, user.VersionID, user.Username, user.Email, user.PasswordHash,
 		user.Roles, user.PrimaryOrganizationID, user.PrimaryClientID,
+		user.CreatedFromIP, user.CreatedSourceType,
 	)
 
 	if err != nil {
@@ -378,6 +379,92 @@ func (r *PostgresRepository) ListUsers(ctx context.Context) ([]*models.User, err
 	return users, nil
 }
 
+func (r *PostgresRepository) ListUsersByScope(ctx context.Context, scopeType string, orgID, clientID *string) ([]*models.User, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	var query string
+	var args []interface{}
+
+	switch scopeType {
+	case "platform":
+		// Platform scope: show only platform-level users (no org/client assignment)
+		query = `
+			SELECT DISTINCT ON (id) id, version_id, username, email, password_hash, roles,
+			       primary_organization_id, primary_client_id,
+			       disabled_at, disabled_by, deleted_at, deleted_by,
+			       permissions_version
+			FROM users
+			WHERE deleted_at IS NULL
+			  AND primary_organization_id IS NULL
+			  AND primary_client_id IS NULL
+			ORDER BY id DESC, version_id DESC
+		`
+	case "organization":
+		if orgID == nil {
+			return nil, fmt.Errorf("organization_id required for organization scope")
+		}
+		// Organization scope: show users in this org (org-level or any client in org)
+		query = `
+			SELECT DISTINCT ON (id) id, version_id, username, email, password_hash, roles,
+			       primary_organization_id, primary_client_id,
+			       disabled_at, disabled_by, deleted_at, deleted_by,
+			       permissions_version
+			FROM users
+			WHERE deleted_at IS NULL
+			  AND primary_organization_id = $1
+			ORDER BY id DESC, version_id DESC
+		`
+		args = append(args, *orgID)
+	case "client":
+		if clientID == nil {
+			return nil, fmt.Errorf("client_id required for client scope")
+		}
+		// Client scope: show only users assigned to this specific client
+		query = `
+			SELECT DISTINCT ON (id) id, version_id, username, email, password_hash, roles,
+			       primary_organization_id, primary_client_id,
+			       disabled_at, disabled_by, deleted_at, deleted_by,
+			       permissions_version
+			FROM users
+			WHERE deleted_at IS NULL
+			  AND primary_client_id = $1
+			ORDER BY id DESC, version_id DESC
+		`
+		args = append(args, *clientID)
+	default:
+		// Unknown scope type - return all users (fallback)
+		return r.ListUsers(ctx)
+	}
+
+	rows, err := r.pool.Query(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list users by scope: %w", err)
+	}
+	defer rows.Close()
+
+	var users []*models.User
+	for rows.Next() {
+		var user models.User
+		err := rows.Scan(
+			&user.ID, &user.VersionID, &user.Username, &user.Email, &user.PasswordHash,
+			&user.Roles, &user.PrimaryOrganizationID, &user.PrimaryClientID,
+			&user.DisabledAt, &user.DisabledBy, &user.DeletedAt, &user.DeletedBy,
+			&user.PermissionsVersion,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan user: %w", err)
+		}
+		users = append(users, &user)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating users: %w", err)
+	}
+
+	return users, nil
+}
+
 func (r *PostgresRepository) DeleteUser(ctx context.Context, id string) error {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
@@ -406,13 +493,13 @@ func (r *PostgresRepository) CreateSession(ctx context.Context, session *models.
 	defer cancel()
 
 	query := `
-		INSERT INTO sessions (id, user_id, access_token, refresh_token, expires_at)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO sessions (id, user_id, access_token, refresh_token, expires_at, ip_address, user_agent, source_type)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 	`
 
 	_, err := r.pool.Exec(ctx, query,
 		session.ID, session.UserID, session.AccessToken, session.RefreshToken,
-		session.ExpiresAt,
+		session.ExpiresAt, session.IPAddress, session.UserAgent, session.SourceType,
 	)
 
 	if err != nil {
@@ -501,12 +588,13 @@ func (r *PostgresRepository) CreateHECToken(ctx context.Context, token *models.H
 	defer cancel()
 
 	query := `
-		INSERT INTO hec_tokens (id, token, name, user_id, client_id, created_by, expires_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		INSERT INTO hec_tokens (id, token, name, user_id, client_id, created_by, expires_at, created_from_ip, created_source_type)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 	`
 
 	_, err := r.pool.Exec(ctx, query,
 		token.ID, token.Token, token.Name, token.UserID, token.ClientID, token.CreatedBy, token.ExpiresAt,
+		token.CreatedFromIP, token.CreatedSourceType,
 	)
 
 	if err != nil {

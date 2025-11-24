@@ -4,6 +4,13 @@ import { useScope } from '../components/ScopeProvider';
 import { apiClient } from '../services/api';
 import { HECToken } from '../types';
 
+// Extract timestamp from UUIDv7 (first 48 bits are milliseconds since Unix epoch)
+function getDateFromUUIDv7(uuid: string): Date {
+  const hex = uuid.replace(/-/g, '').substring(0, 12);
+  const ms = parseInt(hex, 16);
+  return new Date(ms);
+}
+
 export function TokensPage() {
   const { scope, hasClientSelected } = useScope();
   const [tokens, setTokens] = useState<HECToken[]>([]);
@@ -245,7 +252,7 @@ export function TokensPage() {
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                  {new Date(token.created_at).toLocaleDateString()} {new Date(token.created_at).toLocaleTimeString()}
+                  {getDateFromUUIDv7(token.id).toLocaleDateString()} {getDateFromUUIDv7(token.id).toLocaleTimeString()}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
                   {token.enabled ? (
