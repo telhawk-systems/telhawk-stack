@@ -93,16 +93,39 @@ func (s *SearchService) WithDependencies(repo *repository.PostgresRepository, au
 	return s
 }
 
+// UserContext holds authenticated user information including data isolation context.
+type UserContext struct {
+	UserID         string
+	Roles          []string
+	OrganizationID string
+	ClientID       string
+}
+
 // ValidateToken returns a durable user ID for a given bearer token.
+// Deprecated: Use ValidateTokenFull for access to ClientID/OrganizationID.
 func (s *SearchService) ValidateToken(ctx context.Context, token string) (string, error) {
-	if s.authClient == nil {
-		return "", fmt.Errorf("auth client not configured")
-	}
-	vr, err := s.authClient.Validate(ctx, token)
+	uc, err := s.ValidateTokenFull(ctx, token)
 	if err != nil {
 		return "", err
 	}
-	return vr.UserID, nil
+	return uc.UserID, nil
+}
+
+// ValidateTokenFull returns full user context including ClientID for data isolation.
+func (s *SearchService) ValidateTokenFull(ctx context.Context, token string) (*UserContext, error) {
+	if s.authClient == nil {
+		return nil, fmt.Errorf("auth client not configured")
+	}
+	vr, err := s.authClient.Validate(ctx, token)
+	if err != nil {
+		return nil, err
+	}
+	return &UserContext{
+		UserID:         vr.UserID,
+		Roles:          vr.Roles,
+		OrganizationID: vr.OrganizationID,
+		ClientID:       vr.ClientID,
+	}, nil
 }
 
 // Health compiles health metadata for the service.

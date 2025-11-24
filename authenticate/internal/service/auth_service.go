@@ -20,6 +20,14 @@ var (
 	ErrInvalidToken       = errors.New("invalid token")
 )
 
+// stringOrEmpty returns empty string if the pointer is nil, otherwise the value.
+func stringOrEmpty(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
+}
+
 type AuthService struct {
 	repo     repository.Repository
 	tokenGen *tokens.TokenGenerator
@@ -145,7 +153,10 @@ func (s *AuthService) Login(ctx context.Context, req *models.LoginRequest, ipAdd
 		return nil, ErrInvalidCredentials
 	}
 
-	accessToken, err := s.tokenGen.GenerateAccessToken(user.ID, user.Roles, user.PermissionsVersion)
+	accessToken, err := s.tokenGen.GenerateAccessToken(
+		user.ID, user.Roles, user.PermissionsVersion,
+		stringOrEmpty(user.PrimaryOrganizationID), stringOrEmpty(user.PrimaryClientID),
+	)
 	if err != nil {
 		s.auditLog.Log(
 			models.ActorTypeUser, user.ID, user.Username,
@@ -209,7 +220,10 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*m
 		return nil, err
 	}
 
-	accessToken, err := s.tokenGen.GenerateAccessToken(user.ID, user.Roles, user.PermissionsVersion)
+	accessToken, err := s.tokenGen.GenerateAccessToken(
+		user.ID, user.Roles, user.PermissionsVersion,
+		stringOrEmpty(user.PrimaryOrganizationID), stringOrEmpty(user.PrimaryClientID),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -255,6 +269,8 @@ func (s *AuthService) ValidateToken(ctx context.Context, tokenString string) (*m
 		Roles:              claims.Roles,
 		PermissionsVersion: currentVersion,
 		PermissionsStale:   permissionsStale,
+		OrganizationID:     claims.OrganizationID,
+		ClientID:           claims.ClientID,
 	}, nil
 }
 

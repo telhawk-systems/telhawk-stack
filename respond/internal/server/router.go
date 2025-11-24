@@ -9,21 +9,38 @@ import (
 	"github.com/telhawk-systems/telhawk-stack/respond/internal/handlers"
 )
 
+// RouterConfig holds configuration for the router.
+type RouterConfig struct {
+	Handler       *handlers.Handler
+	AlertsHandler *handlers.AlertsHandler // Optional: nil if OpenSearch unavailable
+}
+
 // NewRouter constructs a ServeMux with respond API routes registered.
 func NewRouter(h *handlers.Handler) http.Handler {
+	return NewRouterWithConfig(RouterConfig{Handler: h})
+}
+
+// NewRouterWithConfig constructs a ServeMux with respond API routes and optional alerts handler.
+func NewRouterWithConfig(cfg RouterConfig) http.Handler {
 	mux := http.NewServeMux()
 
 	// Health check endpoints
-	mux.HandleFunc("/healthz", h.HealthCheck)
-	mux.HandleFunc("/readyz", h.ReadyCheck)
+	mux.HandleFunc("/healthz", cfg.Handler.HealthCheck)
+	mux.HandleFunc("/readyz", cfg.Handler.ReadyCheck)
 
 	// Detection Schema routes
-	mux.HandleFunc("/schemas", h.SchemasHandler)
-	mux.HandleFunc("/schemas/", schemaRouteHandler(h))
+	mux.HandleFunc("/schemas", cfg.Handler.SchemasHandler)
+	mux.HandleFunc("/schemas/", schemaRouteHandler(cfg.Handler))
 
 	// Case routes (under /api/v1/ prefix)
-	mux.HandleFunc("/api/v1/cases", h.CasesHandler)
-	mux.HandleFunc("/api/v1/cases/", caseRouteHandler(h))
+	mux.HandleFunc("/api/v1/cases", cfg.Handler.CasesHandler)
+	mux.HandleFunc("/api/v1/cases/", caseRouteHandler(cfg.Handler))
+
+	// Alert routes (under /api/v1/ prefix) - requires OpenSearch
+	if cfg.AlertsHandler != nil {
+		mux.HandleFunc("/api/v1/alerts", cfg.AlertsHandler.AlertsRoute)
+		mux.HandleFunc("/api/v1/alerts/", cfg.AlertsHandler.AlertsRoute)
+	}
 
 	return middleware.RequestID(mux)
 }

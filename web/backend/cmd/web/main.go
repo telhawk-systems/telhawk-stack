@@ -24,8 +24,7 @@ type Config struct {
 	AuthenticateServiceURL string
 	SearchServiceURL       string
 	CoreServiceURL         string
-	RulesServiceURL        string
-	AlertingServiceURL     string
+	RespondServiceURL      string // Handles rules, alerts, and cases (merged from rules + alerting)
 	CookieDomain           string
 	CookieSecure           bool
 	DevMode                bool
@@ -39,8 +38,7 @@ func loadConfig() *Config {
 		AuthenticateServiceURL: getEnv("AUTHENTICATE_SERVICE_URL", "http://authenticate:8080"),
 		SearchServiceURL:       getEnv("SEARCH_SERVICE_URL", "http://search:8082"),
 		CoreServiceURL:         getEnv("CORE_SERVICE_URL", "http://core:8090"),
-		RulesServiceURL:        getEnv("RULES_SERVICE_URL", "http://rules:8084"),
-		AlertingServiceURL:     getEnv("ALERTING_SERVICE_URL", "http://alerting:8085"),
+		RespondServiceURL:      getEnv("RESPOND_SERVICE_URL", "http://respond:8086"),
 		CookieDomain:           getEnv("COOKIE_DOMAIN", ""),
 		CookieSecure:           getEnv("COOKIE_SECURE", "true") == "true",
 		DevMode:                getEnv("DEV_MODE", "false") == "true",
@@ -72,11 +70,10 @@ func main() {
 	searchProxy := proxy.NewProxy(cfg.SearchServiceURL, authClient)
 	coreProxy := proxy.NewProxy(cfg.CoreServiceURL, authClient)
 	authenticateProxy := proxy.NewProxy(cfg.AuthenticateServiceURL, authClient)
-	rulesProxy := proxy.NewProxy(cfg.RulesServiceURL, authClient)
-	alertingProxy := proxy.NewProxy(cfg.AlertingServiceURL, authClient)
+	respondProxy := proxy.NewProxy(cfg.RespondServiceURL, authClient)
 
 	authHandler := handlers.NewAuthHandler(authClient, cfg.CookieDomain, cfg.CookieSecure)
-	dashboardHandler := handlers.NewDashboardHandler(cfg.SearchServiceURL, cfg.AlertingServiceURL)
+	dashboardHandler := handlers.NewDashboardHandler(cfg.SearchServiceURL, cfg.RespondServiceURL)
 
 	// Initialize NATS client for async query support
 	var natsClient messaging.Client
@@ -115,8 +112,7 @@ func main() {
 		AuthenticateProxy: authenticateProxy,
 		SearchProxy:       searchProxy,
 		CoreProxy:         coreProxy,
-		RulesProxy:        rulesProxy,
-		AlertingProxy:     alertingProxy,
+		RespondProxy:      respondProxy,
 		StaticDir:         cfg.StaticDir,
 	})
 
@@ -151,8 +147,7 @@ func main() {
 	log.Printf("TelHawk Web UI starting on :%s", cfg.Port)
 	log.Printf("Authenticate Service: %s", cfg.AuthenticateServiceURL)
 	log.Printf("Search Service: %s", cfg.SearchServiceURL)
-	log.Printf("Rules Service: %s", cfg.RulesServiceURL)
-	log.Printf("Alerting Service: %s", cfg.AlertingServiceURL)
+	log.Printf("Respond Service: %s", cfg.RespondServiceURL)
 	log.Printf("Static Dir: %s", cfg.StaticDir)
 	log.Printf("Dev Mode: %v", cfg.DevMode)
 	log.Printf("NATS URL: %s (async queries: %v)", cfg.NATSURL, natsClient != nil)

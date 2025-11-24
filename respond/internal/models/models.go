@@ -229,6 +229,8 @@ type ListAlertsRequest struct {
 	DetectionSchemaID        string
 	DetectionSchemaVersionID string
 	CaseID                   string
+	ClientID                 string // Required for data isolation
+	OrganizationID           string // Optional additional filter
 }
 
 // ListAlertsResponse represents the response for listing alerts

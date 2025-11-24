@@ -178,7 +178,7 @@ func TestRunSavedSearch_NoRepository(t *testing.T) {
 	svc := NewSearchService("1.0.0", nil)
 	ctx := context.Background()
 
-	resp, err := svc.RunSavedSearch(ctx, "some-id")
+	resp, err := svc.RunSavedSearch(ctx, "some-id", "")
 
 	assert.Error(t, err)
 	assert.Nil(t, resp)

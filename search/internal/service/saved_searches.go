@@ -235,7 +235,8 @@ func (s *SearchService) UnhideSavedSearch(ctx context.Context, id, userID string
 }
 
 // RunSavedSearch executes a saved search and returns results.
-func (s *SearchService) RunSavedSearch(ctx context.Context, id string) (*models.SearchResponse, error) {
+// clientID is required for data isolation - results will be filtered to only the client's data.
+func (s *SearchService) RunSavedSearch(ctx context.Context, id string, clientID string) (*models.SearchResponse, error) {
 	saved, err := s.GetSavedSearch(ctx, id)
 	if err != nil {
 		return nil, err
@@ -252,6 +253,24 @@ func (s *SearchService) RunSavedSearch(ctx context.Context, id string) (*models.
 	var query model.Query
 	if err := json.Unmarshal(queryJSON, &query); err != nil {
 		return nil, fmt.Errorf("unmarshal saved query: %w", err)
+	}
+
+	// CRITICAL: Inject client_id filter for data isolation (multi-tenant security)
+	if clientID != "" {
+		clientFilter := &model.FilterExpr{
+			Field:    ".client_id",
+			Operator: model.OpEq,
+			Value:    clientID,
+		}
+		if query.Filter == nil {
+			query.Filter = clientFilter
+		} else {
+			// Wrap existing filter with AND condition
+			query.Filter = &model.FilterExpr{
+				Type:       model.FilterTypeAnd,
+				Conditions: []model.FilterExpr{*query.Filter, *clientFilter},
+			}
+		}
 	}
 
 	// Translate Phase 2 query to OpenSearch DSL

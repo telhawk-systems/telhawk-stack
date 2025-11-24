@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/telhawk-systems/telhawk-stack/search/internal/models"
+	"github.com/telhawk-systems/telhawk-stack/search/internal/service"
 )
 
 // parseShowAll parses the filter[show_all] query parameter.
@@ -79,17 +80,27 @@ func buildNextLink(path string, cursor interface{}) string {
 }
 
 // requireUser extracts and validates bearer token via auth service.
+// Deprecated: Use requireUserContext for access to ClientID/OrganizationID.
 func (h *Handler) requireUser(r *http.Request) (string, bool) {
+	uc, ok := h.requireUserContext(r)
+	if !ok {
+		return "", false
+	}
+	return uc.UserID, true
+}
+
+// requireUserContext extracts full user context including ClientID for data isolation.
+func (h *Handler) requireUserContext(r *http.Request) (*service.UserContext, bool) {
 	authz := r.Header.Get("Authorization")
 	if !strings.HasPrefix(strings.ToLower(authz), "bearer ") {
-		return "", false
+		return nil, false
 	}
 	token := strings.TrimSpace(authz[len("Bearer "):])
-	userID, err := h.svc.ValidateToken(r.Context(), token)
+	uc, err := h.svc.ValidateTokenFull(r.Context(), token)
 	if err != nil {
-		return "", false
+		return nil, false
 	}
-	return userID, true
+	return uc, true
 }
 
 // svcIDFallback generates a simple fallback ID string when an event lacks an ID field.

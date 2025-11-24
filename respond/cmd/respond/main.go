@@ -16,6 +16,7 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	natsclient "github.com/telhawk-systems/telhawk-stack/common/messaging/nats"
+	"github.com/telhawk-systems/telhawk-stack/respond/internal/auth"
 	"github.com/telhawk-systems/telhawk-stack/respond/internal/config"
 	"github.com/telhawk-systems/telhawk-stack/respond/internal/handlers"
 	respondnats "github.com/telhawk-systems/telhawk-stack/respond/internal/nats"
@@ -23,6 +24,7 @@ import (
 	"github.com/telhawk-systems/telhawk-stack/respond/internal/scheduler"
 	"github.com/telhawk-systems/telhawk-stack/respond/internal/server"
 	"github.com/telhawk-systems/telhawk-stack/respond/internal/service"
+	"github.com/telhawk-systems/telhawk-stack/respond/internal/storage"
 )
 
 func main() {
@@ -69,9 +71,24 @@ func main() {
 	svc := service.NewService(repo)
 
 	// TODO: Initialize Redis for state management (correlation state, suppression cache)
-	// TODO: Initialize query executor for correlation rules (OpenSearch client)
 	// TODO: Initialize evaluation engine (correlation rule evaluator)
 	// TODO: Initialize rule importer (load rules from alerting/dist/rules/)
+
+	// Initialize auth client for token validation (required for data isolation)
+	authClient := auth.NewClient(cfg.Auth.URL)
+	log.Printf("Auth client configured with URL: %s", cfg.Auth.URL)
+
+	// Initialize OpenSearch storage for alerts (optional - alerts endpoint works only if connected)
+	var osStorage *storage.OpenSearchStorage
+	var alertsHandler *handlers.AlertsHandler
+
+	osStorage, err = storage.NewOpenSearchStorage(cfg.Storage)
+	if err != nil {
+		log.Printf("Warning: Failed to connect to OpenSearch: %v (alerts endpoint will be unavailable)", err)
+	} else {
+		log.Printf("Connected to OpenSearch at %s", cfg.Storage.URL)
+		alertsHandler = handlers.NewAlertsHandler(osStorage).WithAuthClient(authClient)
+	}
 
 	// Initialize NATS client (optional - service works without it)
 	var natsClient *natsclient.Client
@@ -115,8 +132,11 @@ func main() {
 	// Initialize handlers with service
 	handler := handlers.NewHandler(svc)
 
-	// Setup HTTP router
-	router := server.NewRouter(handler)
+	// Setup HTTP router with optional alerts handler
+	router := server.NewRouterWithConfig(server.RouterConfig{
+		Handler:       handler,
+		AlertsHandler: alertsHandler,
+	})
 
 	// Create HTTP server
 	srv := &http.Server{

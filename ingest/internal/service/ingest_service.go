@@ -278,9 +278,19 @@ func (s *IngestService) normalizeEvent(event *models.Event) (map[string]interfac
 		return nil, fmt.Errorf("failed to convert OCSF event: %w", err)
 	}
 
-	// Add client_id for data isolation (critical for multi-organization)
+	// Add ingestion context for data isolation and nonrepudiation
+	// These fields are critical for:
+	// - client_id: Multi-tenant data isolation
+	// - hec_token_id: Audit trail / nonrepudiation (which token ingested this event)
+	// - ingest_source_ip: Source IP of the ingestion request (not the event's src_endpoint)
 	if event.ClientID != "" {
 		eventMap["client_id"] = event.ClientID
+	}
+	if event.HECTokenID != "" {
+		eventMap["hec_token_id"] = event.HECTokenID
+	}
+	if event.SourceIP != "" {
+		eventMap["ingest_source_ip"] = event.SourceIP
 	}
 
 	// log.Printf("event %s normalized via pipeline", event.ID)
@@ -326,18 +336,18 @@ func (s *IngestService) forwardToStorage(event map[string]interface{}) error {
 
 func (s *IngestService) eventToMap(event *models.Event) map[string]interface{} {
 	return map[string]interface{}{
-		"id":           event.ID,
-		"timestamp":    event.Timestamp,
-		"host":         event.Host,
-		"source":       event.Source,
-		"sourcetype":   event.SourceType,
-		"source_ip":    event.SourceIP,
-		"index":        event.Index,
-		"event":        event.Event,
-		"fields":       event.Fields,
-		"hec_token_id": event.HECTokenID,
-		"client_id":    event.ClientID,
-		"signature":    event.Signature,
+		"id":               event.ID,
+		"timestamp":        event.Timestamp,
+		"host":             event.Host,
+		"source":           event.Source,
+		"sourcetype":       event.SourceType,
+		"ingest_source_ip": event.SourceIP, // IP of ingestion request, not event's src_endpoint
+		"index":            event.Index,
+		"event":            event.Event,
+		"fields":           event.Fields,
+		"hec_token_id":     event.HECTokenID,
+		"client_id":        event.ClientID,
+		"signature":        event.Signature,
 	}
 }
 

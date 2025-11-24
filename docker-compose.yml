@@ -186,11 +186,12 @@ services:
     networks:
       - telhawk
     healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:8222/healthz"]
-      interval: 10s
+      # NATS minimal image - check if the server process is running
+      test: ["CMD", "/nats-server", "--help"]
+      interval: 30s
       timeout: 5s
-      retries: 5
-      start_period: 5s
+      retries: 3
+      start_period: 10s
     restart: unless-stopped
 
   # DEPRECATED: Renamed to authenticate
@@ -612,6 +613,7 @@ services:
       - AUTHENTICATE_TLS_SKIP_VERIFY=${AUTHENTICATE_TLS_SKIP_VERIFY:-false}
       - SEARCH_SERVICE_URL=http://search:8082
       - SEARCH_TLS_SKIP_VERIFY=${SEARCH_TLS_SKIP_VERIFY:-false}
+      - RESPOND_SERVICE_URL=http://respond:8086
       - COOKIE_DOMAIN=
       - COOKIE_SECURE=false
       - DASHBOARD_CACHE_SECONDS=${DASHBOARD_CACHE_SECONDS:-300}

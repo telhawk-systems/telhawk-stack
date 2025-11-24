@@ -69,8 +69,7 @@ func TestNewRouter_HealthCheck(t *testing.T) {
 		AuthenticateProxy: proxy.NewProxy(authServer.URL, authClient),
 		SearchProxy:       proxy.NewProxy(queryServer.URL, authClient),
 		CoreProxy:         proxy.NewProxy(queryServer.URL, authClient),
-		RulesProxy:        proxy.NewProxy(queryServer.URL, authClient),
-		AlertingProxy:     proxy.NewProxy(queryServer.URL, authClient),
+		RespondProxy:      proxy.NewProxy(queryServer.URL, authClient),
 		StaticDir:         staticDir,
 	}
 
@@ -112,8 +111,7 @@ func TestNewRouter_AuthEndpoints_GetCSRFToken(t *testing.T) {
 		AuthenticateProxy: proxy.NewProxy(authServer.URL, authClient),
 		SearchProxy:       proxy.NewProxy(queryServer.URL, authClient),
 		CoreProxy:         proxy.NewProxy(queryServer.URL, authClient),
-		RulesProxy:        proxy.NewProxy(queryServer.URL, authClient),
-		AlertingProxy:     proxy.NewProxy(queryServer.URL, authClient),
+		RespondProxy:      proxy.NewProxy(queryServer.URL, authClient),
 		StaticDir:         staticDir,
 	}
 
@@ -150,8 +148,7 @@ func TestNewRouter_ProtectedRoute_RequiresAuth(t *testing.T) {
 		AuthenticateProxy: proxy.NewProxy(authServer.URL, authClient),
 		SearchProxy:       proxy.NewProxy(queryServer.URL, authClient),
 		CoreProxy:         proxy.NewProxy(queryServer.URL, authClient),
-		RulesProxy:        proxy.NewProxy(queryServer.URL, authClient),
-		AlertingProxy:     proxy.NewProxy(queryServer.URL, authClient),
+		RespondProxy:      proxy.NewProxy(queryServer.URL, authClient),
 		StaticDir:         staticDir,
 	}
 
@@ -198,8 +195,7 @@ func TestNewRouter_StaticFileServing(t *testing.T) {
 		AuthenticateProxy: proxy.NewProxy(authServer.URL, authClient),
 		SearchProxy:       proxy.NewProxy(queryServer.URL, authClient),
 		CoreProxy:         proxy.NewProxy(queryServer.URL, authClient),
-		RulesProxy:        proxy.NewProxy(queryServer.URL, authClient),
-		AlertingProxy:     proxy.NewProxy(queryServer.URL, authClient),
+		RespondProxy:      proxy.NewProxy(queryServer.URL, authClient),
 		StaticDir:         staticDir,
 	}
 
@@ -237,8 +233,7 @@ func TestNewRouter_SPAFallback(t *testing.T) {
 		AuthenticateProxy: proxy.NewProxy(authServer.URL, authClient),
 		SearchProxy:       proxy.NewProxy(queryServer.URL, authClient),
 		CoreProxy:         proxy.NewProxy(queryServer.URL, authClient),
-		RulesProxy:        proxy.NewProxy(queryServer.URL, authClient),
-		AlertingProxy:     proxy.NewProxy(queryServer.URL, authClient),
+		RespondProxy:      proxy.NewProxy(queryServer.URL, authClient),
 		StaticDir:         staticDir,
 	}
 
@@ -287,8 +282,7 @@ func TestNewRouter_RequestIDMiddleware(t *testing.T) {
 		AuthenticateProxy: proxy.NewProxy(authServer.URL, authClient),
 		SearchProxy:       proxy.NewProxy(queryServer.URL, authClient),
 		CoreProxy:         proxy.NewProxy(queryServer.URL, authClient),
-		RulesProxy:        proxy.NewProxy(queryServer.URL, authClient),
-		AlertingProxy:     proxy.NewProxy(queryServer.URL, authClient),
+		RespondProxy:      proxy.NewProxy(queryServer.URL, authClient),
 		StaticDir:         staticDir,
 	}
 
@@ -327,8 +321,7 @@ func TestNewRouter_StripPrefixForProxies(t *testing.T) {
 		AuthenticateProxy: proxy.NewProxy(backendServer.URL, authClient),
 		SearchProxy:       proxy.NewProxy(backendServer.URL, authClient),
 		CoreProxy:         proxy.NewProxy(backendServer.URL, authClient),
-		RulesProxy:        proxy.NewProxy(backendServer.URL, authClient),
-		AlertingProxy:     proxy.NewProxy(backendServer.URL, authClient),
+		RespondProxy:      proxy.NewProxy(backendServer.URL, authClient),
 		StaticDir:         staticDir,
 	}
 
@@ -409,8 +402,7 @@ func TestNewRouter_RouteOrdering(t *testing.T) {
 		AuthenticateProxy: proxy.NewProxy(authServer.URL, authClient),
 		SearchProxy:       proxy.NewProxy(queryServer.URL, authClient),
 		CoreProxy:         proxy.NewProxy(queryServer.URL, authClient),
-		RulesProxy:        proxy.NewProxy(queryServer.URL, authClient),
-		AlertingProxy:     proxy.NewProxy(queryServer.URL, authClient),
+		RespondProxy:      proxy.NewProxy(queryServer.URL, authClient),
 		StaticDir:         staticDir,
 	}
 
@@ -450,8 +442,7 @@ func TestNewRouter_MethodRouting(t *testing.T) {
 		AuthenticateProxy: proxy.NewProxy(authServer.URL, authClient),
 		SearchProxy:       proxy.NewProxy(queryServer.URL, authClient),
 		CoreProxy:         proxy.NewProxy(queryServer.URL, authClient),
-		RulesProxy:        proxy.NewProxy(queryServer.URL, authClient),
-		AlertingProxy:     proxy.NewProxy(queryServer.URL, authClient),
+		RespondProxy:      proxy.NewProxy(queryServer.URL, authClient),
 		StaticDir:         staticDir,
 	}
 
@@ -511,8 +502,7 @@ func TestNewRouter_ConfigComplete(t *testing.T) {
 		AuthenticateProxy: proxy.NewProxy(authServer.URL, authClient),
 		SearchProxy:       proxy.NewProxy(queryServer.URL, authClient),
 		CoreProxy:         proxy.NewProxy(queryServer.URL, authClient),
-		RulesProxy:        proxy.NewProxy(queryServer.URL, authClient),
-		AlertingProxy:     proxy.NewProxy(queryServer.URL, authClient),
+		RespondProxy:      proxy.NewProxy(queryServer.URL, authClient),
 		StaticDir:         staticDir,
 	}
 

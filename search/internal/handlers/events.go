@@ -20,7 +20,8 @@ func (h *Handler) Events(w http.ResponseWriter, r *http.Request) {
 			h.writeJSONAPIError(w, http.StatusNotAcceptable, "not_acceptable", "Accept must allow application/vnd.api+json")
 			return
 		}
-		if _, ok := h.requireUser(r); !ok {
+		uc, ok := h.requireUserContext(r)
+		if !ok {
 			h.writeJSONAPIUnauthorized(w)
 			return
 		}
@@ -37,7 +38,7 @@ func (h *Handler) Events(w http.ResponseWriter, r *http.Request) {
 			}
 			sortOpt = &models.SortOptions{Field: sortField, Order: order}
 		}
-		req := models.SearchRequest{Query: q, Limit: size, Sort: sortOpt}
+		req := models.SearchRequest{Query: q, Limit: size, Sort: sortOpt, ClientID: uc.ClientID}
 		resp, err := h.svc.ExecuteSearch(r.Context(), &req)
 		if err != nil {
 			h.writeJSONAPIError(w, http.StatusInternalServerError, "events_query_failed", err.Error())
@@ -82,7 +83,8 @@ func (h *Handler) EventsByAction(w http.ResponseWriter, r *http.Request) {
 			h.writeJSONAPIError(w, http.StatusUnsupportedMediaType, "unsupported_media_type", "Content-Type must be application/vnd.api+json")
 			return
 		}
-		if _, ok := h.requireUser(r); !ok {
+		uc, ok := h.requireUserContext(r)
+		if !ok {
 			h.writeJSONAPIUnauthorized(w)
 			return
 		}
@@ -96,6 +98,23 @@ func (h *Handler) EventsByAction(w http.ResponseWriter, r *http.Request) {
 		if typ != "event-query" {
 			h.writeJSONAPIError(w, http.StatusBadRequest, "invalid_type", "data.type must be 'event-query'")
 			return
+		}
+		// Inject client_id filter for data isolation
+		if uc.ClientID != "" {
+			clientFilter := &model.FilterExpr{
+				Field:    ".client_id",
+				Operator: model.OpEq,
+				Value:    uc.ClientID,
+			}
+			if q.Filter == nil {
+				q.Filter = clientFilter
+			} else {
+				// Wrap existing filter with AND condition
+				q.Filter = &model.FilterExpr{
+					Type:       model.FilterTypeAnd,
+					Conditions: []model.FilterExpr{*q.Filter, *clientFilter},
+				}
+			}
 		}
 		resp, err := h.svc.ExecuteQuery(r.Context(), &q)
 		if err != nil {
@@ -136,7 +155,8 @@ func (h *Handler) EventsByAction(w http.ResponseWriter, r *http.Request) {
 			h.writeJSONAPIError(w, http.StatusNotAcceptable, "not_acceptable", "Accept must allow application/vnd.api+json")
 			return
 		}
-		if _, ok := h.requireUser(r); !ok {
+		uc, ok := h.requireUserContext(r)
+		if !ok {
 			h.writeJSONAPIUnauthorized(w)
 			return
 		}
@@ -145,7 +165,7 @@ func (h *Handler) EventsByAction(w http.ResponseWriter, r *http.Request) {
 			h.writeJSONAPIError(w, http.StatusBadRequest, "invalid_saved_search_id", "id required")
 			return
 		}
-		resp, err := h.svc.RunSavedSearch(r.Context(), id)
+		resp, err := h.svc.RunSavedSearch(r.Context(), id, uc.ClientID)
 		if err != nil {
 			if errors.Is(err, service.ErrSearchDisabled) {
 				h.writeJSONAPIConflict(w, "search_disabled", "Saved search is disabled")

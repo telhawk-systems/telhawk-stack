@@ -117,11 +117,12 @@ func (h *Handler) SavedSearchByID(w http.ResponseWriter, r *http.Request) {
 			h.writeJSONAPIError(w, http.StatusNotAcceptable, "not_acceptable", "Accept must allow application/vnd.api+json")
 			return
 		}
-		if _, ok := h.requireUser(r); !ok {
+		uc, ok := h.requireUserContext(r)
+		if !ok {
 			h.writeJSONAPIUnauthorized(w)
 			return
 		}
-		resp, err := h.svc.RunSavedSearch(r.Context(), id)
+		resp, err := h.svc.RunSavedSearch(r.Context(), id, uc.ClientID)
 		if err != nil {
 			log.Printf("Failed to run saved search %s: %v", id, err)
 			if errors.Is(err, service.ErrSearchDisabled) {

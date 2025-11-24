@@ -646,7 +646,7 @@ func TestValidateToken(t *testing.T) {
 	ctx := context.Background()
 
 	// Generate a valid token for testing
-	validToken, err := service.tokenGen.GenerateAccessToken("user-123", []string{"admin"}, 1)
+	validToken, err := service.tokenGen.GenerateAccessToken("user-123", []string{"admin"}, 1, "", "")
 	if err != nil {
 		t.Fatalf("Failed to generate test token: %v", err)
 	}
@@ -712,7 +712,7 @@ func TestValidateToken_NoSession(t *testing.T) {
 	ctx := context.Background()
 
 	// Generate a valid JWT token but don't create a session
-	validToken, err := service.tokenGen.GenerateAccessToken("user-123", []string{"admin"}, 1)
+	validToken, err := service.tokenGen.GenerateAccessToken("user-123", []string{"admin"}, 1, "", "")
 	if err != nil {
 		t.Fatalf("Failed to generate test token: %v", err)
 	}
@@ -733,7 +733,7 @@ func TestValidateToken_RevokedSession(t *testing.T) {
 	ctx := context.Background()
 
 	// Generate a valid token and create a revoked session
-	validToken, err := service.tokenGen.GenerateAccessToken("user-123", []string{"admin"}, 1)
+	validToken, err := service.tokenGen.GenerateAccessToken("user-123", []string{"admin"}, 1, "", "")
 	if err != nil {
 		t.Fatalf("Failed to generate test token: %v", err)
 	}

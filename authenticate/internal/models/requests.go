@@ -37,6 +37,8 @@ type ValidateTokenResponse struct {
 	Roles              []string `json:"roles,omitempty"`
 	PermissionsVersion int      `json:"permissions_version,omitempty"`
 	PermissionsStale   bool     `json:"permissions_stale,omitempty"` // True if JWT version != DB version
+	OrganizationID     string   `json:"organization_id,omitempty"`   // Primary organization for data isolation
+	ClientID           string   `json:"client_id,omitempty"`         // Primary client for data isolation
 }
 
 type ValidateHECTokenRequest struct {

@@ -17,7 +17,9 @@ var (
 type Claims struct {
 	UserID             string   `json:"user_id"`
 	Roles              []string `json:"roles"`
-	PermissionsVersion int      `json:"pv"` // Short key to minimize token size
+	PermissionsVersion int      `json:"pv"`  // Short key to minimize token size
+	OrganizationID     string   `json:"oid"` // Primary organization ID (short key)
+	ClientID           string   `json:"cid"` // Primary client ID (short key)
 	jwt.RegisteredClaims
 }
 
@@ -37,11 +39,13 @@ func NewTokenGenerator(accessSecret, refreshSecret string) *TokenGenerator {
 	}
 }
 
-func (tg *TokenGenerator) GenerateAccessToken(userID string, roles []string, permissionsVersion int) (string, error) {
+func (tg *TokenGenerator) GenerateAccessToken(userID string, roles []string, permissionsVersion int, organizationID, clientID string) (string, error) {
 	claims := Claims{
 		UserID:             userID,
 		Roles:              roles,
 		PermissionsVersion: permissionsVersion,
+		OrganizationID:     organizationID,
+		ClientID:           clientID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(tg.accessTTL)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),

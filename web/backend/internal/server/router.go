@@ -20,8 +20,7 @@ type RouterConfig struct {
 	AuthenticateProxy *proxy.Proxy
 	SearchProxy       *proxy.Proxy
 	CoreProxy         *proxy.Proxy
-	RulesProxy        *proxy.Proxy
-	AlertingProxy     *proxy.Proxy
+	RespondProxy      *proxy.Proxy // Handles rules, alerts, and cases (merged from rules + alerting)
 	StaticDir         string
 }
 
@@ -59,14 +58,14 @@ func NewRouter(cfg RouterConfig) http.Handler {
 		http.StripPrefix("/api/core", cfg.CoreProxy.Handler()),
 	))
 
-	// Rules service proxy (protected)
+	// Respond service proxy (handles rules, alerts, cases) - protected
+	// /api/rules/ -> respond service for detection schemas
 	mux.Handle("/api/rules/", cfg.AuthMiddleware.Protect(
-		http.StripPrefix("/api/rules", cfg.RulesProxy.Handler()),
+		http.StripPrefix("/api/rules", cfg.RespondProxy.Handler()),
 	))
-
-	// Alerting service proxy (protected)
+	// /api/alerting/ -> respond service for alerts and cases
 	mux.Handle("/api/alerting/", cfg.AuthMiddleware.Protect(
-		http.StripPrefix("/api/alerting", cfg.AlertingProxy.Handler()),
+		http.StripPrefix("/api/alerting", cfg.RespondProxy.Handler()),
 	))
 
 	// Health check

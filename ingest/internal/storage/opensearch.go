@@ -300,9 +300,15 @@ func (c *Client) getOCSFMappings() map[string]interface{} {
 			},
 		},
 		"properties": map[string]interface{}{
-			// Client isolation - CRITICAL for multi-organization data segregation
+			// Ingestion context - CRITICAL for multi-tenant isolation and nonrepudiation
 			"client_id": map[string]interface{}{
-				"type": "keyword",
+				"type": "keyword", // Multi-organization data segregation
+			},
+			"hec_token_id": map[string]interface{}{
+				"type": "keyword", // Audit trail: which token ingested this event
+			},
+			"ingest_source_ip": map[string]interface{}{
+				"type": "ip", // IP address of the ingestion request
 			},
 			"time": map[string]interface{}{
 				"type": "date",

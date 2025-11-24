@@ -15,9 +15,15 @@ type Config struct {
 	Database   DatabaseConfig   `mapstructure:"database"`
 	Redis      RedisConfig      `mapstructure:"redis"`
 	Storage    StorageConfig    `mapstructure:"storage"`
+	Auth       AuthConfig       `mapstructure:"auth"`
 	Validation ValidationConfig `mapstructure:"validation"`
 	Logging    LoggingConfig    `mapstructure:"logging"`
 	NATS       NATSConfig       `mapstructure:"nats"`
+}
+
+// AuthConfig holds authentication service configuration
+type AuthConfig struct {
+	URL string `mapstructure:"url"`
 }
 
 // NATSConfig holds NATS message broker configuration
@@ -113,6 +119,8 @@ func Load(configPath string) (*Config, error) {
 
 	v.SetDefault("logging.level", "info")
 	v.SetDefault("logging.format", "json")
+
+	v.SetDefault("auth.url", "http://authenticate:8080")
 
 	v.SetDefault("nats.url", "nats://nats:4222")
 	v.SetDefault("nats.enabled", true)
