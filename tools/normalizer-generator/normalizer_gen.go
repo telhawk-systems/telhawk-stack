@@ -119,6 +119,11 @@ func generateNormalizeMethod(structName, className string, pattern Pattern) stri
 	buf.WriteString("\tevent.Metadata.LogProvider = envelope.Source\n")
 	buf.WriteString("\tevent.Raw = ocsf.RawDescriptor{Format: envelope.Format, Data: payload}\n\n")
 
+	// Add hoisting logic for finding events
+	if needsHoisting(className) {
+		buf.WriteString(generateHoistingCode(className))
+	}
+
 	buf.WriteString("\treturn &event.Event, nil\n")
 	buf.WriteString("}\n\n")
 
@@ -166,6 +171,63 @@ func generateActivityDetermination(structName string, pattern Pattern) string {
 	buf.WriteString("}\n\n")
 
 	return buf.String()
+}
+
+// needsHoisting returns true if the event class needs field hoisting for query performance
+func needsHoisting(className string) bool {
+	// Finding events with Attacks and RiskScore need hoisting
+	hoistingClasses := map[string]bool{
+		"detection_finding":                    true,
+		"security_finding":                     true,
+		"incident_finding":                     true,
+		"vulnerability_finding":                true,
+		"compliance_finding":                   true,
+		"data_security_finding":                true,
+		"application_security_posture_finding": true,
+		"iam_analysis_finding":                 true,
+	}
+	return hoistingClasses[className]
+}
+
+// generateHoistingCode generates code to hoist nested fields to root level
+func generateHoistingCode(className string) string {
+	var buf strings.Builder
+
+	buf.WriteString("\t// Hoist nested fields for query performance\n")
+
+	// Risk score hoisting (for all finding events)
+	buf.WriteString("\tif event.RiskScore > 0 {\n")
+	buf.WriteString("\t\tevent.Event.RiskScore = event.RiskScore\n")
+	buf.WriteString("\t}\n\n")
+
+	// ATT&CK hoisting (for events that have Attacks field)
+	if hasAttacksField(className) {
+		buf.WriteString("\t// Hoist ATT&CK fields from attacks[0]\n")
+		buf.WriteString("\tif len(event.Attacks) > 0 {\n")
+		buf.WriteString("\t\tattack := event.Attacks[0]\n")
+		buf.WriteString("\t\tif attack.Tactic != nil {\n")
+		buf.WriteString("\t\t\tevent.Event.AttackTactic = attack.Tactic.Name\n")
+		buf.WriteString("\t\t\tevent.Event.AttackTacticUID = attack.Tactic.Uid\n")
+		buf.WriteString("\t\t}\n")
+		buf.WriteString("\t\tif attack.Technique != nil {\n")
+		buf.WriteString("\t\t\tevent.Event.AttackTechnique = attack.Technique.Name\n")
+		buf.WriteString("\t\t\tevent.Event.AttackTechniqueUID = attack.Technique.Uid\n")
+		buf.WriteString("\t\t}\n")
+		buf.WriteString("\t}\n\n")
+	}
+
+	return buf.String()
+}
+
+// hasAttacksField returns true if the event class has an Attacks field
+func hasAttacksField(className string) bool {
+	// These classes have Attacks field (from security_control profile or direct)
+	attacksClasses := map[string]bool{
+		"detection_finding": true, // Added via generator extra fields
+		"security_finding":  true,
+		"incident_finding":  true,
+	}
+	return attacksClasses[className]
 }
 
 // generateNormalizersRegistry generates a registry file that includes all normalizers

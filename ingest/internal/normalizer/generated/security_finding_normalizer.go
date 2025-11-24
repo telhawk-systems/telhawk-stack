@@ -10,10 +10,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/telhawk-systems/telhawk-stack/ingest/internal/models"
 	"github.com/telhawk-systems/telhawk-stack/common/ocsf"
 	"github.com/telhawk-systems/telhawk-stack/common/ocsf/events/findings"
 	"github.com/telhawk-systems/telhawk-stack/common/ocsf/objects"
+	"github.com/telhawk-systems/telhawk-stack/ingest/internal/models"
 )
 
 // SecurityFindingNormalizer normalizes security_finding events to OCSF format
@@ -30,8 +30,8 @@ func (n *SecurityFindingNormalizer) Supports(format, sourceType string) bool {
 		return false
 	}
 	st := strings.ToLower(sourceType)
-	return strings.Contains(st, "security_finding") || 
-	       strings.Contains(st, "security")
+	return strings.Contains(st, "security_finding") ||
+		strings.Contains(st, "security")
 }
 
 // Normalize converts raw event to OCSF security_finding
@@ -58,6 +58,23 @@ func (n *SecurityFindingNormalizer) Normalize(ctx context.Context, envelope *mod
 	event.Metadata.LogProvider = envelope.Source
 	event.Raw = ocsf.RawDescriptor{Format: envelope.Format, Data: payload}
 
+	// Hoist nested fields for query performance
+	if event.RiskScore > 0 {
+		event.Event.RiskScore = event.RiskScore
+	}
+
+	// Hoist ATT&CK fields from attacks[0]
+	if len(event.Attacks) > 0 {
+		attack := event.Attacks[0]
+		if attack.Tactic != nil {
+			event.Event.AttackTactic = attack.Tactic.Name
+			event.Event.AttackTacticUID = attack.Tactic.Uid
+		}
+		if attack.Technique != nil {
+			event.Event.AttackTechnique = attack.Technique.Name
+			event.Event.AttackTechniqueUID = attack.Technique.Uid
+		}
+	}
+
 	return &event.Event, nil
 }
-

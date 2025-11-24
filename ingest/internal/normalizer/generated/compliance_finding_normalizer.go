@@ -10,10 +10,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/telhawk-systems/telhawk-stack/ingest/internal/models"
 	"github.com/telhawk-systems/telhawk-stack/common/ocsf"
 	"github.com/telhawk-systems/telhawk-stack/common/ocsf/events/findings"
 	"github.com/telhawk-systems/telhawk-stack/common/ocsf/objects"
+	"github.com/telhawk-systems/telhawk-stack/ingest/internal/models"
 )
 
 // ComplianceFindingNormalizer normalizes compliance_finding events to OCSF format
@@ -30,8 +30,8 @@ func (n *ComplianceFindingNormalizer) Supports(format, sourceType string) bool {
 		return false
 	}
 	st := strings.ToLower(sourceType)
-	return strings.Contains(st, "compliance_finding") || 
-	       strings.Contains(st, "compliance")
+	return strings.Contains(st, "compliance_finding") ||
+		strings.Contains(st, "compliance")
 }
 
 // Normalize converts raw event to OCSF compliance_finding
@@ -58,6 +58,10 @@ func (n *ComplianceFindingNormalizer) Normalize(ctx context.Context, envelope *m
 	event.Metadata.LogProvider = envelope.Source
 	event.Raw = ocsf.RawDescriptor{Format: envelope.Format, Data: payload}
 
+	// Hoist nested fields for query performance
+	if event.RiskScore > 0 {
+		event.Event.RiskScore = event.RiskScore
+	}
+
 	return &event.Event, nil
 }
-

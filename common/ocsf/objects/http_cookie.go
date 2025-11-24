@@ -11,26 +11,25 @@ package objects
 import "fmt"
 
 type HttpCookie struct {
-	Domain string `json:"domain,omitempty"`
-	ExpirationTime int64 `json:"expiration_time,omitempty"`
-	HttpOnly bool `json:"http_only,omitempty"`
-	IsHttpOnly bool `json:"is_http_only,omitempty"`
-	IsSecure bool `json:"is_secure,omitempty"`
-	Name string `json:"name"`
-	Path string `json:"path,omitempty"`
-	Samesite string `json:"samesite,omitempty"`
-	Secure bool `json:"secure,omitempty"`
-	Value string `json:"value"`
+	Domain         string `json:"domain,omitempty"`
+	ExpirationTime int64  `json:"expiration_time,omitempty"`
+	HttpOnly       bool   `json:"http_only,omitempty"`
+	IsHttpOnly     bool   `json:"is_http_only,omitempty"`
+	IsSecure       bool   `json:"is_secure,omitempty"`
+	Name           string `json:"name"`
+	Path           string `json:"path,omitempty"`
+	Samesite       string `json:"samesite,omitempty"`
+	Secure         bool   `json:"secure,omitempty"`
+	Value          string `json:"value"`
 }
 
 // Validate checks that all required fields are properly set
 func (o *HttpCookie) Validate() error {
-	if o.Name == "" {
-		return fmt.Errorf("required field name is empty")
-	}
 	if o.Value == "" {
 		return fmt.Errorf("required field value is empty")
 	}
+	if o.Name == "" {
+		return fmt.Errorf("required field name is empty")
+	}
 	return nil
 }
-

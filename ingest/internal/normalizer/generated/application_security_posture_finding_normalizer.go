@@ -10,10 +10,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/telhawk-systems/telhawk-stack/ingest/internal/models"
 	"github.com/telhawk-systems/telhawk-stack/common/ocsf"
 	"github.com/telhawk-systems/telhawk-stack/common/ocsf/events/findings"
 	"github.com/telhawk-systems/telhawk-stack/common/ocsf/objects"
+	"github.com/telhawk-systems/telhawk-stack/ingest/internal/models"
 )
 
 // ApplicationSecurityPostureFindingNormalizer normalizes application_security_posture_finding events to OCSF format
@@ -30,8 +30,8 @@ func (n *ApplicationSecurityPostureFindingNormalizer) Supports(format, sourceTyp
 		return false
 	}
 	st := strings.ToLower(sourceType)
-	return strings.Contains(st, "application_security_posture_finding") || 
-	       strings.Contains(st, "application")
+	return strings.Contains(st, "application_security_posture_finding") ||
+		strings.Contains(st, "application")
 }
 
 // Normalize converts raw event to OCSF application_security_posture_finding
@@ -58,6 +58,10 @@ func (n *ApplicationSecurityPostureFindingNormalizer) Normalize(ctx context.Cont
 	event.Metadata.LogProvider = envelope.Source
 	event.Raw = ocsf.RawDescriptor{Format: envelope.Format, Data: payload}
 
+	// Hoist nested fields for query performance
+	if event.RiskScore > 0 {
+		event.Event.RiskScore = event.RiskScore
+	}
+
 	return &event.Event, nil
 }
-

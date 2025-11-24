@@ -109,6 +109,13 @@ func generateEventClassFile(class *EventClass, categoryUID int, outputDir, packa
 		buf.WriteString(fmt.Sprintf("\t%s %s `json:\"%s%s\"`\n", fieldName, goType, jsonTag, omit))
 	}
 
+	// Add extra fields for specific event classes that need them
+	// (e.g., Attacks for detection_finding from security_control profile)
+	extraFields := getExtraFieldsForClass(class.Name)
+	for _, ef := range extraFields {
+		buf.WriteString(fmt.Sprintf("\t%s %s `json:\"%s,omitempty\"`\n", ef.FieldName, ef.GoType, ef.JSONTag))
+	}
+
 	buf.WriteString("}\n\n")
 
 	// Generate activity enum if present
@@ -199,4 +206,32 @@ func generateFileHeader() string {
 // Systems Source Available License (TSSAL) v1.0 as-is, without warranty of any kind.
 
 `
+}
+
+// ExtraField defines an additional field to add to specific event classes.
+// Used for fields from OCSF profiles that aren't automatically inherited.
+type ExtraField struct {
+	FieldName string // Go field name (e.g., "Attacks")
+	GoType    string // Go type (e.g., "[]*objects.Attack")
+	JSONTag   string // JSON tag (e.g., "attacks")
+}
+
+// getExtraFieldsForClass returns additional fields that should be added to
+// specific event classes. This handles fields from OCSF profiles (like
+// security_control) that aren't automatically inherited by certain classes.
+func getExtraFieldsForClass(className string) []ExtraField {
+	// detection_finding should have Attacks from security_control profile
+	// but the OCSF schema doesn't include it by default
+	switch className {
+	case "detection_finding":
+		return []ExtraField{
+			{
+				FieldName: "Attacks",
+				GoType:    "[]*objects.Attack",
+				JSONTag:   "attacks",
+			},
+		}
+	default:
+		return nil
+	}
 }

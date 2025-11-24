@@ -33,6 +33,7 @@ func (DnsActivityValidator) Validate(ctx context.Context, event *ocsf.Event) err
 	}
 
 	// Validate enumerated fields
+	// TODO: Validate enum field 'rcode_id' (valid values: 0, 1, 10, 11, 16, 17, 18, 19, 2, 20, 21, 22, 23, 24, 25, 3, 4, 5, 6, 7, 8, 9, 99)
 	if event.ActivityID != 0 {
 		switch event.ActivityID {
 		case 1:
@@ -43,7 +44,5 @@ func (DnsActivityValidator) Validate(ctx context.Context, event *ocsf.Event) err
 			return fmt.Errorf("invalid activity_id: %d (valid values: 1, 2, 6)", event.ActivityID)
 		}
 	}
-	// TODO: Validate enum field 'rcode_id' (valid values: 0, 1, 10, 11, 16, 17, 18, 19, 2, 20, 21, 22, 23, 24, 25, 3, 4, 5, 6, 7, 8, 9, 99)
 	return nil
 }
-

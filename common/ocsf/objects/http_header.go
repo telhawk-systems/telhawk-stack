@@ -11,18 +11,17 @@ package objects
 import "fmt"
 
 type HttpHeader struct {
-	Name string `json:"name"`
+	Name  string `json:"name"`
 	Value string `json:"value"`
 }
 
 // Validate checks that all required fields are properly set
 func (o *HttpHeader) Validate() error {
-	if o.Value == "" {
-		return fmt.Errorf("required field value is empty")
-	}
 	if o.Name == "" {
 		return fmt.Errorf("required field name is empty")
 	}
+	if o.Value == "" {
+		return fmt.Errorf("required field value is empty")
+	}
 	return nil
 }
-

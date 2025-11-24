@@ -5,6 +5,18 @@
  * This is the bridge between the UI filter bar and the backend query service.
  *
  * See: docs/QUERY_LANGUAGE_DESIGN.md
+ *
+ * ## Field Path Requirements
+ *
+ * All field paths must be valid OpenSearch fields defined in common/fields/fields.go.
+ * For nested arrays like `attacks[]`, we use HOISTED fields for query performance:
+ *
+ * - `.attack_tactic` - First tactic name (hoisted from attacks[0].tactic.name)
+ * - `.attack_technique` - First technique name (hoisted from attacks[0].technique.name)
+ *
+ * The normalizers (ingest/internal/normalizer/) are responsible for hoisting these
+ * fields during event ingestion. Do NOT use array index notation like `attacks[0]`
+ * in queries - OpenSearch nested queries are complex and slow.
  */
 
 import {
@@ -81,12 +93,13 @@ export const EVENT_CLASS_DEFAULT_FIELDS: Record<number, string[]> = {
     '.src_endpoint.ip',
   ],
   // Detection Finding (2004)
+  // Note: attack_tactic and attack_technique are hoisted fields (see doc header)
   2004: [
     '.time',
     '.severity',
     '.finding.title',
-    '.attacks[0].tactic.name',
-    '.attacks[0].technique.name',
+    '.attack_tactic',
+    '.attack_technique',
     '.risk_score',
   ],
 };

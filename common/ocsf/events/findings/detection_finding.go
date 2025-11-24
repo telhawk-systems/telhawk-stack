@@ -37,6 +37,7 @@ type DetectionFinding struct {
 	RiskLevelId     int                        `json:"risk_level_id,omitempty"`
 	RiskScore       int                        `json:"risk_score,omitempty"`
 	Vulnerabilities []*objects.Vulnerability   `json:"vulnerabilities,omitempty"`
+	Attacks         []*objects.Attack          `json:"attacks,omitempty"`
 }
 
 func NewDetectionFinding(activityID int) *DetectionFinding {

@@ -42,6 +42,20 @@ type Event struct {
 
 	// Raw data preservation
 	Raw RawDescriptor `json:"raw"`
+
+	// Hoisted fields for query performance.
+	// These are extracted from nested arrays during normalization to avoid
+	// expensive OpenSearch nested queries. The original nested data is preserved
+	// in the class-specific structs (e.g., DetectionFinding.Attacks).
+	//
+	// ATT&CK fields (from attacks[0] if present):
+	AttackTactic       string `json:"attack_tactic,omitempty"`        // attacks[0].tactic.name
+	AttackTacticUID    string `json:"attack_tactic_uid,omitempty"`    // attacks[0].tactic.uid (e.g., "TA0003")
+	AttackTechnique    string `json:"attack_technique,omitempty"`     // attacks[0].technique.name
+	AttackTechniqueUID string `json:"attack_technique_uid,omitempty"` // attacks[0].technique.uid (e.g., "T1547")
+
+	// Risk score (hoisted from finding events):
+	RiskScore int `json:"risk_score,omitempty"` // 0-100 risk score
 }
 
 // Metadata describes the event producer and OCSF schema information.

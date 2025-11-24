@@ -491,6 +491,23 @@ func (c *Client) getOCSFMappings() map[string]interface{} {
 			"resources": map[string]interface{}{
 				"type": "nested",
 			},
+			// Hoisted ATT&CK fields (from attacks[0] for query performance)
+			"attack_tactic": map[string]interface{}{
+				"type": "keyword",
+			},
+			"attack_tactic_uid": map[string]interface{}{
+				"type": "keyword",
+			},
+			"attack_technique": map[string]interface{}{
+				"type": "keyword",
+			},
+			"attack_technique_uid": map[string]interface{}{
+				"type": "keyword",
+			},
+			// Risk score (hoisted from finding events)
+			"risk_score": map[string]interface{}{
+				"type": "integer",
+			},
 			// Auth protocol
 			"auth_protocol": map[string]interface{}{
 				"type": "keyword",

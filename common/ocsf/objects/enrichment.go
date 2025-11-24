@@ -11,29 +11,28 @@ package objects
 import "fmt"
 
 type Enrichment struct {
-	CreatedTime int64 `json:"created_time,omitempty"`
-	Data string `json:"data"`
-	Desc string `json:"desc,omitempty"`
-	Name string `json:"name"`
-	Provider string `json:"provider,omitempty"`
-	Reputation *Reputation `json:"reputation,omitempty"`
-	ShortDesc string `json:"short_desc,omitempty"`
-	SrcUrl string `json:"src_url,omitempty"`
-	Type string `json:"type,omitempty"`
-	Value string `json:"value"`
+	CreatedTime int64       `json:"created_time,omitempty"`
+	Data        string      `json:"data"`
+	Desc        string      `json:"desc,omitempty"`
+	Name        string      `json:"name"`
+	Provider    string      `json:"provider,omitempty"`
+	Reputation  *Reputation `json:"reputation,omitempty"`
+	ShortDesc   string      `json:"short_desc,omitempty"`
+	SrcUrl      string      `json:"src_url,omitempty"`
+	Type        string      `json:"type,omitempty"`
+	Value       string      `json:"value"`
 }
 
 // Validate checks that all required fields are properly set
 func (o *Enrichment) Validate() error {
-	if o.Value == "" {
-		return fmt.Errorf("required field value is empty")
-	}
 	if o.Data == "" {
 		return fmt.Errorf("required field data is empty")
 	}
 	if o.Name == "" {
 		return fmt.Errorf("required field name is empty")
 	}
+	if o.Value == "" {
+		return fmt.Errorf("required field value is empty")
+	}
 	return nil
 }
-

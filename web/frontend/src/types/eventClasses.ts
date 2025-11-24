@@ -75,8 +75,9 @@ export const FIELD_FILTERS: Record<string, FieldFilterConfig> = {
   response_size: { id: 'response_size', label: 'Response Size', ocsfPath: 'http_response.length', type: 'number' },
 
   // Detection Finding (2004)
-  tactic: { id: 'tactic', label: 'MITRE Tactic', ocsfPath: 'attacks[0].tactic.name', type: 'text' },
-  technique: { id: 'technique', label: 'MITRE Technique', ocsfPath: 'attacks[0].technique.name', type: 'text' },
+  // Note: attack_tactic/technique are hoisted fields for query performance (see queryBuilder.ts)
+  tactic: { id: 'tactic', label: 'MITRE Tactic', ocsfPath: 'attack_tactic', type: 'text' },
+  technique: { id: 'technique', label: 'MITRE Technique', ocsfPath: 'attack_technique', type: 'text' },
   severity: { id: 'severity', label: 'Severity', ocsfPath: 'severity', type: 'enum', enumValues: ['Informational', 'Low', 'Medium', 'High', 'Critical'] },
   risk_score: { id: 'risk_score', label: 'Risk Score', ocsfPath: 'risk_score', type: 'number' },
   analytic_name: { id: 'analytic_name', label: 'Analytic Name', ocsfPath: 'analytic.name', type: 'text' },

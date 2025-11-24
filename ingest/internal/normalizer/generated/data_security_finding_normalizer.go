@@ -10,10 +10,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/telhawk-systems/telhawk-stack/ingest/internal/models"
 	"github.com/telhawk-systems/telhawk-stack/common/ocsf"
 	"github.com/telhawk-systems/telhawk-stack/common/ocsf/events/findings"
 	"github.com/telhawk-systems/telhawk-stack/common/ocsf/objects"
+	"github.com/telhawk-systems/telhawk-stack/ingest/internal/models"
 )
 
 // DataSecurityFindingNormalizer normalizes data_security_finding events to OCSF format
@@ -30,8 +30,8 @@ func (n *DataSecurityFindingNormalizer) Supports(format, sourceType string) bool
 		return false
 	}
 	st := strings.ToLower(sourceType)
-	return strings.Contains(st, "data_security_finding") || 
-	       strings.Contains(st, "data")
+	return strings.Contains(st, "data_security_finding") ||
+		strings.Contains(st, "data")
 }
 
 // Normalize converts raw event to OCSF data_security_finding
@@ -58,6 +58,10 @@ func (n *DataSecurityFindingNormalizer) Normalize(ctx context.Context, envelope 
 	event.Metadata.LogProvider = envelope.Source
 	event.Raw = ocsf.RawDescriptor{Format: envelope.Format, Data: payload}
 
+	// Hoist nested fields for query performance
+	if event.RiskScore > 0 {
+		event.Event.RiskScore = event.RiskScore
+	}
+
 	return &event.Event, nil
 }
-

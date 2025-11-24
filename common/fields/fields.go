@@ -99,8 +99,19 @@ var ValidFields = map[string]FieldInfo{
 
 	// Detection objects
 	".finding":   {Type: "object", Description: "Finding/detection object", AllowNested: true},
-	".attacks":   {Type: "nested", Description: "MITRE ATT&CK mappings"},
-	".resources": {Type: "nested", Description: "Affected resources"},
+	".attacks":   {Type: "nested", Description: "MITRE ATT&CK mappings", AllowNested: true},
+	".resources": {Type: "nested", Description: "Affected resources", AllowNested: true},
+
+	// Risk score
+	".risk_score": {Type: "integer", Description: "Risk score (0-100)"},
+
+	// Hoisted MITRE ATT&CK fields (from first element of attacks array)
+	// These are hoisted during normalization for query performance.
+	// The full attacks[] nested array is still available for detailed analysis.
+	".attack_tactic":        {Type: "keyword", Description: "MITRE ATT&CK tactic name (hoisted from attacks[0])"},
+	".attack_tactic_uid":    {Type: "keyword", Description: "MITRE ATT&CK tactic UID, e.g. TA0003 (hoisted from attacks[0])"},
+	".attack_technique":     {Type: "keyword", Description: "MITRE ATT&CK technique name (hoisted from attacks[0])"},
+	".attack_technique_uid": {Type: "keyword", Description: "MITRE ATT&CK technique UID, e.g. T1547 (hoisted from attacks[0])"},
 
 	// Auth protocol
 	".auth_protocol": {Type: "keyword", Description: "Authentication protocol"},
