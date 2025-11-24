@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/opensearch-project/opensearch-go/v2"
@@ -51,9 +52,11 @@ func DefaultConfig() Config {
 
 // Client is a direct OpenSearch client that bypasses the storage service
 type Client struct {
-	osClient    *opensearch.Client
-	config      Config
-	initialized bool
+	osClient      *opensearch.Client
+	config        Config
+	initialized   bool
+	bulkIndexer   opensearchutil.BulkIndexer
+	bulkIndexerMu sync.Mutex
 }
 
 // NewClient creates a new direct OpenSearch client
@@ -120,30 +123,73 @@ func (c *Client) Initialize(ctx context.Context) error {
 	return nil
 }
 
+// getBulkIndexer returns the persistent bulk indexer, creating it if needed
+func (c *Client) getBulkIndexer() (opensearchutil.BulkIndexer, error) {
+	c.bulkIndexerMu.Lock()
+	defer c.bulkIndexerMu.Unlock()
+
+	if c.bulkIndexer != nil {
+		return c.bulkIndexer, nil
+	}
+
+	indexName := c.GetWriteAlias()
+	bi, err := opensearchutil.NewBulkIndexer(opensearchutil.BulkIndexerConfig{
+		Client:        c.osClient,
+		Index:         indexName,
+		NumWorkers:    4,               // Number of worker goroutines
+		FlushBytes:    5 * 1024 * 1024, // Flush when buffer reaches 5MB
+		FlushInterval: 1 * time.Second, // Flush at least every second
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create bulk indexer: %w", err)
+	}
+
+	c.bulkIndexer = bi
+	log.Printf("Created persistent bulk indexer with 4 workers, 5MB buffer, 1s flush interval")
+	return bi, nil
+}
+
+// Close shuts down the client and flushes any pending events
+func (c *Client) Close() error {
+	c.bulkIndexerMu.Lock()
+	defer c.bulkIndexerMu.Unlock()
+
+	if c.bulkIndexer != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		if err := c.bulkIndexer.Close(ctx); err != nil {
+			return fmt.Errorf("failed to close bulk indexer: %w", err)
+		}
+		c.bulkIndexer = nil
+		log.Println("Bulk indexer closed successfully")
+	}
+	return nil
+}
+
 // Ingest implements the storageclient interface for direct OpenSearch indexing
 func (c *Client) Ingest(ctx context.Context, events []map[string]interface{}) (*storageclient.IngestResponse, error) {
 	if c.osClient == nil {
 		return nil, fmt.Errorf("opensearch client not initialized")
 	}
 
-	resp := &storageclient.IngestResponse{}
-	indexName := c.GetWriteAlias()
-
-	bi, err := opensearchutil.NewBulkIndexer(opensearchutil.BulkIndexerConfig{
-		Client: c.osClient,
-		Index:  indexName,
-	})
+	bi, err := c.getBulkIndexer()
 	if err != nil {
-		resp.Failed = len(events)
-		resp.Errors = []string{fmt.Sprintf("Failed to create bulk indexer: %v", err)}
-		return resp, nil
+		return &storageclient.IngestResponse{
+			Failed: len(events),
+			Errors: []string{err.Error()},
+		}, nil
 	}
+
+	resp := &storageclient.IngestResponse{}
+	var respMu sync.Mutex
 
 	for _, event := range events {
 		data, err := json.Marshal(event)
 		if err != nil {
+			respMu.Lock()
 			resp.Failed++
 			resp.Errors = append(resp.Errors, fmt.Sprintf("Failed to marshal event: %v", err))
+			respMu.Unlock()
 			continue
 		}
 
@@ -156,28 +202,32 @@ func (c *Client) Ingest(ctx context.Context, events []map[string]interface{}) (*
 			Action: "index",
 			Body:   bytes.NewReader(data),
 			OnSuccess: func(ctx context.Context, item opensearchutil.BulkIndexerItem, res opensearchutil.BulkIndexerResponseItem) {
+				respMu.Lock()
 				resp.Indexed++
+				respMu.Unlock()
 			},
 			OnFailure: func(ctx context.Context, item opensearchutil.BulkIndexerItem, res opensearchutil.BulkIndexerResponseItem, err error) {
+				respMu.Lock()
 				resp.Failed++
 				if err != nil {
 					resp.Errors = append(resp.Errors, err.Error())
 				} else {
 					resp.Errors = append(resp.Errors, fmt.Sprintf("%s: %s", res.Error.Type, res.Error.Reason))
 				}
+				respMu.Unlock()
 			},
 		})
 
 		if err != nil {
+			respMu.Lock()
 			resp.Failed++
 			resp.Errors = append(resp.Errors, fmt.Sprintf("Failed to add to bulk indexer: %v", err))
+			respMu.Unlock()
 		}
 	}
 
-	if err := bi.Close(ctx); err != nil {
-		resp.Errors = append(resp.Errors, fmt.Sprintf("Bulk indexer close error: %v", err))
-	}
-
+	// Note: We don't close the bulk indexer here - it flushes automatically
+	// based on FlushBytes and FlushInterval settings
 	return resp, nil
 }
 
