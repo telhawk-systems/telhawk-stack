@@ -191,7 +191,7 @@ func (s *IngestService) processEvents() {
 				continue
 			}
 			metrics.QueueDepth.Set(float64(len(s.eventQueue)))
-			log.Printf("Processing event: id=%s source=%s", event.ID, event.Source)
+			// log.Printf("Processing event: id=%s source=%s", event.ID, event.Source)
 
 			// Normalize event via Core service
 			startTime := time.Now()
@@ -221,7 +221,7 @@ func (s *IngestService) processEvents() {
 				continue
 			}
 
-			log.Printf("event %s successfully stored", event.ID)
+			// log.Printf("event %s successfully stored", event.ID)
 
 			// Complete ack if manager is configured
 			if s.ackManager != nil && event.AckID != "" {
@@ -283,7 +283,7 @@ func (s *IngestService) normalizeEvent(event *models.Event) (map[string]interfac
 		eventMap["client_id"] = event.ClientID
 	}
 
-	log.Printf("event %s normalized via pipeline", event.ID)
+	// log.Printf("event %s normalized via pipeline", event.ID)
 	return eventMap, nil
 }
 
