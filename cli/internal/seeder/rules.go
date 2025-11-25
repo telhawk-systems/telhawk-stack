@@ -310,6 +310,14 @@ func MatchesFilter(event map[string]interface{}, filter *QueryFilter) bool {
 				}
 			}
 			return false
+		case "not":
+			// NOT filter - all conditions must NOT match
+			for _, cond := range filter.Conditions {
+				if MatchesFilter(event, &cond) {
+					return false // If any condition matches, NOT fails
+				}
+			}
+			return true // None matched, NOT succeeds
 		default:
 			return false
 		}

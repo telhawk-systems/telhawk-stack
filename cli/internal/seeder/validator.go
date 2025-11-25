@@ -180,6 +180,25 @@ func validateGroupByConsistency(events []HECEvent, groupByFields []string) error
 	return nil
 }
 
+// debugFilterMismatch logs details about why an event doesn't match a filter
+func debugFilterMismatch(event map[string]interface{}, filter *QueryFilter, indent string) {
+	if filter.Type != "" {
+		log.Printf("%sCompound filter type=%s", indent, filter.Type)
+		for i, cond := range filter.Conditions {
+			matches := MatchesFilter(event, &cond)
+			log.Printf("%s  Condition %d: matches=%v", indent, i, matches)
+			if !matches {
+				debugFilterMismatch(event, &cond, indent+"    ")
+			}
+		}
+	} else {
+		value := getFieldValue(event, filter.Field)
+		matches := MatchesFilter(event, filter)
+		log.Printf("%sSimple filter: field=%s op=%s filterValue=%v actualValue=%v matches=%v",
+			indent, filter.Field, filter.Operator, filter.Value, value, matches)
+	}
+}
+
 // ValidateRuleCanBeGenerated checks if a rule can be used for event generation
 func ValidateRuleCanBeGenerated(rule *DetectionRule) error {
 	// Check if rule is supported

@@ -88,15 +88,26 @@ func (g *RuleBasedGenerator) generateForEventCount() ([]HECEvent, error) {
 	events := make([]HECEvent, eventCount)
 	now := time.Now()
 
+	// Create a template event from the filter - this picks ONE consistent OR branch
+	// and extracts values that will be used for all events
+	templateEvent := g.eventGen.createEventMatchingFilter(filter)
+
 	// Generate consistent values for group_by fields
+	// First, extract values from the template event for any group_by fields that were set by the filter
 	groupByValues := g.fieldGen.generateGroupByValues(groupByFields)
+	for _, field := range groupByFields {
+		if templateValue := getFieldValue(templateEvent, field); templateValue != nil {
+			groupByValues[field] = templateValue
+		}
+	}
 
 	for i := 0; i < eventCount; i++ {
 		// Calculate event time with jitter
 		eventTime := g.eventGen.calculateEventTime(now, timeWindow, i, eventCount)
 
-		// Create base event matching the filter
-		event := g.eventGen.createEventMatchingFilter(filter)
+		// Create base event matching the filter using the same template approach
+		// This ensures consistency in OR branch selection
+		event := g.eventGen.createEventMatchingFilterWithSeed(filter, groupByValues)
 
 		// Apply group_by values to ensure events are correlated
 		g.eventGen.applyGroupByValues(event, groupByValues)
