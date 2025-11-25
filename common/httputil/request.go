@@ -130,7 +130,14 @@ func GetClientIP(r *http.Request) string {
 	if xri := r.Header.Get("X-Real-IP"); xri != "" {
 		return xri
 	}
-	return r.RemoteAddr
+	// RemoteAddr includes port (e.g., "192.168.1.1:12345" or "[::1]:12345")
+	// Strip the port for database storage
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		// RemoteAddr might not have a port (unlikely but handle it)
+		return r.RemoteAddr
+	}
+	return host
 }
 
 // ParseIntParam parses an integer query parameter with a default value.
