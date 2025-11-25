@@ -7,11 +7,11 @@ A brutally honest assessment of what's missing. Prioritized by pain level.
 ## Authentication & Identity Management
 
 ### Password Management
-- [ ] **Password reset flow** - No self-service password reset
-- [ ] **Password reset via email** - No email integration at all
-- [ ] **Password complexity requirements** - Configurable policies
-- [ ] **Password expiration** - Force rotation after N days
-- [ ] **Password history** - Prevent reuse of last N passwords
+- [ ] **Password reset (admin-initiated)** - Admin can reset user passwords (P1)
+- [ ] **Password complexity requirements** - Configurable policies (P2)
+- [ ] **Password expiration** - Force rotation after N days (P2)
+- [ ] **Password history** - Prevent reuse of last N passwords (P2)
+- [ ] **Password reset via email** - Self-service reset (P4 - requires email)
 
 ### Multi-Factor Authentication
 - [ ] **TOTP (2FA)** - Google Authenticator, Authy, etc.
@@ -110,18 +110,21 @@ A brutally honest assessment of what's missing. Prioritized by pain level.
 
 ## Alerting & Notifications
 
-### Email Notifications
+### Webhook Notifications (P2)
+- [ ] **Webhook generic** - POST to arbitrary URLs
+- [ ] **Slack integration** - Post alerts to channels
+- [ ] **Microsoft Teams** - Teams webhook support
+- [ ] **PagerDuty** - On-call alerting
+
+### Email Notifications (P4 - Deferred)
+
+> **Deferred:** Email requires static IP/domain for deliverability. Will implement after cloud deployment.
+
 - [ ] **SMTP configuration** - Basic email sending
 - [ ] **Alert email notifications** - Email when alert fires
 - [ ] **Digest emails** - Daily/weekly summary
 - [ ] **Escalation emails** - Notify manager if no response
 - [ ] **Email templates** - Customizable alert emails
-
-### Other Notification Channels
-- [ ] **Slack integration** - Post alerts to channels
-- [ ] **Microsoft Teams** - Teams webhook support
-- [ ] **PagerDuty** - On-call alerting
-- [ ] **Webhook generic** - POST to arbitrary URLs
 - [ ] **SMS/text alerts** - Twilio integration
 
 ---
@@ -235,12 +238,11 @@ Target: End of January 2025
 
 | Gap | Pain Level | Effort | Priority |
 |-----|------------|--------|----------|
-| Password reset | HIGH | LOW | P1 |
+| Password reset (admin-initiated) | HIGH | LOW | P1 |
 | TOTP 2FA | HIGH | MEDIUM | P1 |
-| Token last-used tracking | HIGH | LOW | P1 |
-| Token-to-event linkage | HIGH | MEDIUM | P1 |
+| Token last-used tracking | HIGH | LOW | ~~P1~~ **DONE** |
+| Token-to-event linkage | HIGH | MEDIUM | ~~P1~~ **DONE** |
 | Endpoint documentation | HIGH | LOW | P1 |
-| Email notifications | HIGH | MEDIUM | P1 |
 | Per-tenant rate limiting | HIGH | MEDIUM | P1 |
 | AI: NL-to-query translation | HIGH | HIGH | P1 |
 | Document ISM policy | MEDIUM | LOW | P2 |
@@ -253,6 +255,11 @@ Target: End of January 2025
 | SCIM provisioning | LOW | HIGH | P3 |
 | SOAR integration | LOW | MEDIUM | P3 |
 | MSP admin portal | LOW | HIGH | P3 |
+| Email notifications | LOW | MEDIUM | P4 |
+| Password reset via email | LOW | MEDIUM | P4 |
+| Digest/escalation emails | LOW | MEDIUM | P4 |
+
+> **Note:** Email-related features are P4 (deferred) - requires static IP/domain and cloud deployment.
 
 ---
 
