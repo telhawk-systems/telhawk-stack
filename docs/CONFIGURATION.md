@@ -343,13 +343,13 @@ Services log their configuration on startup:
 
 ```bash
 # Authenticate service
-docker-compose logs authenticate | grep "Starting"
+docker compose logs authenticate | grep "Starting"
 
 # Ingest service
-docker-compose logs ingest | grep -A 3 "Starting"
+docker compose logs ingest | grep -A 3 "Starting"
 
 # Search service
-docker-compose logs search | grep "Starting"
+docker compose logs search | grep "Starting"
 ```
 
 ## Troubleshooting
@@ -367,5 +367,5 @@ Ensure environment variable names match the config structure:
 ### Invalid Configuration Values
 Services will log errors and fail to start. Check logs:
 ```bash
-docker-compose logs <service>
+docker compose logs <service>
 ```

@@ -1,0 +1,180 @@
+# TelHawk Development Environment
+# Usage:
+#   docker compose -f docker-compose.dev.yml up -d
+#   docker exec -it telhawk-dev bash
+#
+# Inside the container:
+#   ./scripts/dev/run-all.sh      # Start all services
+#   ./scripts/dev/run.sh ingest   # Start single service
+#   ./scripts/dev/build.sh        # Build all services
+#
+# Hot reload with air:
+#   cd authenticate && air
+
+services:
+  # Single dev container with all source bind-mounted
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: telhawk-dev
+    volumes:
+      # Bind mount entire source tree (includes .gocache and .gomodcache)
+      - .:/app
+      # State directories
+      - dev-dlq:/var/lib/telhawk/dlq
+    working_dir: /app
+    ports:
+      - "127.0.0.1:9080:9080"   # authenticate (dev port)
+      - "127.0.0.1:9082:9082"   # search (dev port)
+      - "127.0.0.1:9085:9085"   # respond (dev port)
+      - "127.0.0.1:9088:9088"   # ingest HEC (dev port)
+      - "127.0.0.1:3000:3000"   # web backend
+      - "127.0.0.1:80:5173"     # vite dev server (frontend - mapped to port 80 on host)
+      - "127.0.0.1:2345:2345"   # delve debugger
+    environment:
+      # Single PostgreSQL with multiple databases
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=telhawk
+      - DB_PASSWORD=telhawk-dev
+      # Database names (all in same postgres instance)
+      - AUTH_DB_NAME=telhawk_auth
+      - RESPOND_DB_NAME=telhawk_respond
+      # OpenSearch (no TLS in dev)
+      - OPENSEARCH_URL=http://opensearch:9200
+      - OPENSEARCH_SKIP_VERIFY=false
+      # NATS
+      - NATS_URL=nats://nats:4222
+      # Redis
+      - REDIS_URL=redis:6379
+      # Service URLs (for inter-service communication) - using dev ports
+      - AUTHENTICATE_URL=http://localhost:9080
+      - SEARCH_URL=http://localhost:9082
+      - RESPOND_URL=http://localhost:9085
+      - INGEST_URL=http://localhost:9088
+      # Service ports (override config files)
+      - AUTHENTICATE_PORT=9080
+      # Authenticate database config
+      - AUTHENTICATE_DATABASE_TYPE=postgres
+      - AUTHENTICATE_DATABASE_POSTGRES_HOST=postgres
+      - AUTHENTICATE_DATABASE_POSTGRES_PORT=5432
+      - AUTHENTICATE_DATABASE_POSTGRES_USER=telhawk
+      - AUTHENTICATE_DATABASE_POSTGRES_PASSWORD=telhawk-dev
+      - AUTHENTICATE_DATABASE_POSTGRES_DATABASE=telhawk_auth
+      - AUTHENTICATE_DATABASE_POSTGRES_SSLMODE=disable
+      - SEARCH_PORT=9082
+      - RESPOND_PORT=9085
+      - INGEST_PORT=9088
+      # WEB_PORT defaults to 3000 (no override needed)
+      # Dev mode settings
+      - TLS_ENABLED=false
+      - LOG_LEVEL=debug
+      - GO111MODULE=on
+    networks:
+      - telhawk
+      - telhawk-db
+    depends_on:
+      opensearch:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      nats:
+        condition: service_started
+      redis:
+        condition: service_started
+    stdin_open: true
+    tty: true
+
+  # Infrastructure services
+  opensearch:
+    image: opensearchproject/opensearch:2.11.0
+    container_name: telhawk-opensearch-dev
+    environment:
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
+      - OPENSEARCH_INITIAL_ADMIN_PASSWORD=TelHawk123!
+      - plugins.security.disabled=true  # Disable security for dev
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    volumes:
+      - opensearch-data:/usr/share/opensearch/data
+    ports:
+      - "127.0.0.1:9200:9200"
+    networks:
+      - telhawk
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health | grep -q 'yellow\\|green'"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # Single PostgreSQL with multiple databases
+  postgres:
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM postgres:16-alpine
+        COPY scripts/dev/init-postgres.sh /docker-entrypoint-initdb.d/init-postgres.sh
+        RUN chmod +x /docker-entrypoint-initdb.d/init-postgres.sh
+    container_name: telhawk-postgres-dev
+    environment:
+      - POSTGRES_USER=telhawk
+      - POSTGRES_PASSWORD=telhawk-dev
+      - POSTGRES_MULTIPLE_DATABASES=telhawk_auth,telhawk_respond
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432"
+    networks:
+      - telhawk-db
+      - telhawk
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U telhawk"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  nats:
+    image: nats:2.10-alpine
+    container_name: telhawk-nats
+    ports:
+      - "127.0.0.1:4222:4222"
+      - "127.0.0.1:8222:8222"
+    command: ["--js", "--sd", "/data"]
+    volumes:
+      - nats-data:/data
+    networks:
+      - telhawk
+
+  redis:
+    image: redis:7-alpine
+    container_name: telhawk-redis
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - telhawk
+
+networks:
+  telhawk:
+    driver: bridge
+  telhawk-db:
+    driver: bridge
+
+volumes:
+  opensearch-data:
+  postgres-data:
+  nats-data:
+  redis-data:
+  go-mod-cache:
+  dev-dlq:

@@ -48,6 +48,19 @@ export interface HECToken {
   expires_at?: string;
 }
 
+// HEC token usage statistics from Redis
+export interface HECTokenStats {
+  token_id: string;
+  last_used_at?: string;
+  last_used_ip?: string;
+  total_events: number;
+  events_last_hour: number;
+  events_last_24h: number;
+  unique_ips_today: number;
+  ingest_instances?: Record<string, string>; // instance_id -> last_seen timestamp
+  stats_retrieved_at: string;
+}
+
 // Scope types for multi-organization data isolation
 export type ScopeType = 'platform' | 'organization' | 'client';
 

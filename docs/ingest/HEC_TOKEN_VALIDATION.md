@@ -13,10 +13,10 @@ This guide demonstrates the complete HEC token validation flow:
 
 ```bash
 # Start all services
-docker-compose up -d
+docker compose up -d
 
 # Verify all services are healthy
-docker-compose ps
+docker compose ps
 ```
 
 ## Test Procedure
@@ -129,7 +129,7 @@ Expected response:
 
 Check ingest logs for validation:
 ```bash
-docker-compose logs ingest | grep -A2 "HEC token validated"
+docker compose logs ingest | grep -A2 "HEC token validated"
 ```
 
 ### Step 6: Test Ingestion with Invalid Token
@@ -153,7 +153,7 @@ Expected response (401 Unauthorized):
 
 Check ingest logs:
 ```bash
-docker-compose logs ingest | grep "HEC token validation failed"
+docker compose logs ingest | grep "HEC token validation failed"
 ```
 
 ### Step 7: Test Ingestion without Token
@@ -201,14 +201,14 @@ time curl -X POST http://localhost:8088/services/collector/event \
 
 ```bash
 # View token validation audit logs
-docker-compose logs auth | grep "hec_token_validate"
+docker compose logs auth | grep "hec_token_validate"
 ```
 
 ### Check Ingest Service Logs
 
 ```bash
 # View token validation in ingest
-docker-compose logs ingest | grep "HEC token"
+docker compose logs ingest | grep "HEC token"
 ```
 
 ### Check Validation Stats
@@ -258,7 +258,7 @@ INGEST_AUTH_TOKEN_VALIDATION_CACHE_TTL=10m
 - Auth service is accessible from ingest container
 
 ```bash
-docker-compose logs ingest | grep "Auth URL"
+docker compose logs ingest | grep "Auth URL"
 ```
 
 ## Security Considerations

@@ -73,10 +73,10 @@ See `docs/README.md` for the full documentation index.
 
 ```bash
 # Start the stack
-docker-compose up -d
+docker compose up -d
 
 # Wait for services to be healthy
-docker-compose ps
+docker compose ps
 
 # Access the web UI
 open http://localhost:3000

@@ -33,7 +33,7 @@ WEB_RESPOND_SERVICE_URL=https://respond:8085
 Then start the stack:
 
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
 ## Certificate Management
@@ -247,11 +247,11 @@ To regenerate self-signed certificates:
 
 ```bash
 # Remove certificate volume
-docker-compose down
+docker compose down
 docker volume rm telhawk-stack_telhawk-certs
 
 # Restart - certificates will be regenerated
-docker-compose up -d
+docker compose up -d
 ```
 
 ## Architecture
@@ -296,6 +296,6 @@ When `TLS_SKIP_VERIFY=true`:
 ## Support
 
 For issues or questions about TLS configuration:
-1. Check service logs: `docker-compose logs <service>`
+1. Check service logs: `docker compose logs <service>`
 2. Verify certificate validity: `openssl x509 -in /certs/generated/auth.pem -text -noout`
 3. Open an issue on GitHub with logs and configuration

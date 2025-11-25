@@ -1,0 +1,79 @@
+# TelHawk Development Container
+# Single container with all services, bind-mount friendly
+# Usage: docker-compose -f docker-compose.dev.yml up -d
+#        docker exec -it telhawk-dev bash
+
+FROM ubuntu:24.04
+
+# Prevent interactive prompts
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install essentials + Node.js
+RUN apt-get update && apt-get install -y \
+    curl \
+    wget \
+    git \
+    jq \
+    vim \
+    htop \
+    netcat-openbsd \
+    postgresql-client \
+    ca-certificates \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Node.js 24.x (latest)
+RUN curl -fsSL https://deb.nodesource.com/setup_24.x | bash - && \
+    apt-get install -y nodejs && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install latest Go
+ARG GO_VERSION=1.25.4
+RUN curl -fsSL "https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz" | tar -C /usr/local -xz
+ENV PATH="/usr/local/go/bin:/home/ubuntu/go/bin:${PATH}"
+ENV GOPATH="/home/ubuntu/go"
+ENV GOCACHE="/app/.gocache"
+ENV GOMODCACHE="/app/.gomodcache"
+
+# Install useful Go tools
+RUN go install github.com/air-verse/air@latest && \
+    go install github.com/go-delve/delve/cmd/dlv@latest
+
+# Ubuntu 24.04 already has 'ubuntu' user with UID 1000:1000, use that
+
+# Create working directory
+WORKDIR /app
+
+# Copy go.mod/go.sum for dependency caching (optional, can be bind-mounted)
+# COPY go.mod go.sum ./
+# RUN go mod download
+
+# Create directories for state and set ownership
+RUN mkdir -p /var/lib/telhawk/dlq /var/log/telhawk /tmp/telhawk && \
+    chown -R ubuntu:ubuntu /var/lib/telhawk /var/log/telhawk /tmp/telhawk /app
+
+# Create startup script
+RUN echo '#!/bin/bash\n\
+# Build thawk CLI\n\
+cd /app/cli && go build -o /app/bin/thawk . && echo "Built thawk CLI"\n\
+# Create symlinks for migrations (dist/migrations -> migrations)\n\
+cd /app/authenticate && ln -sf dist/migrations migrations\n\
+cd /app/respond && ln -sf dist/migrations migrations\n\
+# Start thawk serve daemon\n\
+/app/bin/thawk serve &\n\
+echo "Started thawk serve daemon"\n\
+# Keep container alive\n\
+tail -f /dev/null\n\
+' > /entrypoint.sh && chmod +x /entrypoint.sh
+
+# Add /app/bin to PATH in ubuntu user's bashrc
+RUN echo 'export PATH="/app/bin:$PATH"' >> /home/ubuntu/.bashrc
+
+# Switch to ubuntu user (UID 1000)
+USER ubuntu
+
+# Expose all service ports (dev ports)
+EXPOSE 9080 9082 9085 9088 3000 5173 2345
+
+# Start thawk serve on container start
+CMD ["/entrypoint.sh"]

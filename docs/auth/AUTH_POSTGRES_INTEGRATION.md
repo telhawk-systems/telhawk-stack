@@ -7,7 +7,7 @@ Successfully integrated PostgreSQL as the auth service database, making it a sel
 ## What Was Implemented
 
 ### 1. Database Infrastructure
-- **PostgreSQL 16 Alpine** added to docker-compose
+- **PostgreSQL 16 Alpine** added to docker compose
 - Dedicated volume `auth-db-data` for persistence
 - Health checks ensure database is ready before auth service starts
 - Database: `telhawk_auth`, User: `telhawk`

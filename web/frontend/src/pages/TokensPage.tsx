@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Layout } from '../components/Layout';
 import { useScope } from '../components/ScopeProvider';
 import { apiClient } from '../services/api';
-import { HECToken } from '../types';
+import { HECToken, HECTokenStats } from '../types';
 
 // Extract timestamp from UUIDv7 (first 48 bits are milliseconds since Unix epoch)
 function getDateFromUUIDv7(uuid: string): Date {
@@ -11,19 +11,51 @@ function getDateFromUUIDv7(uuid: string): Date {
   return new Date(ms);
 }
 
+// Format large numbers with commas
+function formatNumber(num: number): string {
+  return num.toLocaleString();
+}
+
+// Format relative time
+function formatRelativeTime(dateStr: string | undefined): string {
+  if (!dateStr) return 'Never';
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return date.toLocaleDateString();
+}
+
 export function TokensPage() {
   const { scope, hasClientSelected } = useScope();
   const [tokens, setTokens] = useState<HECToken[]>([]);
+  const [tokenStats, setTokenStats] = useState<Record<string, HECTokenStats>>({});
   const [loading, setLoading] = useState(true);
+  const [statsLoading, setStatsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [tokenName, setTokenName] = useState('');
   const [newlyCreatedToken, setNewlyCreatedToken] = useState<HECToken | null>(null);
   const [copiedTokenId, setCopiedTokenId] = useState<string | null>(null);
+  const [expandedToken, setExpandedToken] = useState<string | null>(null);
 
   useEffect(() => {
     loadTokens();
   }, []);
+
+  // Load stats when tokens change
+  useEffect(() => {
+    if (tokens.length > 0) {
+      loadStats(tokens.map(t => t.id));
+    }
+  }, [tokens]);
 
   const loadTokens = async () => {
     try {
@@ -35,6 +67,19 @@ export function TokensPage() {
       setError(err instanceof Error ? err.message : 'Failed to load HEC tokens');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadStats = async (tokenIds: string[]) => {
+    try {
+      setStatsLoading(true);
+      const stats = await apiClient.getHECTokenStatsBatch(tokenIds);
+      setTokenStats(stats);
+    } catch (err) {
+      // Stats are optional - don't show error if unavailable
+      console.warn('Failed to load token stats:', err);
+    } finally {
+      setStatsLoading(false);
     }
   };
 
@@ -217,6 +262,12 @@ export function TokensPage() {
                 Status
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Last Used
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Events (24h)
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Created
               </th>
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -225,49 +276,116 @@ export function TokensPage() {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {tokens.map((token) => (
-              <tr key={token.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900">{token.name}</div>
-                </td>
-                {token.username && (
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{token.username}</div>
-                  </td>
-                )}
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <code className="text-xs font-mono text-gray-600">
-                    {token.token.substring(0, 8)}...{token.token.substring(token.token.length - 8)}
-                  </code>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span
-                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      token.enabled
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-red-100 text-red-800'
-                    }`}
+            {tokens.map((token) => {
+              const stats = tokenStats[token.id];
+              const isExpanded = expandedToken === token.id;
+              return (
+                <>
+                  <tr
+                    key={token.id}
+                    className={`hover:bg-gray-50 cursor-pointer ${isExpanded ? 'bg-blue-50' : ''}`}
+                    onClick={() => setExpandedToken(isExpanded ? null : token.id)}
                   >
-                    {token.enabled ? 'Active' : 'Revoked'}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                  {getDateFromUUIDv7(token.id).toLocaleDateString()} {getDateFromUUIDv7(token.id).toLocaleTimeString()}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
-                  {token.enabled ? (
-                    <button
-                      onClick={() => handleRevokeToken(token.id)}
-                      className="text-red-600 hover:text-red-800 font-medium"
-                    >
-                      Revoke
-                    </button>
-                  ) : (
-                    <span className="text-gray-400">Revoked</span>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <span className={`mr-2 text-gray-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`}>
+                          {stats ? '>' : ''}
+                        </span>
+                        <div className="text-sm font-medium text-gray-900">{token.name}</div>
+                      </div>
+                    </td>
+                    {token.username && (
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">{token.username}</div>
+                      </td>
+                    )}
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <code className="text-xs font-mono text-gray-600">
+                        {token.token.substring(0, 8)}...{token.token.substring(token.token.length - 8)}
+                      </code>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          token.enabled
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-red-100 text-red-800'
+                        }`}
+                      >
+                        {token.enabled ? 'Active' : 'Revoked'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      {statsLoading ? (
+                        <span className="text-gray-400">...</span>
+                      ) : stats?.last_used_at ? (
+                        <span title={new Date(stats.last_used_at).toLocaleString()}>
+                          {formatRelativeTime(stats.last_used_at)}
+                        </span>
+                      ) : (
+                        <span className="text-gray-400">Never</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      {statsLoading ? (
+                        <span className="text-gray-400">...</span>
+                      ) : stats ? (
+                        <span className={stats.events_last_24h > 0 ? 'text-green-600 font-medium' : ''}>
+                          {formatNumber(stats.events_last_24h)}
+                        </span>
+                      ) : (
+                        <span className="text-gray-400">-</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      {getDateFromUUIDv7(token.id).toLocaleDateString()} {getDateFromUUIDv7(token.id).toLocaleTimeString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm" onClick={(e) => e.stopPropagation()}>
+                      {token.enabled ? (
+                        <button
+                          onClick={() => handleRevokeToken(token.id)}
+                          className="text-red-600 hover:text-red-800 font-medium"
+                        >
+                          Revoke
+                        </button>
+                      ) : (
+                        <span className="text-gray-400">Revoked</span>
+                      )}
+                    </td>
+                  </tr>
+                  {isExpanded && stats && (
+                    <tr key={`${token.id}-stats`} className="bg-blue-50">
+                      <td colSpan={tokens[0].username ? 8 : 7} className="px-6 py-4">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                          <div className="bg-white rounded-lg p-3 shadow-sm">
+                            <div className="text-gray-500 text-xs uppercase">Total Events</div>
+                            <div className="text-xl font-semibold text-gray-900">{formatNumber(stats.total_events)}</div>
+                          </div>
+                          <div className="bg-white rounded-lg p-3 shadow-sm">
+                            <div className="text-gray-500 text-xs uppercase">Last Hour</div>
+                            <div className="text-xl font-semibold text-gray-900">{formatNumber(stats.events_last_hour)}</div>
+                          </div>
+                          <div className="bg-white rounded-lg p-3 shadow-sm">
+                            <div className="text-gray-500 text-xs uppercase">Unique IPs Today</div>
+                            <div className="text-xl font-semibold text-gray-900">{formatNumber(stats.unique_ips_today)}</div>
+                          </div>
+                          <div className="bg-white rounded-lg p-3 shadow-sm">
+                            <div className="text-gray-500 text-xs uppercase">Last IP</div>
+                            <div className="text-lg font-mono text-gray-900">{stats.last_used_ip || '-'}</div>
+                          </div>
+                        </div>
+                        {stats.ingest_instances && Object.keys(stats.ingest_instances).length > 0 && (
+                          <div className="mt-3 text-xs text-gray-500">
+                            <span className="font-medium">Ingest instances:</span>{' '}
+                            {Object.keys(stats.ingest_instances).join(', ')}
+                          </div>
+                        )}
+                      </td>
+                    </tr>
                   )}
-                </td>
-              </tr>
-            ))}
+                </>
+              );
+            })}
           </tbody>
         </table>
 

@@ -21,9 +21,9 @@ echo -e "${BLUE}========================================${NC}\n"
 # Step 1: Check if Docker services are running
 echo -e "${YELLOW}[1/6]${NC} Checking Docker services..."
 
-if ! docker-compose ps | grep -q "telhawk-auth.*Up.*healthy"; then
+if ! docker compose ps | grep -q "telhawk-auth.*Up.*healthy"; then
     echo -e "${YELLOW}→${NC} Starting required services (auth, ingest, core, storage, opensearch)..."
-    docker-compose up -d auth ingest core storage opensearch web
+    docker compose up -d auth ingest core storage opensearch web
 
     echo -e "${YELLOW}→${NC} Waiting for services to become healthy (this may take 30-60 seconds)..."
     sleep 10
@@ -32,8 +32,8 @@ if ! docker-compose ps | grep -q "telhawk-auth.*Up.*healthy"; then
     MAX_WAIT=60
     ELAPSED=0
     while [ $ELAPSED -lt $MAX_WAIT ]; do
-        if docker-compose ps | grep -q "telhawk-auth.*Up.*healthy" && \
-           docker-compose ps | grep -q "telhawk-ingest.*Up.*healthy"; then
+        if docker compose ps | grep -q "telhawk-auth.*Up.*healthy" && \
+           docker compose ps | grep -q "telhawk-ingest.*Up.*healthy"; then
             echo -e "${GREEN}✓${NC} Services are healthy"
             break
         fi
@@ -44,7 +44,7 @@ if ! docker-compose ps | grep -q "telhawk-auth.*Up.*healthy"; then
 
     if [ $ELAPSED -ge $MAX_WAIT ]; then
         echo -e "${RED}✗${NC} Timeout waiting for services to become healthy"
-        echo -e "${YELLOW}→${NC} Check service logs with: docker-compose logs auth ingest"
+        echo -e "${YELLOW}→${NC} Check service logs with: docker compose logs auth ingest"
         exit 1
     fi
 else

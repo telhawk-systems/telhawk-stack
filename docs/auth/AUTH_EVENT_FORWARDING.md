@@ -148,7 +148,7 @@ Auth events are normalized to **OCSF Authentication class (3002)**:
 
 ### Enable Event Forwarding
 
-Set these environment variables in docker-compose or production:
+Set these environment variables in docker compose or production:
 
 ```bash
 AUTH_INGEST_ENABLED=true

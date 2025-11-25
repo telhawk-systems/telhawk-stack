@@ -1,5 +1,5 @@
 #!/bin/bash
-# Wrapper to execute bash scripts inside the devtools container
+# Wrapper to execute bash scripts inside the dev container
 # This allows scripts to access internal TelHawk services
 #
 # Usage: ./scripts/script_exec.sh <script-path>
@@ -10,9 +10,8 @@
 #
 # The script will be executed with bash and has access to:
 #   - curl, jq, wget
-#   - All internal services (auth, rules, query, core, storage, opensearch)
-#   - /tmp directory (mounted from host ./tmp)
-#   - /scripts directory (mounted read-only from host ./scripts)
+#   - All internal services (authenticate, search, respond, ingest)
+#   - /app directory (bind-mounted from host)
 
 set -e
 
@@ -32,16 +31,15 @@ if [ ! -f "$SCRIPT_PATH" ]; then
     exit 1
 fi
 
-# Check if devtools container is running
-if ! docker ps --format '{{.Names}}' | grep -q '^telhawk-devtools$'; then
-    echo "Error: devtools container is not running" >&2
-    echo "Start it with: docker-compose --profile devtools up -d devtools" >&2
+# Check if dev container is running
+if ! docker ps --format '{{.Names}}' | grep -q '^telhawk-dev$'; then
+    echo "Error: telhawk-dev container not running" >&2
+    echo "Start it with: docker compose -f docker-compose.dev.yml up -d" >&2
     exit 1
 fi
 
-# Determine the path inside the container
-# With the new setup, everything is at /workspace
-CONTAINER_PATH="/workspace/${SCRIPT_PATH}"
+# Path inside the container (everything is at /app)
+CONTAINER_PATH="/app/${SCRIPT_PATH}"
 
-# Execute the script in the devtools container
-docker exec -i telhawk-devtools bash "$CONTAINER_PATH"
+# Execute the script in the dev container
+docker exec -i telhawk-dev bash "$CONTAINER_PATH"

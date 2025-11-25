@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/telhawk-systems/telhawk-stack/common/hecstats"
 	"github.com/telhawk-systems/telhawk-stack/common/messaging"
 	"github.com/telhawk-systems/telhawk-stack/common/messaging/nats"
 	"github.com/telhawk-systems/telhawk-stack/common/middleware"
@@ -29,6 +30,7 @@ type Config struct {
 	CookieSecure           bool
 	DevMode                bool
 	NATSURL                string
+	RedisURL               string
 }
 
 func loadConfig() *Config {
@@ -43,6 +45,7 @@ func loadConfig() *Config {
 		CookieSecure:           getEnv("COOKIE_SECURE", "true") == "true",
 		DevMode:                getEnv("DEV_MODE", "false") == "true",
 		NATSURL:                getEnv("NATS_URL", "nats://nats:4222"),
+		RedisURL:               getEnv("REDIS_URL", "redis://redis:6379"),
 	}
 	return cfg
 }
@@ -74,6 +77,19 @@ func main() {
 
 	authHandler := handlers.NewAuthHandler(authClient, cfg.CookieDomain, cfg.CookieSecure)
 	dashboardHandler := handlers.NewDashboardHandler(cfg.SearchServiceURL, cfg.RespondServiceURL)
+
+	// Initialize Redis client for HEC stats (read-only for web backend)
+	var hecStatsHandler *handlers.HECStatsHandler
+	if cfg.RedisURL != "" {
+		statsClient, err := hecstats.NewClient(cfg.RedisURL, "web-backend")
+		if err != nil {
+			log.Printf("Warning: Failed to connect to Redis at %s: %v", cfg.RedisURL, err)
+			log.Printf("HEC token stats will be unavailable")
+		} else {
+			log.Printf("Connected to Redis for HEC stats")
+			hecStatsHandler = handlers.NewHECStatsHandler(statsClient)
+		}
+	}
 
 	// Initialize NATS client for async query support
 	var natsClient messaging.Client
@@ -108,6 +124,7 @@ func main() {
 		AuthHandler:       authHandler,
 		DashboardHandler:  dashboardHandler,
 		AsyncQueryHandler: asyncQueryHandler,
+		HECStatsHandler:   hecStatsHandler,
 		AuthMiddleware:    authMiddleware,
 		AuthenticateProxy: authenticateProxy,
 		SearchProxy:       searchProxy,

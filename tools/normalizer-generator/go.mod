@@ -1,5 +1,5 @@
 module github.com/telhawk-systems/telhawk-stack/tools/normalizer-generator
 
-go 1.25
+go 1.25.4
 
 toolchain go1.25.4

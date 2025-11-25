@@ -1,0 +1,27 @@
+[Unit]
+Description=TelHawk Respond Service
+After=network.target telhawk-authenticate.service
+
+[Service]
+Type=simple
+WorkingDirectory=/app/respond
+ExecStartPre=/usr/local/go/bin/go build -o /app/bin/respond ./cmd/respond
+ExecStart=/app/bin/respond
+Restart=always
+RestartSec=5
+Environment="PATH=/usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+Environment="RESPOND_PORT=9085"
+Environment="AUTHENTICATE_URL=http://localhost:9080"
+Environment="DB_HOST=postgres"
+Environment="DB_PORT=5432"
+Environment="DB_USER=telhawk"
+Environment="DB_PASSWORD=telhawk-dev"
+Environment="DB_NAME=telhawk_respond"
+Environment="OPENSEARCH_URL=http://opensearch:9200"
+Environment="NATS_URL=nats://nats:4222"
+Environment="LOG_LEVEL=debug"
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

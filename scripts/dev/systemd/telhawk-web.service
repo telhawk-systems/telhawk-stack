@@ -1,0 +1,23 @@
+[Unit]
+Description=TelHawk Web Service
+After=network.target telhawk-authenticate.service telhawk-search.service telhawk-respond.service
+
+[Service]
+Type=simple
+WorkingDirectory=/app/web/backend
+ExecStartPre=/usr/local/go/bin/go build -o /app/bin/web ./cmd/web
+ExecStart=/app/bin/web
+Restart=always
+RestartSec=5
+Environment="PATH=/usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+Environment="WEB_PORT=80"
+Environment="AUTHENTICATE_URL=http://localhost:9080"
+Environment="SEARCH_URL=http://localhost:9082"
+Environment="RESPOND_URL=http://localhost:9085"
+Environment="INGEST_URL=http://localhost:9088"
+Environment="LOG_LEVEL=debug"
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

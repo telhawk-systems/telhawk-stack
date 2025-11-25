@@ -154,7 +154,7 @@ thawk search "error" --output yaml
 ### Development (Local)
 
 ```bash
-# Services running locally via docker-compose
+# Services running locally via docker compose
 ./scripts/thawk auth login -u admin -p admin123
 ./scripts/thawk search "severity:high" --last 1h
 ```
@@ -202,7 +202,7 @@ thawk search "class_uid:3002" --last 24h --output json > auth_events.json
 ## Troubleshooting
 
 ### "connection refused"
-- Check if services are running: `docker-compose ps`
+- Check if services are running: `docker compose ps`
 - Verify URLs are correct
 - Use `./scripts/thawk` for Docker network access
 

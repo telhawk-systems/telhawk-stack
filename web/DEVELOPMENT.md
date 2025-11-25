@@ -21,7 +21,7 @@ web/
 
 ```bash
 # Build and start all services including web
-docker-compose up --build web
+docker compose up --build web
 
 # Access UI at http://localhost:3000
 # Login with default credentials (see auth service docs)
@@ -53,7 +53,7 @@ npm run dev
 **Terminal 3: Start Dependencies**
 ```bash
 # Start auth, query, core services
-docker-compose up auth query core storage opensearch
+docker compose up auth query core storage opensearch
 ```
 
 ## Key Features

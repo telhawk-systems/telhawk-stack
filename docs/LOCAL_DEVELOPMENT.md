@@ -6,9 +6,9 @@ Purpose: Quick start for running and iterating locally.
 - No local Go toolchain needed; containers build and run services.
 
 Common tasks
-- Start stack: `docker-compose up -d`
-- Logs: `docker-compose logs -f`
-- Status: `docker-compose ps`
+- Start stack: `docker compose up -d`
+- Logs: `docker compose logs -f`
+- Status: `docker compose ps`
 
 CLI (`thawk`)
 - Run once: `./scripts/thawk auth login -u admin -p <password>`

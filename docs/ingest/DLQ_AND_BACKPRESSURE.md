@@ -352,7 +352,7 @@ Backpressure prevents cascade failures:
 
 ```bash
 # Stop ingest service
-docker-compose stop storage
+docker compose stop storage
 
 # Send event via ingest
 curl -X POST http://localhost:8088/services/collector/event \
@@ -360,7 +360,7 @@ curl -X POST http://localhost:8088/services/collector/event \
   -d '{"event": "test"}'
 
 # Restart ingest service (during retry window)
-docker-compose start storage
+docker compose start storage
 
 # Check if event succeeded
 ```
@@ -376,7 +376,7 @@ for i in {1..1000}; do
 done
 
 # Monitor retry behavior
-docker-compose logs -f ingest | grep "retry"
+docker compose logs -f ingest | grep "retry"
 ```
 
 ### Production Configuration

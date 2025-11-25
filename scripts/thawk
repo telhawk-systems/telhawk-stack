@@ -1,100 +1,24 @@
 #!/bin/bash
-# Smart wrapper for thawk CLI
-# - If Go is installed and devtools is not running: build thawk locally and copy to devtools image
-# - If Go is not installed or devtools is running: rebuild devtools image with thawk
-# - Execute thawk command via devtools container
+# Wrapper for thawk CLI using dev container
+# Builds thawk inside the dev container and executes commands
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
-CLI_DIR="$PROJECT_ROOT/cli"
-BIN_DIR="$PROJECT_ROOT/bin"
-THAWK_BINARY="$BIN_DIR/thawk"
 
-# Check if devtools container is running
-is_devtools_running() {
-    docker ps --filter "name=telhawk-devtools" --filter "status=running" --format "{{.Names}}" | grep -q "telhawk-devtools"
+# Check if dev container is running
+is_dev_running() {
+    docker ps --filter "name=telhawk-dev" --filter "status=running" --format "{{.Names}}" | grep -q "telhawk-dev"
 }
 
-# Check if Go compiler is available
-has_go_compiler() {
-    command -v go >/dev/null 2>&1
-}
-
-# Build thawk binary locally
-build_thawk_locally() {
-    echo "Building thawk locally..." >&2
-    cd "$CLI_DIR"
-    CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o "$THAWK_BINARY" .
-    echo "✓ Built thawk binary at $THAWK_BINARY" >&2
-}
-
-# Copy thawk binary to devtools image
-copy_to_devtools() {
-    echo "Updating thawk in devtools image..." >&2
-
-    # Create a temporary Dockerfile that adds the binary to the existing image
-    local temp_dir=$(mktemp -d)
-    trap "rm -rf $temp_dir" EXIT
-
-    cat > "$temp_dir/Dockerfile" <<'EOF'
-FROM telhawk-stack-devtools:latest
-COPY thawk /usr/local/bin/thawk
-RUN chmod +x /usr/local/bin/thawk
-EOF
-
-    cp "$THAWK_BINARY" "$temp_dir/"
-
-    # Build the updated image
-    docker build -q -t telhawk-stack-devtools:latest -f "$temp_dir/Dockerfile" "$temp_dir" >&2
-
-    echo "✓ Updated devtools image with new thawk binary" >&2
-}
-
-# Rebuild devtools image from scratch with thawk included
-rebuild_devtools_with_thawk() {
-    echo "Rebuilding devtools image with thawk..." >&2
-
-    # First build thawk in a builder container
-    docker build -t telhawk-thawk-builder \
-        --target builder \
-        -f "$PROJECT_ROOT/cli/Dockerfile" \
-        "$PROJECT_ROOT" >/dev/null 2>&1
-
-    # Extract the binary
-    local temp_dir=$(mktemp -d)
-    trap "rm -rf $temp_dir" EXIT
-
-    docker create --name thawk-temp telhawk-thawk-builder >/dev/null 2>&1 || true
-    docker cp thawk-temp:/build/cli/thawk "$temp_dir/" 2>/dev/null || {
-        docker rm thawk-temp >/dev/null 2>&1 || true
-        echo "Error: Failed to extract thawk binary" >&2
-        return 1
-    }
-    docker rm thawk-temp >/dev/null 2>&1 || true
-
-    # Update devtools Dockerfile to include thawk
-    cat > "$temp_dir/Dockerfile.devtools" <<'EOF'
-FROM alpine:latest
-
-RUN apk add --no-cache bash curl jq wget
-
-WORKDIR /app
-
-# Copy thawk binary
-COPY thawk /usr/local/bin/thawk
-RUN chmod +x /usr/local/bin/thawk
-
-CMD ["/bin/bash"]
-EOF
-
-    # Build new devtools image
-    docker build -t telhawk-stack-devtools:latest \
-        -f "$temp_dir/Dockerfile.devtools" \
-        "$temp_dir" >/dev/null 2>&1
-
-    echo "✓ Rebuilt devtools image with thawk" >&2
+# Build thawk inside dev container
+build_thawk() {
+    if ! docker exec telhawk-dev test -f /app/bin/thawk 2>/dev/null; then
+        echo "Building thawk..." >&2
+        docker exec telhawk-dev bash -c "cd /app/cli && go build -o /app/bin/thawk ."
+        echo "✓ Built thawk" >&2
+    fi
 }
 
 # Parse arguments to detect rules directory (--from-rules flag or positional for list-rules)
@@ -148,54 +72,39 @@ main() {
     # Ensure we're in the project root
     cd "$PROJECT_ROOT"
 
+    # Check if dev container is running
+    if ! is_dev_running; then
+        echo "Error: telhawk-dev container not running" >&2
+        echo "Start it with: docker-compose -f docker-compose.dev.yml up -d" >&2
+        exit 1
+    fi
+
+    # Build thawk if needed
+    build_thawk
+
     # Parse arguments to detect rules path
     parse_rules_path "$@"
 
-    # Determine build strategy
-    if is_devtools_running; then
-        # Container is running, we need to rebuild the image
-        echo "Devtools container is running, rebuilding image..." >&2
-        rebuild_devtools_with_thawk
-    elif has_go_compiler; then
-        # Go is available and container not running, build locally
-        build_thawk_locally
-        copy_to_devtools
-    else
-        # No Go compiler, must rebuild image
-        rebuild_devtools_with_thawk
-    fi
+    # Build command to execute
+    local cmd=(/app/bin/thawk "${MODIFIED_ARGS[@]}")
 
-    # Build docker run command
-    # All CLI operations go through the web backend for consistent access
-    local docker_cmd=(
-        docker run --rm
-        --network telhawk-stack_telhawk
-        -e THAWK_AUTH_URL=http://web:3000
-        -e THAWK_INGEST_URL=http://ingest:8088
-        -e THAWK_QUERY_URL=http://web:3000
-        -e THAWK_RULES_URL=http://web:3000
-        -e THAWK_ALERTING_URL=http://web:3000
-        -v "$HOME/.thawk:/root/.thawk"
+    # Set environment variables for thawk
+    local env_vars=(
+        -e "THAWK_AUTH_URL=http://localhost:8080"
+        -e "THAWK_INGEST_URL=http://localhost:8088"
+        -e "THAWK_QUERY_URL=http://localhost:8082"
+        -e "THAWK_RULES_URL=http://localhost:8085"
+        -e "THAWK_ALERTING_URL=http://localhost:8085"
     )
 
-    # If we detected a rules path, mount it
-    if [[ -n "$RULES_PATH" ]]; then
-        docker_cmd+=(-v "$RULES_PATH:/rules:ro")
-    fi
-
-    # If .hec-token file exists, mount it and set HEC_TOKEN env var
+    # If .hec-token file exists, set HEC_TOKEN env var
     if [[ -f "$PROJECT_ROOT/.hec-token" ]]; then
         local token=$(cat "$PROJECT_ROOT/.hec-token")
-        docker_cmd+=(-e "HEC_TOKEN=$token")
+        env_vars+=(-e "HEC_TOKEN=$token")
     fi
 
-    docker_cmd+=(
-        telhawk-stack-devtools:latest
-        thawk "${MODIFIED_ARGS[@]}"
-    )
-
-    # Execute thawk command via devtools
-    "${docker_cmd[@]}"
+    # Execute thawk command in dev container
+    docker exec "${env_vars[@]}" telhawk-dev "${cmd[@]}"
 }
 
 main "$@"

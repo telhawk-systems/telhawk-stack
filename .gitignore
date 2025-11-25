@@ -81,3 +81,7 @@ rules/rules
 docs/CLEANLINESS_TODO.md
 cli/thawk
 authenticate/auth
+.gocache/
+.gomodcache/
+respond/migrations
+authenticate/migrations

@@ -1,0 +1,22 @@
+[Unit]
+Description=TelHawk Ingest Service
+After=network.target telhawk-authenticate.service
+
+[Service]
+Type=simple
+WorkingDirectory=/app/ingest
+ExecStartPre=/usr/local/go/bin/go build -o /app/bin/ingest ./cmd/ingest
+ExecStart=/app/bin/ingest
+Restart=always
+RestartSec=5
+Environment="PATH=/usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+Environment="INGEST_PORT=9088"
+Environment="AUTHENTICATE_URL=http://localhost:9080"
+Environment="OPENSEARCH_URL=http://opensearch:9200"
+Environment="REDIS_URL=redis:6379"
+Environment="LOG_LEVEL=debug"
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

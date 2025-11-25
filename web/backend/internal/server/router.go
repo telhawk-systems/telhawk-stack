@@ -16,6 +16,7 @@ type RouterConfig struct {
 	AuthHandler       *handlers.AuthHandler
 	DashboardHandler  *handlers.DashboardHandler
 	AsyncQueryHandler *handlers.AsyncQueryHandler // Optional: nil if NATS unavailable
+	HECStatsHandler   *handlers.HECStatsHandler   // Optional: nil if Redis unavailable
 	AuthMiddleware    *auth.Middleware
 	AuthenticateProxy *proxy.Proxy
 	SearchProxy       *proxy.Proxy
@@ -41,6 +42,12 @@ func NewRouter(cfg RouterConfig) http.Handler {
 	if cfg.AsyncQueryHandler != nil {
 		mux.Handle("POST /api/async-query/submit", cfg.AuthMiddleware.Protect(http.HandlerFunc(cfg.AsyncQueryHandler.SubmitQuery)))
 		mux.Handle("GET /api/async-query/status/{id}", cfg.AuthMiddleware.Protect(http.HandlerFunc(cfg.AsyncQueryHandler.GetQueryStatus)))
+	}
+
+	// HEC stats endpoints (protected, only if Redis is available)
+	if cfg.HECStatsHandler != nil {
+		mux.Handle("GET /api/hec/stats/{id}", cfg.AuthMiddleware.Protect(http.HandlerFunc(cfg.HECStatsHandler.GetStats)))
+		mux.Handle("POST /api/hec/stats/batch", cfg.AuthMiddleware.Protect(http.HandlerFunc(cfg.HECStatsHandler.GetMultiStats)))
 	}
 
 	// User management endpoints (protected)

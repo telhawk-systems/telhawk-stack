@@ -408,9 +408,12 @@ func (t *OpenSearchTranslator) translateAggregation(agg *model.Aggregation) (map
 
 	switch agg.Type {
 	case model.AggTypeTerms:
+		// For terms aggregations, use .keyword suffix for text fields unless already specified
+		// OpenSearch dynamic mapping creates text fields with keyword subfields
+		termsField := t.ensureKeywordField(field)
 		aggBody = map[string]interface{}{
 			"terms": map[string]interface{}{
-				"field": field,
+				"field": termsField,
 				"size":  agg.Size,
 			},
 		}
@@ -459,9 +462,11 @@ func (t *OpenSearchTranslator) translateAggregation(agg *model.Aggregation) (map
 		}
 
 	case model.AggTypeCardinality:
+		// Cardinality works better on keyword fields for text data
+		cardinalityField := t.ensureKeywordField(field)
 		aggBody = map[string]interface{}{
 			"cardinality": map[string]interface{}{
-				"field": field,
+				"field": cardinalityField,
 			},
 		}
 
@@ -489,6 +494,47 @@ func (t *OpenSearchTranslator) translateFieldPath(field string) string {
 		return field[1:]
 	}
 	return field
+}
+
+// ensureKeywordField returns the appropriate keyword field for terms aggregations.
+// For text fields that have a .keyword subfield, this appends .keyword.
+// For fields that are already numeric, date, IP, or explicitly keyword, returns as-is.
+func (t *OpenSearchTranslator) ensureKeywordField(field string) string {
+	// Already has .keyword suffix
+	if strings.HasSuffix(field, ".keyword") {
+		return field
+	}
+
+	// Numeric and date fields don't need .keyword
+	numericFields := map[string]bool{
+		"class_uid":     true,
+		"category_uid":  true,
+		"activity_id":   true,
+		"severity_id":   true,
+		"type_uid":      true,
+		"status_id":     true,
+		"time":          true,
+		"end_time":      true,
+		"start_time":    true,
+		"observed_time": true,
+	}
+	if numericFields[field] {
+		return field
+	}
+
+	// Fields ending with _id, _uid, _code are typically numeric
+	if strings.HasSuffix(field, "_id") || strings.HasSuffix(field, "_uid") ||
+		strings.HasSuffix(field, "_code") || strings.HasSuffix(field, ".port") {
+		return field
+	}
+
+	// IP fields are mapped as ip type
+	if strings.HasSuffix(field, ".ip") || strings.HasSuffix(field, "_ip") {
+		return field
+	}
+
+	// For text fields, append .keyword for aggregations
+	return field + ".keyword"
 }
 
 // shouldUseTermQuery determines if a field should use term (exact match) vs match (analyzed text) queries.

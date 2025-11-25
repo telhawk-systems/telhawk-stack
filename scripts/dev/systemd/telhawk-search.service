@@ -1,0 +1,21 @@
+[Unit]
+Description=TelHawk Search Service
+After=network.target telhawk-authenticate.service
+
+[Service]
+Type=simple
+WorkingDirectory=/app/search
+ExecStartPre=/usr/local/go/bin/go build -o /app/bin/search ./cmd/search
+ExecStart=/app/bin/search
+Restart=always
+RestartSec=5
+Environment="PATH=/usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+Environment="SEARCH_PORT=9082"
+Environment="AUTHENTICATE_URL=http://localhost:9080"
+Environment="OPENSEARCH_URL=http://opensearch:9200"
+Environment="LOG_LEVEL=debug"
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

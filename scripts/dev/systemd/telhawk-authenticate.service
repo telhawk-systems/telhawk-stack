@@ -1,0 +1,24 @@
+[Unit]
+Description=TelHawk Authentication Service
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/app/authenticate
+ExecStartPre=/usr/local/go/bin/go build -o /app/bin/authenticate ./cmd/authenticate
+ExecStart=/app/bin/authenticate
+Restart=always
+RestartSec=5
+Environment="PATH=/usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+Environment="AUTHENTICATE_PORT=9080"
+Environment="DB_HOST=postgres"
+Environment="DB_PORT=5432"
+Environment="DB_USER=telhawk"
+Environment="DB_PASSWORD=telhawk-dev"
+Environment="DB_NAME=telhawk_auth"
+Environment="LOG_LEVEL=debug"
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

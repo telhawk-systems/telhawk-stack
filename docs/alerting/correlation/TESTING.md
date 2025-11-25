@@ -523,9 +523,9 @@ jobs:
       - uses: actions/checkout@v3
       - name: Run load tests
         run: |
-          docker-compose up -d
+          docker compose up -d
           ./tests/load/run_load_test.sh
-          docker-compose down
+          docker compose down
 ```
 
 ---

@@ -71,7 +71,7 @@ func (h *DashboardHandler) GetMetrics(w http.ResponseWriter, r *http.Request) {
 			{
 				"name":  "events_by_class",
 				"type":  "terms",
-				"field": ".class_name",
+				"field": ".class",
 				"size":  10,
 			},
 			{
@@ -83,7 +83,7 @@ func (h *DashboardHandler) GetMetrics(w http.ResponseWriter, r *http.Request) {
 			{
 				"name":  "unique_users",
 				"type":  "cardinality",
-				"field": ".actor.user.name.keyword",
+				"field": ".actor.user.name",
 			},
 			{
 				"name":  "unique_ips",

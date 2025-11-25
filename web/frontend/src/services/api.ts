@@ -1,4 +1,4 @@
-import { User, UserDetails, LoginRequest, LoginResponse, HECToken, ViewingScope, UserScope } from '../types';
+import { User, UserDetails, LoginRequest, LoginResponse, HECToken, HECTokenStats, ViewingScope, UserScope } from '../types';
 import { Query, QueryResponse } from '../types/query';
 import { Alert, AlertDetails, AlertsListResponse, AlertUpdateRequest, Case, CaseDetails, CasesListResponse, CreateCaseRequest } from '../types/alerts';
 
@@ -520,6 +520,54 @@ class ApiClient {
     if (!response.ok) {
       throw new Error('Failed to revoke HEC token');
     }
+  }
+
+  // HEC Token Stats API (reads from Redis)
+  async getHECTokenStats(tokenId: string): Promise<HECTokenStats | null> {
+    const response = await fetch(`${this.baseUrl}/hec/stats/${tokenId}`, {
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      // Stats may not be available (Redis down or no data yet)
+      if (response.status === 404) {
+        return null;
+      }
+      throw new Error('Failed to get HEC token stats');
+    }
+
+    return response.json();
+  }
+
+  async getHECTokenStatsBatch(tokenIds: string[]): Promise<Record<string, HECTokenStats>> {
+    if (tokenIds.length === 0) {
+      return {};
+    }
+
+    // Get CSRF token if not already set
+    if (!this.csrfToken) {
+      await this.getCSRFToken();
+    }
+
+    const response = await fetch(`${this.baseUrl}/hec/stats/batch`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': this.csrfToken!,
+      },
+      credentials: 'include',
+      body: JSON.stringify({ token_ids: tokenIds }),
+    });
+
+    if (!response.ok) {
+      // Stats may not be available
+      if (response.status === 404 || response.status === 503) {
+        return {};
+      }
+      throw new Error('Failed to get HEC token stats');
+    }
+
+    return response.json();
   }
 
   // Alerts API

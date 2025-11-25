@@ -5,7 +5,7 @@
 ```bash
 # Quick setup with helper script
 ./bin/configure-tls.sh enable
-docker-compose up -d
+docker compose up -d
 
 # Or manually create .env
 cat > .env << 'EOF'
@@ -35,7 +35,7 @@ EOF
 ```bash
 # Quick disable
 ./bin/configure-tls.sh disable
-docker-compose restart
+docker compose restart
 
 # Or remove .env
 rm .env

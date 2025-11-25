@@ -149,7 +149,7 @@ opensearch:
 export OPENSEARCH_PASSWORD="NewSecurePassword123!"
 
 # Restart OpenSearch
-docker-compose restart opensearch
+docker compose restart opensearch
 
 # Credentials are automatically updated
 ```

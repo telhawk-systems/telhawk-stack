@@ -224,10 +224,10 @@ Created comprehensive documentation:
 
 ### Upgrading from Previous Version
 
-1. Update docker-compose:
+1. Update docker compose:
    ```bash
-   docker-compose pull
-   docker-compose up -d redis
+   docker compose pull
+   docker compose up -d redis
    ```
 
 2. Set environment variables (optional):
@@ -238,8 +238,8 @@ Created comprehensive documentation:
 
 3. Rebuild and restart ingest:
    ```bash
-   docker-compose build ingest
-   docker-compose up -d ingest
+   docker compose build ingest
+   docker compose up -d ingest
    ```
 
 4. Verify metrics:

@@ -4,16 +4,16 @@
 
 ```bash
 # Start all services
-docker-compose up -d
+docker compose up -d
 
 # Start with build
-docker-compose up -d --build
+docker compose up -d --build
 
 # View logs
-docker-compose logs -f
+docker compose logs -f
 
 # View logs for specific service
-docker-compose logs -f ingest
+docker compose logs -f ingest
 ```
 
 ## Using the CLI Tool
@@ -68,20 +68,20 @@ curl http://localhost:8088/readyz
 curl -u admin:TelHawk123! http://localhost:9200/_cluster/health
 
 # All services
-docker-compose ps
+docker compose ps
 ```
 
 ## Managing Data
 
 ```bash
 # Stop services (keep data)
-docker-compose down
+docker compose down
 
 # Stop and remove all data
-docker-compose down -v
+docker compose down -v
 
 # Backup OpenSearch data
-docker-compose exec opensearch tar czf /tmp/backup.tar.gz /usr/share/opensearch/data
+docker compose exec opensearch tar czf /tmp/backup.tar.gz /usr/share/opensearch/data
 docker cp telhawk-opensearch:/tmp/backup.tar.gz ./opensearch-backup.tar.gz
 ```
 
@@ -89,16 +89,16 @@ docker cp telhawk-opensearch:/tmp/backup.tar.gz ./opensearch-backup.tar.gz
 
 ```bash
 # Check service logs
-docker-compose logs <service-name>
+docker compose logs <service-name>
 
 # Restart a service
-docker-compose restart <service-name>
+docker compose restart <service-name>
 
 # Rebuild a service
-docker-compose up -d --build <service-name>
+docker compose up -d --build <service-name>
 
 # Enter a container
-docker-compose exec <service-name> sh
+docker compose exec <service-name> sh
 
 # Check resource usage
 docker stats
@@ -108,9 +108,9 @@ docker stats
 
 ```bash
 # Rebuild after code changes
-docker-compose build
-docker-compose up -d
+docker compose build
+docker compose up -d
 
 # Watch logs during development
-docker-compose logs -f auth ingest
+docker compose logs -f auth ingest
 ```

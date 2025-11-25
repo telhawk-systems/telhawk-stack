@@ -17,11 +17,14 @@ var ValidFields = map[string]FieldInfo{
 
 	// Event classification
 	".class_uid":     {Type: "integer", Description: "OCSF event class identifier"},
-	".class_name":    {Type: "keyword", Description: "OCSF event class name"},
+	".class":         {Type: "keyword", Description: "OCSF event class name"},
+	".class_name":    {Type: "keyword", Description: "OCSF event class name (alias)"},
 	".category_uid":  {Type: "integer", Description: "OCSF category identifier"},
-	".category_name": {Type: "keyword", Description: "OCSF category name"},
+	".category":      {Type: "keyword", Description: "OCSF category name"},
+	".category_name": {Type: "keyword", Description: "OCSF category name (alias)"},
 	".activity_id":   {Type: "integer", Description: "Activity identifier"},
-	".activity_name": {Type: "keyword", Description: "Activity name"},
+	".activity":      {Type: "keyword", Description: "Activity name"},
+	".activity_name": {Type: "keyword", Description: "Activity name (alias)"},
 	".type_uid":      {Type: "long", Description: "Full type identifier (class_uid * 100 + activity_id)"},
 
 	// Severity and status

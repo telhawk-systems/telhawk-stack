@@ -206,7 +206,7 @@ The dashboard will be available at `http://localhost:5173` (default Vite port).
 
 To test the dashboard:
 
-1. Ensure services are running (docker-compose up)
+1. Ensure services are running (docker compose up)
 2. Ingest sample events via HEC endpoint
 3. Navigate to Dashboard → Overview tab
 4. Verify metrics load and charts render

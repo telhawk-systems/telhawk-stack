@@ -157,7 +157,7 @@ volumes:
 
 1. **Generate certificates:**
    ```bash
-   docker-compose up telhawk-certs
+   docker compose up telhawk-certs
    ```
 
 2. **Enable TLS for all services:**
@@ -187,7 +187,7 @@ volumes:
 
 3. **Start the stack:**
    ```bash
-   docker-compose up -d
+   docker compose up -d
    ```
 
 4. **Verify TLS:**

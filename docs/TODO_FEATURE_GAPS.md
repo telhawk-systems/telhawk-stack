@@ -264,7 +264,7 @@ Target: End of January 2025
 4. **Password reset (basic)** - Admin-initiated password reset
 5. **API docs skeleton** - Basic OpenAPI spec
 6. ~~**Integrate hecstats into ingest** - Wire up the collector in HEC handler~~ **DONE** (see below)
-7. **Expose token stats in web UI** - Read from Redis, display in token management page
+7. ~~**Expose token stats in web UI** - Read from Redis, display in token management page~~ **DONE** (see below)
 8. ~~**Populate audit context fields** - Update Go handlers to set `*_from_ip` and `*_source_type`~~ **DONE** (see below)
 
 ---
@@ -377,6 +377,41 @@ The authenticate service now populates `*_from_ip` and `*_source_type` audit fie
 - `CreateUser()` - Populates user audit fields
 - `CreateHECToken()` - Populates token audit fields
 - Added `inferSourceType()` helper to detect CLI vs Web from User-Agent
+
+### HEC Token Stats in Web UI
+
+The web frontend now displays real-time HEC token usage statistics from Redis.
+
+**New Files:**
+- `web/backend/internal/handlers/hec_stats.go` - Handler for stats endpoints
+
+**API Endpoints:**
+- `GET /api/hec/stats/{id}` - Get stats for a single token
+- `POST /api/hec/stats/batch` - Get stats for multiple tokens (JSON body: `{"token_ids": [...]}`)
+
+**Response Format:**
+```json
+{
+  "token_id": "019ab35c-bfa7-7321-8bc3-4b7fe9d06ab2",
+  "last_used_at": "2025-11-24T14:04:51Z",
+  "last_used_ip": "10.0.0.1",
+  "total_events": 1445,
+  "events_last_hour": 200,
+  "events_last_24h": 1445,
+  "unique_ips_today": 3,
+  "ingest_instances": {"ingest-1": "2025-11-24T14:04:51Z"},
+  "stats_retrieved_at": "2025-11-24T14:06:19Z"
+}
+```
+
+**Frontend Changes:**
+- `web/frontend/src/pages/TokensPage.tsx` - Added "Last Used" and "Events (24h)" columns
+- Click a row to expand and see detailed stats (total events, last hour, unique IPs, last IP, ingest instances)
+- `web/frontend/src/services/api.ts` - Added `getHECTokenStats()` and `getHECTokenStatsBatch()` methods
+- `web/frontend/src/types/index.ts` - Added `HECTokenStats` interface
+
+**Configuration:**
+- Web backend reads from Redis via `REDIS_URL` environment variable (default: `redis://redis:6379`)
 
 ---
 
