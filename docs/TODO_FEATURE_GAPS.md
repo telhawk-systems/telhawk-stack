@@ -7,7 +7,7 @@ A brutally honest assessment of what's missing. Prioritized by pain level.
 ## Authentication & Identity Management
 
 ### Password Management
-- [ ] **Password reset (admin-initiated)** - Admin can reset user passwords (P1)
+- [x] **Password reset (admin-initiated)** - Admin can reset user passwords ~~(P1)~~ **DONE**
 - [ ] **Password complexity requirements** - Configurable policies (P2)
 - [ ] **Password expiration** - Force rotation after N days (P2)
 - [ ] **Password history** - Prevent reuse of last N passwords (P2)
@@ -238,7 +238,7 @@ Target: End of January 2025
 
 | Gap | Pain Level | Effort | Priority |
 |-----|------------|--------|----------|
-| Password reset (admin-initiated) | HIGH | LOW | P1 |
+| Password reset (admin-initiated) | HIGH | LOW | ~~P1~~ **DONE** |
 | TOTP 2FA | HIGH | MEDIUM | P1 |
 | Token last-used tracking | HIGH | LOW | ~~P1~~ **DONE** |
 | Token-to-event linkage | HIGH | MEDIUM | ~~P1~~ **DONE** |
@@ -268,7 +268,7 @@ Target: End of January 2025
 1. ~~**Token last-used timestamp** - Add `last_used_at` column, update on each use~~ **DONE** (Redis via `common/hecstats`)
 2. ~~**Store token_id in events** - Add to event metadata during ingestion~~ **DONE** (see below)
 3. **Endpoint agent docs** - Markdown files for common agents
-4. **Password reset (basic)** - Admin-initiated password reset
+4. ~~**Password reset (basic)** - Admin-initiated password reset~~ **DONE**
 5. **API docs skeleton** - Basic OpenAPI spec
 6. ~~**Integrate hecstats into ingest** - Wire up the collector in HEC handler~~ **DONE** (see below)
 7. ~~**Expose token stats in web UI** - Read from Redis, display in token management page~~ **DONE** (see below)
