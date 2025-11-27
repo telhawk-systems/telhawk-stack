@@ -85,3 +85,4 @@ authenticate/auth
 .gomodcache/
 respond/migrations
 authenticate/migrations
+search/search

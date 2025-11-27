@@ -3,6 +3,7 @@ package handlers
 import (
 	"net/http"
 
+	"github.com/telhawk-systems/telhawk-stack/common/httputil"
 	"github.com/telhawk-systems/telhawk-stack/common/messaging"
 	"github.com/telhawk-systems/telhawk-stack/search/internal/models"
 	searchnats "github.com/telhawk-systems/telhawk-stack/search/internal/nats"
@@ -38,7 +39,8 @@ func (h *Handler) WithNATSHandler(natsHandler *searchnats.Handler) *Handler {
 // Health handles GET /healthz for liveness probes.
 func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		h.methodNotAllowed(w, http.MethodGet)
+		w.Header().Set("Allow", http.MethodGet)
+		httputil.WriteJSONAPIError(w, http.StatusMethodNotAllowed, "method_not_allowed", "Method Not Allowed", "")
 		return
 	}
 	health := h.svc.Health(r.Context())
@@ -54,5 +56,5 @@ func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
 			Error:     natsStatus.Error,
 		}
 	}
-	h.writeJSON(w, http.StatusOK, health)
+	httputil.WriteJSON(w, http.StatusOK, health)
 }

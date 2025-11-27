@@ -133,7 +133,7 @@ func (h *Handler) handleSearchJob(ctx context.Context, msg *messaging.Message) e
 
 	// Reply via NATS request-reply if reply subject specified
 	if msg.Reply != "" {
-		if err := h.reply(ctx, msg.Reply, resp); err != nil {
+		if err := h.client.PublishJSON(ctx, msg.Reply, resp); err != nil {
 			h.logger.Error("Failed to reply to search job",
 				slog.String("job_id", req.JobID),
 				slog.String("error", err.Error()))
@@ -142,7 +142,7 @@ func (h *Handler) handleSearchJob(ctx context.Context, msg *messaging.Message) e
 
 	// Also publish to job-specific result subject for async consumers (web backend)
 	resultSubject := messaging.SearchQueryResultSubject(req.JobID)
-	return h.publish(ctx, resultSubject, resp)
+	return h.client.PublishJSON(ctx, resultSubject, resp)
 }
 
 // handleCorrelationJob processes correlation evaluation requests from NATS.
@@ -205,7 +205,7 @@ func (h *Handler) handleCorrelationJob(ctx context.Context, msg *messaging.Messa
 
 	// Reply to requester if reply subject specified
 	if msg.Reply != "" {
-		if err := h.reply(ctx, msg.Reply, resp); err != nil {
+		if err := h.client.PublishJSON(ctx, msg.Reply, resp); err != nil {
 			h.logger.Error("Failed to reply to correlation job",
 				slog.String("job_id", req.JobID),
 				slog.String("error", err.Error()))
@@ -213,7 +213,7 @@ func (h *Handler) handleCorrelationJob(ctx context.Context, msg *messaging.Messa
 	}
 
 	// Always publish to broadcast subject for respond service to consume
-	return h.publish(ctx, messaging.SubjectSearchResultsCorrelate, resp)
+	return h.client.PublishJSON(ctx, messaging.SubjectSearchResultsCorrelate, resp)
 }
 
 // aggregateResults groups search results by an aggregation key and applies threshold filtering.
@@ -301,27 +301,6 @@ func (h *Handler) extractTime(event map[string]interface{}) time.Time {
 	return time.Time{}
 }
 
-// reply sends a response to a specific subject.
-func (h *Handler) reply(ctx context.Context, subject string, data interface{}) error {
-	if subject == "" {
-		return nil
-	}
-	bytes, err := json.Marshal(data)
-	if err != nil {
-		return fmt.Errorf("failed to marshal reply: %w", err)
-	}
-	return h.client.Publish(ctx, subject, bytes)
-}
-
-// publish sends a message to a subject.
-func (h *Handler) publish(ctx context.Context, subject string, data interface{}) error {
-	bytes, err := json.Marshal(data)
-	if err != nil {
-		return fmt.Errorf("failed to marshal message: %w", err)
-	}
-	return h.client.Publish(ctx, subject, bytes)
-}
-
 // replyError sends an error response to a reply subject.
 func (h *Handler) replyError(ctx context.Context, subject, jobID string, err error) error {
 	if subject == "" {
@@ -332,5 +311,5 @@ func (h *Handler) replyError(ctx context.Context, subject, jobID string, err err
 		Success: false,
 		Error:   err.Error(),
 	}
-	return h.reply(ctx, subject, resp)
+	return h.client.PublishJSON(ctx, subject, resp)
 }

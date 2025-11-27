@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/telhawk-systems/telhawk-stack/common/httputil"
 	"github.com/telhawk-systems/telhawk-stack/search/internal/models"
 	"github.com/telhawk-systems/telhawk-stack/search/internal/service"
 )
@@ -152,7 +153,8 @@ func (h *Handler) SavedSearchByID(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if r.Method != http.MethodPost {
-			h.methodNotAllowed(w, http.MethodPost)
+			w.Header().Set("Allow", http.MethodPost)
+			httputil.WriteJSONAPIError(w, http.StatusMethodNotAllowed, "method_not_allowed", "Method Not Allowed", "")
 			return
 		}
 		userID, ok := h.requireUser(r)
@@ -175,7 +177,8 @@ func (h *Handler) SavedSearchByID(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if r.Method != http.MethodPost {
-			h.methodNotAllowed(w, http.MethodPost)
+			w.Header().Set("Allow", http.MethodPost)
+			httputil.WriteJSONAPIError(w, http.StatusMethodNotAllowed, "method_not_allowed", "Method Not Allowed", "")
 			return
 		}
 		userID, ok := h.requireUser(r)
@@ -198,7 +201,8 @@ func (h *Handler) SavedSearchByID(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if r.Method != http.MethodPost {
-			h.methodNotAllowed(w, http.MethodPost)
+			w.Header().Set("Allow", http.MethodPost)
+			httputil.WriteJSONAPIError(w, http.StatusMethodNotAllowed, "method_not_allowed", "Method Not Allowed", "")
 			return
 		}
 		userID, ok := h.requireUser(r)
@@ -221,7 +225,8 @@ func (h *Handler) SavedSearchByID(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if r.Method != http.MethodPost {
-			h.methodNotAllowed(w, http.MethodPost)
+			w.Header().Set("Allow", http.MethodPost)
+			httputil.WriteJSONAPIError(w, http.StatusMethodNotAllowed, "method_not_allowed", "Method Not Allowed", "")
 			return
 		}
 		userID, ok := h.requireUser(r)
@@ -313,7 +318,8 @@ func (h *Handler) SavedSearchByID(w http.ResponseWriter, r *http.Request) {
 // State transition endpoints for saved searches
 func (h *Handler) SavedSearchDisable(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		h.methodNotAllowed(w, http.MethodPost)
+		w.Header().Set("Allow", http.MethodPost)
+		httputil.WriteJSONAPIError(w, http.StatusMethodNotAllowed, "method_not_allowed", "Method Not Allowed", "")
 		return
 	}
 	userID, ok := h.requireUser(r)
@@ -333,7 +339,8 @@ func (h *Handler) SavedSearchDisable(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) SavedSearchEnable(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		h.methodNotAllowed(w, http.MethodPost)
+		w.Header().Set("Allow", http.MethodPost)
+		httputil.WriteJSONAPIError(w, http.StatusMethodNotAllowed, "method_not_allowed", "Method Not Allowed", "")
 		return
 	}
 	userID, ok := h.requireUser(r)
@@ -353,7 +360,8 @@ func (h *Handler) SavedSearchEnable(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) SavedSearchHide(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		h.methodNotAllowed(w, http.MethodPost)
+		w.Header().Set("Allow", http.MethodPost)
+		httputil.WriteJSONAPIError(w, http.StatusMethodNotAllowed, "method_not_allowed", "Method Not Allowed", "")
 		return
 	}
 	userID, ok := h.requireUser(r)
@@ -373,7 +381,8 @@ func (h *Handler) SavedSearchHide(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) SavedSearchUnhide(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		h.methodNotAllowed(w, http.MethodPost)
+		w.Header().Set("Allow", http.MethodPost)
+		httputil.WriteJSONAPIError(w, http.StatusMethodNotAllowed, "method_not_allowed", "Method Not Allowed", "")
 		return
 	}
 	userID, ok := h.requireUser(r)

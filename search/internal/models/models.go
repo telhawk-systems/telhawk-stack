@@ -149,6 +149,7 @@ type ExportResponse struct {
 }
 
 // ErrorResponse formalizes error messages returned to clients.
+// Deprecated: Use common/httputil JSON:API error response helpers instead.
 type ErrorResponse struct {
 	Code    string                 `json:"code"`
 	Message string                 `json:"message"`

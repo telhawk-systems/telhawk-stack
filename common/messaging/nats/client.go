@@ -3,6 +3,7 @@ package nats
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
@@ -99,6 +100,16 @@ func (c *Client) Publish(ctx context.Context, subject string, data []byte) error
 		return err
 	}
 	return c.conn.Publish(subject, data)
+}
+
+// PublishJSON marshals data to JSON and publishes to the subject.
+// This is a convenience method for publishing JSON-encoded messages.
+func (c *Client) PublishJSON(ctx context.Context, subject string, data interface{}) error {
+	bytes, err := json.Marshal(data)
+	if err != nil {
+		return fmt.Errorf("marshal message: %w", err)
+	}
+	return c.Publish(ctx, subject, bytes)
 }
 
 // PublishMsg sends a Message with full control over headers and metadata.

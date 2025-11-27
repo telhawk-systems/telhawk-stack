@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/telhawk-systems/telhawk-stack/common/httputil"
 	"github.com/telhawk-systems/telhawk-stack/search/internal/models"
 	"github.com/telhawk-systems/telhawk-stack/search/internal/service"
 )
@@ -18,7 +19,8 @@ func (h *Handler) Alerts(w http.ResponseWriter, r *http.Request) {
 	case http.MethodPost:
 		h.handleUpsertAlert(w, r)
 	default:
-		h.methodNotAllowed(w, http.MethodGet, http.MethodPost)
+		w.Header().Set("Allow", joinMethods(http.MethodGet, http.MethodPost))
+		httputil.WriteJSONAPIError(w, http.StatusMethodNotAllowed, "method_not_allowed", "Method Not Allowed", "")
 	}
 }
 
@@ -84,7 +86,7 @@ func (h *Handler) handleUpsertAlert(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) AlertByID(w http.ResponseWriter, r *http.Request) {
 	id := strings.TrimPrefix(r.URL.Path, "/api/v1/alerts/")
 	if id == "" || strings.ContainsRune(id, '/') {
-		h.writeError(w, http.StatusBadRequest, "invalid_alert_id", "alert id must be provided")
+		httputil.WriteJSONAPIValidationError(w, "alert id must be provided")
 		return
 	}
 	switch r.Method {
@@ -93,7 +95,8 @@ func (h *Handler) AlertByID(w http.ResponseWriter, r *http.Request) {
 	case http.MethodPatch:
 		h.patchAlert(w, r, id)
 	default:
-		h.methodNotAllowed(w, http.MethodGet, http.MethodPatch)
+		w.Header().Set("Allow", joinMethods(http.MethodGet, http.MethodPatch))
+		httputil.WriteJSONAPIError(w, http.StatusMethodNotAllowed, "method_not_allowed", "Method Not Allowed", "")
 	}
 }
 

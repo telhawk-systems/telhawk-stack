@@ -129,26 +129,3 @@ func containsJSONAPI(s string) bool {
 func joinMethods(methods ...string) string {
 	return strings.Join(methods, ", ")
 }
-
-// writeJSON writes a JSON response.
-func (h *Handler) writeJSON(w http.ResponseWriter, status int, data interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(data)
-}
-
-// writeError writes a JSON error response.
-func (h *Handler) writeError(w http.ResponseWriter, status int, code, message string) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(models.ErrorResponse{
-		Code:    code,
-		Message: message,
-	})
-}
-
-// methodNotAllowed writes a 405 Method Not Allowed response.
-func (h *Handler) methodNotAllowed(w http.ResponseWriter, allowed ...string) {
-	w.Header().Set("Allow", joinMethods(allowed...))
-	h.writeError(w, http.StatusMethodNotAllowed, "method_not_allowed", "method is not allowed")
-}

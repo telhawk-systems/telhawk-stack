@@ -259,6 +259,7 @@ type Pagination struct {
 }
 
 // ErrorResponse represents an API error response
+// Deprecated: Use httputil JSON:API error functions instead (WriteJSONAPIError, WriteJSONAPINotFoundError, etc.)
 type ErrorResponse struct {
 	Error      string                 `json:"error"`
 	Message    string                 `json:"message"`
