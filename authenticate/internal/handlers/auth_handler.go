@@ -209,6 +209,22 @@ func (h *AuthHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Get user context from headers
+	requestingUserID := r.Header.Get("X-User-ID")
+	rolesHeader := r.Header.Get("X-User-Roles")
+
+	// Check if user has admin role
+	isAdmin := false
+	if rolesHeader != "" {
+		roles := strings.Split(rolesHeader, ",")
+		for _, role := range roles {
+			if strings.TrimSpace(role) == "admin" {
+				isAdmin = true
+				break
+			}
+		}
+	}
+
 	// Get scope from headers
 	scopeType := r.Header.Get("X-Scope-Type")
 	orgIDStr := r.Header.Get("X-Organization-ID")
@@ -227,9 +243,22 @@ func (h *AuthHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
 			clientID = &clientIDStr
 		}
 		users, err = h.service.ListUsersByScope(r.Context(), scopeType, orgID, clientID)
-	} else {
-		// No scope specified - return all users (admin fallback)
+	} else if isAdmin {
+		// Admin users can see all users
 		users, err = h.service.ListUsers(r.Context())
+	} else {
+		// Non-admin users without scope can only see themselves
+		if requestingUserID == "" {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+		user, err := h.service.GetUser(r.Context(), requestingUserID)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		users = []*models.User{user}
+		err = nil
 	}
 
 	if err != nil {

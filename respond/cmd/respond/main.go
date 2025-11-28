@@ -15,9 +15,9 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/telhawk-systems/telhawk-stack/common/config"
 	natsclient "github.com/telhawk-systems/telhawk-stack/common/messaging/nats"
 	"github.com/telhawk-systems/telhawk-stack/respond/internal/auth"
-	"github.com/telhawk-systems/telhawk-stack/respond/internal/config"
 	"github.com/telhawk-systems/telhawk-stack/respond/internal/handlers"
 	respondnats "github.com/telhawk-systems/telhawk-stack/respond/internal/nats"
 	"github.com/telhawk-systems/telhawk-stack/respond/internal/repository"
@@ -28,24 +28,22 @@ import (
 )
 
 func main() {
-	// Parse command-line flags
-	configPath := flag.String("config", "", "path to config file")
+	// Parse command-line flags (for backward compatibility, not used)
+	_ = flag.String("config", "", "path to config file (deprecated, use TELHAWK_CONFIG_DIR)")
 	flag.Parse()
 
-	// Load configuration
-	cfg, err := config.Load(*configPath)
-	if err != nil {
-		log.Fatalf("Failed to load config: %v", err)
-	}
+	// Load configuration using common config package
+	config.MustLoad("respond")
+	cfg := config.GetConfig()
 
 	// Build PostgreSQL connection string
 	connString := fmt.Sprintf(
 		"postgres://%s:%s@%s:%d/%s?sslmode=%s",
-		cfg.Database.Postgres.User,
-		cfg.Database.Postgres.Password,
+		cfg.Respond.Database.Postgres.User,
+		cfg.Respond.Database.Postgres.Password,
 		cfg.Database.Postgres.Host,
 		cfg.Database.Postgres.Port,
-		cfg.Database.Postgres.Database,
+		cfg.Respond.Database.Postgres.Database,
 		cfg.Database.Postgres.SSLMode,
 	)
 
@@ -75,18 +73,18 @@ func main() {
 	// TODO: Initialize rule importer (load rules from alerting/dist/rules/)
 
 	// Initialize auth client for token validation (required for data isolation)
-	authClient := auth.NewClient(cfg.Auth.URL)
-	log.Printf("Auth client configured with URL: %s", cfg.Auth.URL)
+	authClient := auth.NewClient(cfg.Respond.Auth.URL)
+	log.Printf("Auth client configured with URL: %s", cfg.Respond.Auth.URL)
 
 	// Initialize OpenSearch storage for alerts (optional - alerts endpoint works only if connected)
 	var osStorage *storage.OpenSearchStorage
 	var alertsHandler *handlers.AlertsHandler
 
-	osStorage, err = storage.NewOpenSearchStorage(cfg.Storage)
+	osStorage, err = storage.NewOpenSearchStorage()
 	if err != nil {
 		log.Printf("Warning: Failed to connect to OpenSearch: %v (alerts endpoint will be unavailable)", err)
 	} else {
-		log.Printf("Connected to OpenSearch at %s", cfg.Storage.URL)
+		log.Printf("Connected to OpenSearch at %s", cfg.Respond.Storage.URL)
 		alertsHandler = handlers.NewAlertsHandler(osStorage).WithAuthClient(authClient)
 	}
 
@@ -129,8 +127,8 @@ func main() {
 		log.Println("NATS is disabled, running in HTTP-only mode")
 	}
 
-	// Initialize handlers with service
-	handler := handlers.NewHandler(svc)
+	// Initialize handlers with service and auth client
+	handler := handlers.NewHandler(svc).WithAuthClient(authClient)
 
 	// Setup HTTP router with optional alerts handler
 	router := server.NewRouterWithConfig(server.RouterConfig{
@@ -140,11 +138,11 @@ func main() {
 
 	// Create HTTP server
 	srv := &http.Server{
-		Addr:         fmt.Sprintf(":%d", cfg.Server.Port),
+		Addr:         fmt.Sprintf(":%d", cfg.Respond.Server.Port),
 		Handler:      router,
-		ReadTimeout:  cfg.Server.ReadTimeout,
-		WriteTimeout: cfg.Server.WriteTimeout,
-		IdleTimeout:  cfg.Server.IdleTimeout,
+		ReadTimeout:  cfg.Respond.Server.ReadTimeoutDuration(),
+		WriteTimeout: cfg.Respond.Server.WriteTimeoutDuration(),
+		IdleTimeout:  cfg.Respond.Server.IdleTimeoutDuration(),
 	}
 
 	// Start server in goroutine
@@ -180,7 +178,7 @@ func main() {
 		}
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), cfg.Server.WriteTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), cfg.Respond.Server.WriteTimeoutDuration())
 
 	if err := srv.Shutdown(ctx); err != nil {
 		cancel()

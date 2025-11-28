@@ -33,7 +33,11 @@ var searchCmd = &cobra.Command{
 			return fmt.Errorf("not logged in: %w", err)
 		}
 
-		baseURL, _ := cmd.Flags().GetString("url")
+		// Use config URL, but allow override via flag
+		baseURL := cfg.GetQueryURL(profile)
+		if cmd.Flags().Changed("url") {
+			baseURL, _ = cmd.Flags().GetString("url")
+		}
 		queryClient := client.NewQueryClient(baseURL)
 
 		raw, _ := cmd.Flags().GetBool("raw")
@@ -88,6 +92,6 @@ func init() {
 	searchCmd.Flags().String("earliest", "", "Earliest time (e.g., -1h, -7d)")
 	searchCmd.Flags().String("latest", "", "Latest time (e.g., now, -1h)")
 	searchCmd.Flags().String("last", "", "Time range shorthand (e.g., 1h, 24h, 7d)")
-	searchCmd.Flags().String("url", "http://localhost:3000", "Web backend URL")
+	searchCmd.Flags().String("url", "", "Query service URL (default from config/env)")
 	searchCmd.Flags().Bool("raw", false, "Read raw JSON query from stdin")
 }

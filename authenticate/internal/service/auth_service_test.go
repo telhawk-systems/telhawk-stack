@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/telhawk-systems/telhawk-stack/authenticate/internal/config"
 	"github.com/telhawk-systems/telhawk-stack/authenticate/internal/models"
 	"github.com/telhawk-systems/telhawk-stack/authenticate/internal/repository"
+	"github.com/telhawk-systems/telhawk-stack/common/config"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -274,12 +274,13 @@ func (m *mockRepository) LogAudit(ctx context.Context, entry *models.AuditLogEnt
 
 // Helper to create test auth service
 func setupTestService() (*AuthService, *mockRepository) {
+	cfg := config.GetConfig()
+	cfg.Authenticate.JWTSecret = "test-jwt-secret-that-is-long-enough-for-hs256"
+	cfg.Authenticate.JWTRefreshSecret = "test-refresh-secret-that-is-long-enough-for-hs256"
+	cfg.Authenticate.AuditSecret = "test-audit-secret"
+
 	repo := newMockRepository()
-	cfg := &config.AuthConfig{
-		JWTSecret:        "test-jwt-secret-that-is-long-enough-for-hs256",
-		JWTRefreshSecret: "test-refresh-secret-that-is-long-enough-for-hs256",
-		AuditSecret:      "test-audit-secret"}
-	service := NewAuthService(repo, nil, cfg)
+	service := NewAuthService(repo, nil)
 	return service, repo
 }
 

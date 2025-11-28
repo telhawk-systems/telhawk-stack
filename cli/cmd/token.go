@@ -22,6 +22,7 @@ var tokenCreateCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name, _ := cmd.Flags().GetString("name")
 		expiresIn, _ := cmd.Flags().GetString("expires")
+		setDefault, _ := cmd.Flags().GetBool("set-default")
 
 		if name == "" {
 			return fmt.Errorf("token name is required")
@@ -39,6 +40,15 @@ var tokenCreateCmd = &cobra.Command{
 			return fmt.Errorf("failed to create token: %w", err)
 		}
 
+		// Optionally save token as default for this profile
+		if setDefault {
+			if err := cfg.SaveHECToken(profile, token.Token); err != nil {
+				output.Warn("Failed to save token as default: %v", err)
+			} else {
+				output.Info("Token saved as default for profile '%s'", profile)
+			}
+		}
+
 		output.Success("HEC token created: %s", token.Token)
 		output.Info("Name: %s", token.Name)
 		if !token.ExpiresAt.IsZero() {
@@ -46,6 +56,9 @@ var tokenCreateCmd = &cobra.Command{
 		}
 		output.Info("\nUse this token with:")
 		output.Info("  curl -H 'Authorization: Splunk %s' ...", token.Token)
+		if !setDefault {
+			output.Info("\nTo save as default token for this profile, use --set-default flag")
+		}
 		return nil
 	},
 }
@@ -123,6 +136,7 @@ func init() {
 
 	tokenCreateCmd.Flags().StringP("name", "n", "", "Token name")
 	tokenCreateCmd.Flags().String("expires", "", "Expiration duration (e.g., 30d, 1y)")
+	tokenCreateCmd.Flags().Bool("set-default", false, "Save this token as the default for the current profile")
 	if err := tokenCreateCmd.MarkFlagRequired("name"); err != nil {
 		panic(fmt.Sprintf("failed to mark name as required: %v", err))
 	}

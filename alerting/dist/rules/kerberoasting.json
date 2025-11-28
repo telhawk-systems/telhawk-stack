@@ -1,0 +1,62 @@
+{
+  "name": "kerberoasting",
+  "description": "Detects potential Kerberoasting attacks through unusual TGS-REQ patterns for service accounts",
+  "model": {
+    "correlation_type": "event_count",
+    "parameters": {
+      "time_window": "10m",
+      "query": {
+        "filter": {
+          "type": "and",
+          "conditions": [
+            {
+              "field": ".class_uid",
+              "operator": "eq",
+              "value": 3002
+            },
+            {
+              "field": ".activity_id",
+              "operator": "eq",
+              "value": 3
+            },
+            {
+              "field": ".status_id",
+              "operator": "eq",
+              "value": 1
+            },
+            {
+              "field": ".metadata.product.feature",
+              "operator": "contains",
+              "value": "TGS"
+            }
+          ]
+        }
+      },
+      "threshold": {
+        "value": 10,
+        "operator": "gte"
+      },
+      "group_by": [".actor.user.name", ".src_endpoint.ip"]
+    }
+  },
+  "view": {
+    "title": "Potential Kerberoasting Attack Detected",
+    "severity": "high",
+    "description": "User {{actor.user.name}} from {{src_endpoint.ip}} requested {{event_count}} Kerberos TGS tickets in 10 minutes, indicating possible Kerberoasting attack",
+    "category": "Credential Access",
+    "tags": ["kerberos", "kerberoasting", "credential-access", "service-ticket", "active-directory"],
+    "mitre_attack": {
+      "tactics": ["Credential Access"],
+      "techniques": ["T1558.003 - Steal or Forge Kerberos Tickets: Kerberoasting"]
+    }
+  },
+  "controller": {
+    "detection": {
+      "suppression_window": "30m"
+    },
+    "response": {
+      "actions": [],
+      "severity_threshold": "high"
+    }
+  }
+}

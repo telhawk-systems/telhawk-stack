@@ -3,13 +3,13 @@ package cmd
 import (
 	"testing"
 
-	"github.com/telhawk-systems/telhawk-stack/cli/internal/config"
+	"github.com/telhawk-systems/telhawk-stack/common/config"
 )
 
 // Test command initialization and registration
 func TestCommandsRegistered(t *testing.T) {
 	// Setup config
-	cfg = config.Default()
+	cfg = config.DefaultCLI()
 
 	// Verify root command exists
 	if rootCmd == nil {
@@ -19,7 +19,9 @@ func TestCommandsRegistered(t *testing.T) {
 	// Check that all main commands are registered
 	commands := rootCmd.Commands()
 	expectedCommands := map[string]bool{
-		"auth":   false,
+		"login":  false,
+		"logout": false,
+		"whoami": false,
 		"alerts": false,
 		"rules":  false,
 		"search": false,
@@ -47,16 +49,22 @@ func TestCommandsRegistered(t *testing.T) {
 	}
 }
 
-func TestAuthCommandHasSubcommands(t *testing.T) {
-	if authCmd == nil {
-		t.Fatal("authCmd should not be nil")
+func TestLoginCommandExists(t *testing.T) {
+	if loginCmd == nil {
+		t.Fatal("loginCmd should not be nil")
 	}
 
-	subcommands := authCmd.Commands()
-	expected := []string{"login", "logout", "whoami"}
-
-	if len(subcommands) != len(expected) {
-		t.Errorf("expected %d subcommands, got %d", len(expected), len(subcommands))
+	// Verify login is a root-level command
+	commands := rootCmd.Commands()
+	found := false
+	for _, cmd := range commands {
+		if cmd.Use == "login" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("login command should be registered as a root-level command")
 	}
 }
 
@@ -131,7 +139,7 @@ func TestGlobalFlags(t *testing.T) {
 	}
 
 	// Check that global flags exist
-	flags := []string{"config", "output", "profile"}
+	flags := []string{"output", "profile"}
 	for _, flagName := range flags {
 		flag := rootCmd.PersistentFlags().Lookup(flagName)
 		if flag == nil {
@@ -140,26 +148,26 @@ func TestGlobalFlags(t *testing.T) {
 	}
 }
 
-func TestAuthLoginCommandFlags(t *testing.T) {
-	if authLoginCmd == nil {
-		t.Fatal("authLoginCmd should not be nil")
+func TestLoginCommandFlags(t *testing.T) {
+	if loginCmd == nil {
+		t.Fatal("loginCmd should not be nil")
 	}
 
 	// Check required flags
 	requiredFlags := []string{"username", "password"}
 	for _, flagName := range requiredFlags {
-		flag := authLoginCmd.Flags().Lookup(flagName)
+		flag := loginCmd.Flags().Lookup(flagName)
 		if flag == nil {
-			t.Errorf("expected flag '%s' to be defined on auth login command", flagName)
+			t.Errorf("expected flag '%s' to be defined on login command", flagName)
 		}
 	}
 
 	// Check optional flags
 	optionalFlags := []string{"auth-url"}
 	for _, flagName := range optionalFlags {
-		flag := authLoginCmd.Flags().Lookup(flagName)
+		flag := loginCmd.Flags().Lookup(flagName)
 		if flag == nil {
-			t.Errorf("expected flag '%s' to be defined on auth login command", flagName)
+			t.Errorf("expected flag '%s' to be defined on login command", flagName)
 		}
 	}
 }

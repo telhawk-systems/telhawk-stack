@@ -14,10 +14,10 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/telhawk-systems/telhawk-stack/authenticate/internal/config"
 	"github.com/telhawk-systems/telhawk-stack/authenticate/internal/models"
 	"github.com/telhawk-systems/telhawk-stack/authenticate/internal/repository"
 	"github.com/telhawk-systems/telhawk-stack/authenticate/internal/service"
+	"github.com/telhawk-systems/telhawk-stack/common/config"
 )
 
 // ============================================================================
@@ -213,13 +213,17 @@ func (r *testRepo) ListClientsByOrganization(ctx context.Context, orgID string) 
 	return []*models.Client{}, nil
 }
 
+func setupTestConfig() {
+	cfg := config.GetConfig()
+	cfg.Authenticate.JWTSecret = "test-secret-key-long-enough"
+	cfg.Authenticate.JWTRefreshSecret = "test-refresh-secret-long"
+	cfg.Authenticate.AuditSecret = "test-audit"
+}
+
 func setupHandler() *AuthHandler {
+	setupTestConfig()
 	repo := newTestRepo()
-	cfg := &config.AuthConfig{
-		JWTSecret:        "test-secret-key-long-enough",
-		JWTRefreshSecret: "test-refresh-secret-long",
-		AuditSecret:      "test-audit"}
-	svc := service.NewAuthService(repo, nil, cfg)
+	svc := service.NewAuthService(repo, nil)
 	return NewAuthHandler(svc)
 }
 
@@ -839,12 +843,9 @@ func TestGetClientIP(t *testing.T) {
 // ============================================================================
 
 func TestListHECTokensHandler_AdminUser(t *testing.T) {
+	setupTestConfig()
 	repo := newTestRepo()
-	cfg := &config.AuthConfig{
-		JWTSecret:        "test-secret-key-long-enough",
-		JWTRefreshSecret: "test-refresh-secret-long",
-		AuditSecret:      "test-audit"}
-	svc := service.NewAuthService(repo, nil, cfg)
+	svc := service.NewAuthService(repo, nil)
 	handler := NewAuthHandler(svc)
 
 	// Create test users
@@ -910,12 +911,9 @@ func TestListHECTokensHandler_AdminUser(t *testing.T) {
 }
 
 func TestListHECTokensHandler_RegularUser(t *testing.T) {
+	setupTestConfig()
 	repo := newTestRepo()
-	cfg := &config.AuthConfig{
-		JWTSecret:        "test-secret-key-long-enough",
-		JWTRefreshSecret: "test-refresh-secret-long",
-		AuditSecret:      "test-audit"}
-	svc := service.NewAuthService(repo, nil, cfg)
+	svc := service.NewAuthService(repo, nil)
 	handler := NewAuthHandler(svc)
 
 	// Create test user
@@ -996,12 +994,9 @@ func TestListHECTokensHandler_EmptyResult(t *testing.T) {
 // ============================================================================
 
 func TestRevokeHECTokenByIDHandler_Success(t *testing.T) {
+	setupTestConfig()
 	repo := newTestRepo()
-	cfg := &config.AuthConfig{
-		JWTSecret:        "test-secret-key-long-enough",
-		JWTRefreshSecret: "test-refresh-secret-long",
-		AuditSecret:      "test-audit"}
-	svc := service.NewAuthService(repo, nil, cfg)
+	svc := service.NewAuthService(repo, nil)
 	handler := NewAuthHandler(svc)
 
 	// Create token
@@ -1031,12 +1026,9 @@ func TestRevokeHECTokenByIDHandler_Success(t *testing.T) {
 }
 
 func TestRevokeHECTokenByIDHandler_Unauthorized(t *testing.T) {
+	setupTestConfig()
 	repo := newTestRepo()
-	cfg := &config.AuthConfig{
-		JWTSecret:        "test-secret-key-long-enough",
-		JWTRefreshSecret: "test-refresh-secret-long",
-		AuditSecret:      "test-audit"}
-	svc := service.NewAuthService(repo, nil, cfg)
+	svc := service.NewAuthService(repo, nil)
 	handler := NewAuthHandler(svc)
 
 	// Create token owned by user-1
@@ -1096,12 +1088,9 @@ func TestRevokeHECTokenByIDHandler_NotFound(t *testing.T) {
 // ============================================================================
 
 func TestValidateHECTokenHandler_ValidToken(t *testing.T) {
+	setupTestConfig()
 	repo := newTestRepo()
-	cfg := &config.AuthConfig{
-		JWTSecret:        "test-secret-key-long-enough",
-		JWTRefreshSecret: "test-refresh-secret-long",
-		AuditSecret:      "test-audit"}
-	svc := service.NewAuthService(repo, nil, cfg)
+	svc := service.NewAuthService(repo, nil)
 	handler := NewAuthHandler(svc)
 
 	// Create valid token
@@ -1152,12 +1141,9 @@ func TestValidateHECTokenHandler_InvalidToken(t *testing.T) {
 }
 
 func TestValidateHECTokenHandler_RevokedToken(t *testing.T) {
+	setupTestConfig()
 	repo := newTestRepo()
-	cfg := &config.AuthConfig{
-		JWTSecret:        "test-secret-key-long-enough",
-		JWTRefreshSecret: "test-refresh-secret-long",
-		AuditSecret:      "test-audit"}
-	svc := service.NewAuthService(repo, nil, cfg)
+	svc := service.NewAuthService(repo, nil)
 	handler := NewAuthHandler(svc)
 
 	// Create and revoke token
@@ -1216,12 +1202,9 @@ func TestValidateHECTokenHandler_MissingToken(t *testing.T) {
 // ============================================================================
 
 func TestLoginHandler_Success(t *testing.T) {
+	setupTestConfig()
 	repo := newTestRepo()
-	cfg := &config.AuthConfig{
-		JWTSecret:        "test-secret-key-long-enough",
-		JWTRefreshSecret: "test-refresh-secret-long",
-		AuditSecret:      "test-audit"}
-	svc := service.NewAuthService(repo, nil, cfg)
+	svc := service.NewAuthService(repo, nil)
 	handler := NewAuthHandler(svc)
 
 	// Create a test user with hashed password
@@ -1259,12 +1242,9 @@ func TestLoginHandler_Success(t *testing.T) {
 }
 
 func TestCreateUserHandler_Success(t *testing.T) {
+	setupTestConfig()
 	repo := newTestRepo()
-	cfg := &config.AuthConfig{
-		JWTSecret:        "test-secret-key-long-enough",
-		JWTRefreshSecret: "test-refresh-secret-long",
-		AuditSecret:      "test-audit"}
-	svc := service.NewAuthService(repo, nil, cfg)
+	svc := service.NewAuthService(repo, nil)
 	handler := NewAuthHandler(svc)
 
 	// Create request
@@ -1300,12 +1280,9 @@ func TestCreateUserHandler_Success(t *testing.T) {
 }
 
 func TestRefreshTokenHandler_Success(t *testing.T) {
+	setupTestConfig()
 	repo := newTestRepo()
-	cfg := &config.AuthConfig{
-		JWTSecret:        "test-secret-key-long-enough",
-		JWTRefreshSecret: "test-refresh-secret-long",
-		AuditSecret:      "test-audit"}
-	svc := service.NewAuthService(repo, nil, cfg)
+	svc := service.NewAuthService(repo, nil)
 	handler := NewAuthHandler(svc)
 
 	// Create user and login to get refresh token
@@ -1343,12 +1320,9 @@ func TestRefreshTokenHandler_Success(t *testing.T) {
 }
 
 func TestValidateTokenHandler_Success(t *testing.T) {
+	setupTestConfig()
 	repo := newTestRepo()
-	cfg := &config.AuthConfig{
-		JWTSecret:        "test-secret-key-long-enough",
-		JWTRefreshSecret: "test-refresh-secret-long",
-		AuditSecret:      "test-audit"}
-	svc := service.NewAuthService(repo, nil, cfg)
+	svc := service.NewAuthService(repo, nil)
 	handler := NewAuthHandler(svc)
 
 	// Create user and login to get access token
@@ -1389,12 +1363,9 @@ func TestValidateTokenHandler_Success(t *testing.T) {
 }
 
 func TestRevokeTokenHandler_Success(t *testing.T) {
+	setupTestConfig()
 	repo := newTestRepo()
-	cfg := &config.AuthConfig{
-		JWTSecret:        "test-secret-key-long-enough",
-		JWTRefreshSecret: "test-refresh-secret-long",
-		AuditSecret:      "test-audit"}
-	svc := service.NewAuthService(repo, nil, cfg)
+	svc := service.NewAuthService(repo, nil)
 	handler := NewAuthHandler(svc)
 
 	// Create user and login to get refresh token
@@ -1431,12 +1402,9 @@ func TestRevokeTokenHandler_Success(t *testing.T) {
 }
 
 func TestGetUserHandler_Success(t *testing.T) {
+	setupTestConfig()
 	repo := newTestRepo()
-	cfg := &config.AuthConfig{
-		JWTSecret:        "test-secret-key-long-enough",
-		JWTRefreshSecret: "test-refresh-secret-long",
-		AuditSecret:      "test-audit"}
-	svc := service.NewAuthService(repo, nil, cfg)
+	svc := service.NewAuthService(repo, nil)
 	handler := NewAuthHandler(svc)
 
 	// Create test user
@@ -1469,12 +1437,9 @@ func TestGetUserHandler_Success(t *testing.T) {
 }
 
 func TestUpdateUserHandler_Success(t *testing.T) {
+	setupTestConfig()
 	repo := newTestRepo()
-	cfg := &config.AuthConfig{
-		JWTSecret:        "test-secret-key-long-enough",
-		JWTRefreshSecret: "test-refresh-secret-long",
-		AuditSecret:      "test-audit"}
-	svc := service.NewAuthService(repo, nil, cfg)
+	svc := service.NewAuthService(repo, nil)
 	handler := NewAuthHandler(svc)
 
 	// Create test user
@@ -1512,12 +1477,9 @@ func TestUpdateUserHandler_Success(t *testing.T) {
 }
 
 func TestDeleteUserHandler_Success(t *testing.T) {
+	setupTestConfig()
 	repo := newTestRepo()
-	cfg := &config.AuthConfig{
-		JWTSecret:        "test-secret-key-long-enough",
-		JWTRefreshSecret: "test-refresh-secret-long",
-		AuditSecret:      "test-audit"}
-	svc := service.NewAuthService(repo, nil, cfg)
+	svc := service.NewAuthService(repo, nil)
 	handler := NewAuthHandler(svc)
 
 	// Create test user
@@ -1547,12 +1509,9 @@ func TestDeleteUserHandler_Success(t *testing.T) {
 }
 
 func TestResetPasswordHandler_Success(t *testing.T) {
+	setupTestConfig()
 	repo := newTestRepo()
-	cfg := &config.AuthConfig{
-		JWTSecret:        "test-secret-key-long-enough",
-		JWTRefreshSecret: "test-refresh-secret-long",
-		AuditSecret:      "test-audit"}
-	svc := service.NewAuthService(repo, nil, cfg)
+	svc := service.NewAuthService(repo, nil)
 	handler := NewAuthHandler(svc)
 
 	// Create test user
@@ -1588,12 +1547,9 @@ func TestResetPasswordHandler_Success(t *testing.T) {
 }
 
 func TestCreateHECTokenHandler_Success(t *testing.T) {
+	setupTestConfig()
 	repo := newTestRepo()
-	cfg := &config.AuthConfig{
-		JWTSecret:        "test-secret-key-long-enough",
-		JWTRefreshSecret: "test-refresh-secret-long",
-		AuditSecret:      "test-audit"}
-	svc := service.NewAuthService(repo, nil, cfg)
+	svc := service.NewAuthService(repo, nil)
 	handler := NewAuthHandler(svc)
 
 	// Create test user
@@ -1637,12 +1593,9 @@ func TestCreateHECTokenHandler_Success(t *testing.T) {
 }
 
 func TestRevokeHECTokenHandler_Success(t *testing.T) {
+	setupTestConfig()
 	repo := newTestRepo()
-	cfg := &config.AuthConfig{
-		JWTSecret:        "test-secret-key-long-enough",
-		JWTRefreshSecret: "test-refresh-secret-long",
-		AuditSecret:      "test-audit"}
-	svc := service.NewAuthService(repo, nil, cfg)
+	svc := service.NewAuthService(repo, nil)
 	handler := NewAuthHandler(svc)
 
 	// Create HEC token
@@ -1675,12 +1628,9 @@ func TestRevokeHECTokenHandler_Success(t *testing.T) {
 }
 
 func TestUpdateUserHandler_PatchMethod(t *testing.T) {
+	setupTestConfig()
 	repo := newTestRepo()
-	cfg := &config.AuthConfig{
-		JWTSecret:        "test-secret-key-long-enough",
-		JWTRefreshSecret: "test-refresh-secret-long",
-		AuditSecret:      "test-audit"}
-	svc := service.NewAuthService(repo, nil, cfg)
+	svc := service.NewAuthService(repo, nil)
 	handler := NewAuthHandler(svc)
 
 	// Create test user

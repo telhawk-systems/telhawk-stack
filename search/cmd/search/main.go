@@ -16,11 +16,11 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/telhawk-systems/telhawk-stack/common/config"
 	"github.com/telhawk-systems/telhawk-stack/common/logging"
 	natsclient "github.com/telhawk-systems/telhawk-stack/common/messaging/nats"
 	sauth "github.com/telhawk-systems/telhawk-stack/search/internal/auth"
 	"github.com/telhawk-systems/telhawk-stack/search/internal/client"
-	"github.com/telhawk-systems/telhawk-stack/search/internal/config"
 	"github.com/telhawk-systems/telhawk-stack/search/internal/handlers"
 	searchnats "github.com/telhawk-systems/telhawk-stack/search/internal/nats"
 	"github.com/telhawk-systems/telhawk-stack/search/internal/notification"
@@ -31,14 +31,14 @@ import (
 )
 
 func main() {
-	configPath := flag.String("config", "", "path to YAML config file")
+	// Parse command line flags (for backward compatibility, not used)
+	_ = flag.String("config", "", "path to YAML config file (deprecated, use TELHAWK_CONFIG_DIR)")
 	addr := flag.String("addr", "", "override listen address")
 	flag.Parse()
 
-	cfg, err := config.Load(*configPath)
-	if err != nil {
-		log.Fatalf("load config: %v", err)
-	}
+	// Load configuration using common config package
+	config.MustLoad("search")
+	cfg := config.GetConfig()
 
 	// Initialize structured logging
 	logger := logging.New(
@@ -48,17 +48,17 @@ func main() {
 	logging.SetDefault(logger)
 
 	slog.Info("Starting Search service",
-		slog.Int("port", cfg.Server.Port),
+		slog.Int("port", cfg.Search.Server.Port),
 		slog.String("log_level", cfg.Logging.Level),
 		slog.String("log_format", cfg.Logging.Format),
 	)
 
-	listenAddr := fmt.Sprintf(":%d", cfg.Server.Port)
+	listenAddr := fmt.Sprintf(":%d", cfg.Search.Server.Port)
 	if *addr != "" {
 		listenAddr = *addr
 	}
 
-	osClient, err := client.NewOpenSearchClient(cfg.OpenSearch)
+	osClient, err := client.NewOpenSearchClient()
 	if err != nil {
 		slog.Error("Failed to create OpenSearch client", slog.String("error", err.Error()))
 		os.Exit(1)
@@ -66,9 +66,9 @@ func main() {
 	slog.Info("Connected to OpenSearch", slog.String("url", cfg.OpenSearch.URL))
 
 	// Run DB migrations if configured
-	if cfg.DatabaseURL != "" {
+	if cfg.Search.DatabaseURL != "" {
 		slog.Info("Running database migrations")
-		m, err := migrate.New("file://migrations", cfg.DatabaseURL)
+		m, err := migrate.New("file://migrations", cfg.Search.DatabaseURL)
 		if err != nil {
 			slog.Error("Failed to initialize migrations", slog.String("error", err.Error()))
 			os.Exit(1)
@@ -82,14 +82,14 @@ func main() {
 
 	// Initialize repo + auth client
 	var repo *repository.PostgresRepository
-	if cfg.DatabaseURL != "" {
-		repo, err = repository.NewPostgresRepository(context.Background(), cfg.DatabaseURL)
+	if cfg.Search.DatabaseURL != "" {
+		repo, err = repository.NewPostgresRepository(context.Background(), cfg.Search.DatabaseURL)
 		if err != nil {
 			log.Fatalf("connect postgres: %v", err)
 		}
 		defer repo.Close()
 	}
-	authClient := sauth.NewClient(cfg.AuthURL)
+	authClient := sauth.NewClient(cfg.Search.AuthURL)
 
 	svc := service.NewSearchService("0.1.0", osClient).WithDependencies(repo, authClient)
 	h := handlers.New(svc)
@@ -97,10 +97,10 @@ func main() {
 	var alertScheduler *scheduler.Scheduler
 	schedulerCtx, schedulerStop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 
-	if cfg.Alerting.Enabled {
+	if cfg.Search.Alerting.Enabled {
 		notifChannel := buildNotificationChannel(cfg)
 		schedulerCfg := scheduler.Config{
-			CheckInterval: time.Duration(cfg.Alerting.CheckIntervalSeconds) * time.Second,
+			CheckInterval: time.Duration(cfg.Search.Alerting.CheckIntervalSeconds) * time.Second,
 		}
 		alertScheduler = scheduler.NewScheduler(svc, svc, notifChannel, schedulerCfg)
 
@@ -150,9 +150,9 @@ func main() {
 	srv := &http.Server{
 		Addr:         listenAddr,
 		Handler:      server.NewRouter(h),
-		ReadTimeout:  cfg.Server.ReadTimeout(),
-		WriteTimeout: cfg.Server.WriteTimeout(),
-		IdleTimeout:  cfg.Server.IdleTimeout(),
+		ReadTimeout:  cfg.Search.Server.ReadTimeoutDuration(),
+		WriteTimeout: cfg.Search.Server.WriteTimeoutDuration(),
+		IdleTimeout:  cfg.Search.Server.IdleTimeoutDuration(),
 	}
 
 	shutdownCtx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
@@ -200,15 +200,15 @@ func buildNotificationChannel(cfg *config.Config) notification.Channel {
 		notification.NewLogChannel(log.Printf),
 	}
 
-	timeout := time.Duration(cfg.Alerting.NotificationTimeout) * time.Second
+	timeout := time.Duration(cfg.Search.Alerting.NotificationTimeout) * time.Second
 
-	if cfg.Alerting.WebhookURL != "" {
-		channels = append(channels, notification.NewWebhookChannel(cfg.Alerting.WebhookURL, timeout))
-		log.Printf("webhook notifications enabled: %s", cfg.Alerting.WebhookURL)
+	if cfg.Search.Alerting.WebhookURL != "" {
+		channels = append(channels, notification.NewWebhookChannel(cfg.Search.Alerting.WebhookURL, timeout))
+		log.Printf("webhook notifications enabled: %s", cfg.Search.Alerting.WebhookURL)
 	}
 
-	if cfg.Alerting.SlackWebhookURL != "" {
-		channels = append(channels, notification.NewSlackChannel(cfg.Alerting.SlackWebhookURL, timeout))
+	if cfg.Search.Alerting.SlackWebhookURL != "" {
+		channels = append(channels, notification.NewSlackChannel(cfg.Search.Alerting.SlackWebhookURL, timeout))
 		log.Printf("slack notifications enabled")
 	}
 

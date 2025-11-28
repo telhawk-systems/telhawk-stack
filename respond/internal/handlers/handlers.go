@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/telhawk-systems/telhawk-stack/common/httputil"
+	"github.com/telhawk-systems/telhawk-stack/respond/internal/auth"
 	"github.com/telhawk-systems/telhawk-stack/respond/internal/models"
 	"github.com/telhawk-systems/telhawk-stack/respond/internal/repository"
 	"github.com/telhawk-systems/telhawk-stack/respond/internal/service"
@@ -16,7 +17,8 @@ import (
 
 // Handler provides HTTP handlers for the respond service
 type Handler struct {
-	svc *service.Service
+	svc        *service.Service
+	authClient *auth.Client
 }
 
 // NewHandler creates a new Handler instance
@@ -24,9 +26,39 @@ func NewHandler(svc *service.Service) *Handler {
 	return &Handler{svc: svc}
 }
 
+// WithAuthClient sets the auth client for token validation
+func (h *Handler) WithAuthClient(client *auth.Client) *Handler {
+	h.authClient = client
+	return h
+}
+
 // =============================================================================
 // Helper Methods
 // =============================================================================
+
+// getUserIDFromRequest extracts user ID from authenticated request
+func (h *Handler) getUserIDFromRequest(r *http.Request) (string, error) {
+	if h.authClient == nil {
+		return "", errors.New("auth client not configured")
+	}
+
+	authz := r.Header.Get("Authorization")
+	if !strings.HasPrefix(strings.ToLower(authz), "bearer ") {
+		return "", errors.New("missing bearer token")
+	}
+
+	token := strings.TrimSpace(authz[len("Bearer "):])
+	uc, err := h.authClient.Validate(r.Context(), token)
+	if err != nil {
+		return "", err
+	}
+
+	if uc.UserID == "" {
+		return "", errors.New("user ID not found in token")
+	}
+
+	return uc.UserID, nil
+}
 
 // extractIDFromPath extracts an ID from a URL path like /schemas/{id} or /api/v1/cases/{id}
 func extractIDFromPath(path, prefix string) string {
@@ -179,8 +211,11 @@ func (h *Handler) UpdateSchema(w http.ResponseWriter, r *http.Request, id string
 
 // HideSchema handles DELETE /schemas/{id}
 func (h *Handler) HideSchema(w http.ResponseWriter, r *http.Request, id string) {
-	// TODO: Get user ID from auth context
-	userID := "system"
+	userID, err := h.getUserIDFromRequest(r)
+	if err != nil {
+		httputil.WriteJSONAPIError(w, http.StatusUnauthorized, "auth_required", "Authentication required", "User ID not found in context")
+		return
+	}
 
 	if err := h.svc.HideSchema(r.Context(), id, userID); err != nil {
 		if errors.Is(err, repository.ErrSchemaNotFound) {
@@ -205,8 +240,12 @@ func (h *Handler) DisableSchemaHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	id := extractIDFromPath(r.URL.Path, "/schemas")
-	// TODO: Get user ID from auth context
-	userID := "system"
+
+	userID, err := h.getUserIDFromRequest(r)
+	if err != nil {
+		httputil.WriteJSONAPIError(w, http.StatusUnauthorized, "auth_required", "Authentication required", "User ID not found in context")
+		return
+	}
 
 	schema, err := h.svc.DisableSchema(r.Context(), id, userID)
 	if err != nil {
@@ -337,8 +376,11 @@ func (h *Handler) CreateCase(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Get user ID from auth context
-	userID := "system"
+	userID, err := h.getUserIDFromRequest(r)
+	if err != nil {
+		httputil.WriteJSONAPIError(w, http.StatusUnauthorized, "auth_required", "Authentication required", "User ID not found in context")
+		return
+	}
 
 	c, err := h.svc.CreateCase(r.Context(), &req, userID)
 	if err != nil {
@@ -396,8 +438,11 @@ func (h *Handler) UpdateCase(w http.ResponseWriter, r *http.Request, id string) 
 		return
 	}
 
-	// TODO: Get user ID from auth context
-	userID := "system"
+	userID, err := h.getUserIDFromRequest(r)
+	if err != nil {
+		httputil.WriteJSONAPIError(w, http.StatusUnauthorized, "auth_required", "Authentication required", "User ID not found in context")
+		return
+	}
 
 	c, err := h.svc.UpdateCase(r.Context(), id, &req, userID)
 	if err != nil {
@@ -420,8 +465,12 @@ func (h *Handler) CloseCaseHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	id := extractIDFromPath(r.URL.Path, "/api/v1/cases")
-	// TODO: Get user ID from auth context
-	userID := "system"
+
+	userID, err := h.getUserIDFromRequest(r)
+	if err != nil {
+		httputil.WriteJSONAPIError(w, http.StatusUnauthorized, "auth_required", "Authentication required", "User ID not found in context")
+		return
+	}
 
 	c, err := h.svc.CloseCase(r.Context(), id, userID)
 	if err != nil {
@@ -494,8 +543,11 @@ func (h *Handler) AddAlertsToCase(w http.ResponseWriter, r *http.Request, caseID
 		return
 	}
 
-	// TODO: Get user ID from auth context
-	userID := "system"
+	userID, err := h.getUserIDFromRequest(r)
+	if err != nil {
+		httputil.WriteJSONAPIError(w, http.StatusUnauthorized, "auth_required", "Authentication required", "User ID not found in context")
+		return
+	}
 
 	if err := h.svc.AddAlertsToCase(r.Context(), caseID, req.AlertIDs, userID); err != nil {
 		if errors.Is(err, repository.ErrCaseNotFound) {

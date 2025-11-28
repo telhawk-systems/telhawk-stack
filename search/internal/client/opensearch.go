@@ -6,7 +6,7 @@ import (
 	"net/http"
 
 	"github.com/opensearch-project/opensearch-go/v2"
-	"github.com/telhawk-systems/telhawk-stack/search/internal/config"
+	"github.com/telhawk-systems/telhawk-stack/common/config"
 )
 
 type OpenSearchClient struct {
@@ -14,19 +14,20 @@ type OpenSearchClient struct {
 	index  string
 }
 
-func NewOpenSearchClient(cfg config.OpenSearchConfig) (*OpenSearchClient, error) {
+func NewOpenSearchClient() (*OpenSearchClient, error) {
+	cfg := config.GetConfig()
 	httpClient := &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: cfg.Insecure,
+				InsecureSkipVerify: cfg.OpenSearch.Insecure,
 			},
 		},
 	}
 
 	osCfg := opensearch.Config{
-		Addresses: []string{cfg.URL},
-		Username:  cfg.Username,
-		Password:  cfg.Password,
+		Addresses: []string{cfg.OpenSearch.URL},
+		Username:  cfg.OpenSearch.Username,
+		Password:  cfg.OpenSearch.Password,
 		Transport: httpClient.Transport,
 	}
 
@@ -47,7 +48,7 @@ func NewOpenSearchClient(cfg config.OpenSearchConfig) (*OpenSearchClient, error)
 
 	return &OpenSearchClient{
 		client: client,
-		index:  cfg.Index,
+		index:  cfg.OpenSearch.Index,
 	}, nil
 }
 

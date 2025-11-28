@@ -31,14 +31,23 @@ var ingestSendCmd = &cobra.Command{
 			return fmt.Errorf("either --message or --json is required")
 		}
 
+		profile, _ := cmd.Flags().GetString("profile")
+
+		// Try to get HEC token from profile if not provided via flag
 		if hecToken == "" {
-			return fmt.Errorf("HEC token is required (use --token or create with 'thawk token create')")
+			p, err := cfg.GetProfile(profile)
+			if err == nil && p.HECToken != "" {
+				hecToken = p.HECToken
+			}
+		}
+
+		if hecToken == "" {
+			return fmt.Errorf("HEC token is required (use --token flag, store in profile with 'thawk token create', or set in config)")
 		}
 
 		ingestURL, _ := cmd.Flags().GetString("ingest-url")
 		// Use config default if not provided via flag
 		if ingestURL == "" || !cmd.Flags().Changed("ingest-url") {
-			profile, _ := cmd.Flags().GetString("profile")
 			ingestURL = cfg.GetIngestURL(profile)
 		}
 

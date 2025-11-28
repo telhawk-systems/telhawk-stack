@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 
 	"github.com/google/uuid"
 	"github.com/telhawk-systems/telhawk-stack/respond/internal/models"
@@ -256,8 +257,10 @@ func (s *Service) CreateCase(ctx context.Context, req *models.CreateCaseRequest,
 			alerts[i] = &models.CaseAlert{AlertID: alertID}
 		}
 		// Log but don't fail - case was created successfully
-		// TODO: Add proper logging for this error
-		_ = s.repo.AddAlertsToCase(ctx, c.ID, alerts, userID) //nolint:errcheck // intentionally ignoring error
+		if err := s.repo.AddAlertsToCase(ctx, c.ID, alerts, userID); err != nil {
+			log.Printf("Warning: Failed to add alerts to case %s: %v (case_id=%s, alert_count=%d, user_id=%s)",
+				c.ID, err, c.ID, len(alerts), userID)
+		}
 	}
 
 	return s.repo.GetCaseByID(ctx, c.ID)

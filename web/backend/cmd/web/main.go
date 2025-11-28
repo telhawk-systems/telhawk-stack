@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/telhawk-systems/telhawk-stack/common/config"
 	"github.com/telhawk-systems/telhawk-stack/common/hecstats"
 	"github.com/telhawk-systems/telhawk-stack/common/messaging"
 	"github.com/telhawk-systems/telhawk-stack/common/messaging/nats"
@@ -58,13 +59,15 @@ func getEnv(key, defaultValue string) string {
 }
 
 func main() {
-	configPath := flag.String("config", "", "Path to config file")
+	// Parse command line flags (for backward compatibility, not used)
+	_ = flag.String("config", "", "Path to config file (deprecated, use TELHAWK_CONFIG_DIR)")
 	flag.Parse()
 
-	if *configPath != "" {
-		log.Printf("Config file support not yet implemented, using env vars")
-	}
+	// Load configuration using common config package
+	config.MustLoad("web")
+	globalCfg := config.GetConfig()
 
+	// Load web-specific config from environment (until WebConfig is fully implemented)
 	cfg := loadConfig()
 
 	authClient := auth.NewClient(cfg.AuthenticateServiceURL)
@@ -79,11 +82,16 @@ func main() {
 	dashboardHandler := handlers.NewDashboardHandler(cfg.SearchServiceURL, cfg.RespondServiceURL)
 
 	// Initialize Redis client for HEC stats (read-only for web backend)
+	// Use Redis URL from common config if available, otherwise fall back to env var
 	var hecStatsHandler *handlers.HECStatsHandler
-	if cfg.RedisURL != "" {
-		statsClient, err := hecstats.NewClient(cfg.RedisURL, "web-backend")
+	redisURL := globalCfg.Redis.URL
+	if redisURL == "" {
+		redisURL = cfg.RedisURL
+	}
+	if redisURL != "" && globalCfg.Redis.Enabled {
+		statsClient, err := hecstats.NewClient(redisURL, "web-backend")
 		if err != nil {
-			log.Printf("Warning: Failed to connect to Redis at %s: %v", cfg.RedisURL, err)
+			log.Printf("Warning: Failed to connect to Redis at %s: %v", redisURL, err)
 			log.Printf("HEC token stats will be unavailable")
 		} else {
 			log.Printf("Connected to Redis for HEC stats")
@@ -92,22 +100,27 @@ func main() {
 	}
 
 	// Initialize NATS client for async query support
+	// Use NATS URL from common config if available, otherwise fall back to env var
 	var natsClient messaging.Client
 	var asyncQueryHandler *handlers.AsyncQueryHandler
 	var resultSubscriber *webnats.ResultSubscriber
 
-	if cfg.NATSURL != "" {
+	natsURL := globalCfg.NATS.URL
+	if natsURL == "" {
+		natsURL = cfg.NATSURL
+	}
+	if natsURL != "" && globalCfg.NATS.Enabled {
 		natsCfg := nats.DefaultConfig()
-		natsCfg.URL = cfg.NATSURL
+		natsCfg.URL = natsURL
 		natsCfg.Name = "telhawk-web"
 
 		var err error
 		natsClient, err = nats.NewClient(natsCfg)
 		if err != nil {
-			log.Printf("Warning: Failed to connect to NATS at %s: %v", cfg.NATSURL, err)
+			log.Printf("Warning: Failed to connect to NATS at %s: %v", natsURL, err)
 			log.Printf("Async query support will be disabled")
 		} else {
-			log.Printf("Connected to NATS at %s", cfg.NATSURL)
+			log.Printf("Connected to NATS at %s", natsURL)
 			asyncQueryHandler = handlers.NewAsyncQueryHandler(natsClient, messaging.SubjectSearchJobsQuery)
 
 			// Start result subscriber to receive search results
@@ -153,12 +166,26 @@ func main() {
 	csrfMiddleware := webmiddleware.CSRF(cfg.CookieSecure)
 	handler = csrfMiddleware(handler)
 
+	// Use server timeouts from common config if available, otherwise use defaults
+	readTimeout := globalCfg.Server.ReadTimeoutDuration()
+	if readTimeout == 0 {
+		readTimeout = 15 * time.Second
+	}
+	writeTimeout := globalCfg.Server.WriteTimeoutDuration()
+	if writeTimeout == 0 {
+		writeTimeout = 15 * time.Second
+	}
+	idleTimeout := globalCfg.Server.IdleTimeoutDuration()
+	if idleTimeout == 0 {
+		idleTimeout = 60 * time.Second
+	}
+
 	httpServer := &http.Server{
 		Addr:         ":" + cfg.Port,
 		Handler:      handler,
-		ReadTimeout:  15 * time.Second,
-		WriteTimeout: 15 * time.Second,
-		IdleTimeout:  60 * time.Second,
+		ReadTimeout:  readTimeout,
+		WriteTimeout: writeTimeout,
+		IdleTimeout:  idleTimeout,
 	}
 
 	log.Printf("TelHawk Web UI starting on :%s", cfg.Port)

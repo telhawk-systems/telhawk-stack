@@ -24,13 +24,6 @@ func init() {
 	searchCmd.AddCommand(savedHideCmd)
 	searchCmd.AddCommand(savedUnhideCmd)
 
-	// shared flags
-	for _, c := range []*cobra.Command{savedSaveCmd, savedListCmd, savedShowCmd, savedUpdateCmd, savedDeleteCmd, savedRunCmd, savedDisableCmd, savedEnableCmd, savedHideCmd, savedUnhideCmd} {
-		c.Flags().String("query-url", "http://localhost:8082", "Query service URL")
-		c.Flags().String("profile", "default", "profile to use")
-		c.Flags().String("output", "table", "output format: table, json, yaml")
-	}
-
 	savedSaveCmd.Flags().String("name", "", "Saved search name")
 	savedSaveCmd.Flags().String("file", "", "Path to JSON DSL file")
 	savedSaveCmd.Flags().String("query", "", "Inline JSON DSL string")
@@ -82,9 +75,9 @@ var savedSaveCmd = &cobra.Command{
 		profile, _ := cmd.Flags().GetString("profile")
 		p, err := cfg.GetProfile(profile)
 		if err != nil {
-			return err
+			return fmt.Errorf("not logged in: %w", err)
 		}
-		queryURL, _ := cmd.Flags().GetString("query-url")
+		queryURL := cfg.GetQueryURL(profile)
 		qc := client.NewQueryClient(queryURL)
 		saved, err := qc.SavedSearchCreate(p.AccessToken, queryURL, name, q, map[string]interface{}{}, isGlobal)
 		if err != nil {
@@ -103,7 +96,8 @@ var savedListCmd = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("failed to get show-all flag: %w", err)
 		}
-		queryURL, _ := cmd.Flags().GetString("query-url")
+		profile, _ := cmd.Flags().GetString("profile")
+		queryURL := cfg.GetQueryURL(profile)
 		qc := client.NewQueryClient(queryURL)
 		items, err := qc.SavedSearchList(queryURL, showAll)
 		if err != nil {
@@ -134,7 +128,8 @@ var savedShowCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		id := args[0]
-		queryURL, _ := cmd.Flags().GetString("query-url")
+		profile, _ := cmd.Flags().GetString("profile")
+		queryURL := cfg.GetQueryURL(profile)
 		qc := client.NewQueryClient(queryURL)
 		s, err := qc.SavedSearchGet(queryURL, id)
 		if err != nil {
@@ -178,9 +173,9 @@ var savedUpdateCmd = &cobra.Command{
 		profile, _ := cmd.Flags().GetString("profile")
 		p, err := cfg.GetProfile(profile)
 		if err != nil {
-			return err
+			return fmt.Errorf("not logged in: %w", err)
 		}
-		queryURL, _ := cmd.Flags().GetString("query-url")
+		queryURL := cfg.GetQueryURL(profile)
 		qc := client.NewQueryClient(queryURL)
 		s, err := qc.SavedSearchUpdate(p.AccessToken, queryURL, id, attrs)
 		if err != nil {
@@ -200,9 +195,9 @@ var savedDeleteCmd = &cobra.Command{
 		profile, _ := cmd.Flags().GetString("profile")
 		p, err := cfg.GetProfile(profile)
 		if err != nil {
-			return err
+			return fmt.Errorf("not logged in: %w", err)
 		}
-		queryURL, _ := cmd.Flags().GetString("query-url")
+		queryURL := cfg.GetQueryURL(profile)
 		qc := client.NewQueryClient(queryURL)
 		_, err = qc.SavedSearchAction(p.AccessToken, queryURL, id, "hide")
 		if err != nil {
@@ -222,9 +217,9 @@ var savedRunCmd = &cobra.Command{
 		profile, _ := cmd.Flags().GetString("profile")
 		p, err := cfg.GetProfile(profile)
 		if err != nil {
-			return err
+			return fmt.Errorf("not logged in: %w", err)
 		}
-		queryURL, _ := cmd.Flags().GetString("query-url")
+		queryURL := cfg.GetQueryURL(profile)
 		// Use generic action to trigger run and print raw response
 		// For now, call endpoint directly via HTTP for simplicity
 		qcli := client.NewQueryClient(queryURL)
@@ -259,9 +254,9 @@ var savedDisableCmd = &cobra.Command{
 		profile, _ := cmd.Flags().GetString("profile")
 		p, err := cfg.GetProfile(profile)
 		if err != nil {
-			return err
+			return fmt.Errorf("not logged in: %w", err)
 		}
-		queryURL, _ := cmd.Flags().GetString("query-url")
+		queryURL := cfg.GetQueryURL(profile)
 		qc := client.NewQueryClient(queryURL)
 		_, err = qc.SavedSearchAction(p.AccessToken, queryURL, id, "disable")
 		if err != nil {
@@ -281,9 +276,9 @@ var savedEnableCmd = &cobra.Command{
 		profile, _ := cmd.Flags().GetString("profile")
 		p, err := cfg.GetProfile(profile)
 		if err != nil {
-			return err
+			return fmt.Errorf("not logged in: %w", err)
 		}
-		queryURL, _ := cmd.Flags().GetString("query-url")
+		queryURL := cfg.GetQueryURL(profile)
 		qc := client.NewQueryClient(queryURL)
 		_, err = qc.SavedSearchAction(p.AccessToken, queryURL, id, "enable")
 		if err != nil {
@@ -303,9 +298,9 @@ var savedHideCmd = &cobra.Command{
 		profile, _ := cmd.Flags().GetString("profile")
 		p, err := cfg.GetProfile(profile)
 		if err != nil {
-			return err
+			return fmt.Errorf("not logged in: %w", err)
 		}
-		queryURL, _ := cmd.Flags().GetString("query-url")
+		queryURL := cfg.GetQueryURL(profile)
 		qc := client.NewQueryClient(queryURL)
 		_, err = qc.SavedSearchAction(p.AccessToken, queryURL, id, "hide")
 		if err != nil {
@@ -325,9 +320,9 @@ var savedUnhideCmd = &cobra.Command{
 		profile, _ := cmd.Flags().GetString("profile")
 		p, err := cfg.GetProfile(profile)
 		if err != nil {
-			return err
+			return fmt.Errorf("not logged in: %w", err)
 		}
-		queryURL, _ := cmd.Flags().GetString("query-url")
+		queryURL := cfg.GetQueryURL(profile)
 		qc := client.NewQueryClient(queryURL)
 		_, err = qc.SavedSearchAction(p.AccessToken, queryURL, id, "unhide")
 		if err != nil {

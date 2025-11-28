@@ -8,13 +8,7 @@ import (
 	"github.com/telhawk-systems/telhawk-stack/cli/pkg/output"
 )
 
-var authCmd = &cobra.Command{
-	Use:   "auth",
-	Short: "Authentication commands",
-	Long:  "Manage authentication with TelHawk Stack services",
-}
-
-var authLoginCmd = &cobra.Command{
+var loginCmd = &cobra.Command{
 	Use:   "login",
 	Short: "Log in to TelHawk Stack",
 	Long:  "Authenticate with TelHawk Stack and save credentials",
@@ -69,7 +63,7 @@ var authLoginCmd = &cobra.Command{
 	},
 }
 
-var authLogoutCmd = &cobra.Command{
+var logoutCmd = &cobra.Command{
 	Use:   "logout",
 	Short: "Log out from TelHawk Stack",
 	Long:  "Remove stored credentials",
@@ -88,7 +82,7 @@ var authLogoutCmd = &cobra.Command{
 	},
 }
 
-var authWhoamiCmd = &cobra.Command{
+var whoamiCmd = &cobra.Command{
 	Use:   "whoami",
 	Short: "Display current user information",
 	Long:  "Show information about the currently authenticated user",
@@ -122,18 +116,17 @@ var authWhoamiCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(authCmd)
-	authCmd.AddCommand(authLoginCmd)
-	authCmd.AddCommand(authLogoutCmd)
-	authCmd.AddCommand(authWhoamiCmd)
+	rootCmd.AddCommand(loginCmd)
+	rootCmd.AddCommand(logoutCmd)
+	rootCmd.AddCommand(whoamiCmd)
 
-	authLoginCmd.Flags().StringP("username", "u", "", "Username")
-	authLoginCmd.Flags().StringP("password", "p", "", "Password")
-	authLoginCmd.Flags().String("auth-url", "", "Auth service URL (default from config/env)")
-	if err := authLoginCmd.MarkFlagRequired("username"); err != nil {
+	loginCmd.Flags().StringP("username", "u", "", "Username")
+	loginCmd.Flags().StringP("password", "p", "", "Password")
+	loginCmd.Flags().String("auth-url", "", "Auth service URL (default from config/env)")
+	if err := loginCmd.MarkFlagRequired("username"); err != nil {
 		panic(fmt.Sprintf("failed to mark username as required: %v", err))
 	}
-	if err := authLoginCmd.MarkFlagRequired("password"); err != nil {
+	if err := loginCmd.MarkFlagRequired("password"); err != nil {
 		panic(fmt.Sprintf("failed to mark password as required: %v", err))
 	}
 }

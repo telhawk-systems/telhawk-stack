@@ -75,6 +75,7 @@ tools/event-seeder/event-seeder
 AGENTS.md
 tmp
 rules-gen
+plans/
 alerting/alerting
 .gitignore
 rules/rules

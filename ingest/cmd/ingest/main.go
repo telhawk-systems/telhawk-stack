@@ -12,11 +12,12 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/telhawk-systems/telhawk-stack/common/config"
 	"github.com/telhawk-systems/telhawk-stack/common/hecstats"
 	"github.com/telhawk-systems/telhawk-stack/common/logging"
+	natsclient "github.com/telhawk-systems/telhawk-stack/common/messaging/nats"
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/ack"
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/authclient"
-	"github.com/telhawk-systems/telhawk-stack/ingest/internal/config"
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/dlq"
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/handlers"
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/normalizer"
@@ -27,20 +28,16 @@ import (
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/service"
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/storage"
 	"github.com/telhawk-systems/telhawk-stack/ingest/internal/validator"
-
-	natsclient "github.com/telhawk-systems/telhawk-stack/common/messaging/nats"
 )
 
 func main() {
-	// Parse command line flags
-	configPath := flag.String("config", "", "path to config file")
+	// Parse command line flags (for backward compatibility, not used)
+	_ = flag.String("config", "", "path to config file (deprecated, use TELHAWK_CONFIG_DIR)")
 	flag.Parse()
 
-	// Load configuration
-	cfg, err := config.Load(*configPath)
-	if err != nil {
-		log.Fatalf("Failed to load config: %v", err)
-	}
+	// Load configuration using common config package
+	config.MustLoad("ingest")
+	cfg := config.GetConfig()
 
 	// Initialize structured logging
 	logger := logging.New(
@@ -50,26 +47,23 @@ func main() {
 	logging.SetDefault(logger)
 
 	slog.Info("Starting Ingest service",
-		slog.Int("port", cfg.Server.Port),
+		slog.Int("port", cfg.Ingest.Server.Port),
 		slog.String("log_level", cfg.Logging.Level),
 		slog.String("log_format", cfg.Logging.Format),
 	)
-	if *configPath != "" {
-		slog.Info("Loaded configuration", slog.String("config_path", *configPath))
-	}
 	slog.Info("Service URLs configured",
-		slog.String("authenticate_url", cfg.Authenticate.URL),
+		slog.String("authenticate_url", cfg.Ingest.Authenticate.URL),
 		slog.String("opensearch_url", cfg.OpenSearch.URL),
 	)
 
 	// Initialize rate limiter
 	var rateLimiter ratelimit.RateLimiter
-	if cfg.Redis.Enabled && cfg.Ingestion.RateLimitEnabled {
+	if cfg.Redis.Enabled && cfg.Ingest.Ingestion.RateLimitEnabled {
 		log.Printf("Initializing Redis rate limiter: %s", cfg.Redis.URL)
 		limiter, err := ratelimit.NewRedisRateLimiter(
 			cfg.Redis.URL,
-			cfg.Ingestion.RateLimitRequests,
-			cfg.Ingestion.RateLimitWindow,
+			cfg.Ingest.Ingestion.RateLimitRequests,
+			cfg.Ingest.Ingestion.RateLimitWindow,
 			false,
 		)
 		if err != nil {
@@ -78,14 +72,14 @@ func main() {
 			rateLimiter = &ratelimit.NoOpRateLimiter{}
 		} else {
 			rateLimiter = limiter
-			log.Printf("Rate limiting enabled: %d requests per %s", cfg.Ingestion.RateLimitRequests, cfg.Ingestion.RateLimitWindow)
+			log.Printf("Rate limiting enabled: %d requests per %s", cfg.Ingest.Ingestion.RateLimitRequests, cfg.Ingest.Ingestion.RateLimitWindow)
 		}
 	} else {
 		rateLimiter = &ratelimit.NoOpRateLimiter{}
 		if !cfg.Redis.Enabled {
 			log.Println("Redis disabled - rate limiting not available")
 		}
-		if !cfg.Ingestion.RateLimitEnabled {
+		if !cfg.Ingest.Ingestion.RateLimitEnabled {
 			log.Println("Rate limiting disabled in configuration")
 		}
 	}
@@ -113,9 +107,9 @@ func main() {
 
 	// Initialize ack manager
 	var ackManager *ack.Manager
-	if cfg.Ack.Enabled {
-		ackManager = ack.NewManager(cfg.Ack.TTL)
-		log.Printf("HEC acknowledgement channel enabled (TTL: %s)", cfg.Ack.TTL)
+	if cfg.Ingest.Ack.Enabled {
+		ackManager = ack.NewManager(cfg.Ingest.Ack.TTL)
+		log.Printf("HEC acknowledgement channel enabled (TTL: %s)", cfg.Ingest.Ack.TTL)
 		defer ackManager.Close()
 	} else {
 		log.Println("HEC acknowledgement channel disabled")
@@ -123,12 +117,12 @@ func main() {
 
 	// Initialize Dead Letter Queue
 	var dlqWriter dlq.Writer
-	if cfg.DLQ.Enabled {
-		switch cfg.DLQ.Backend {
+	if cfg.Ingest.DLQ.Enabled {
+		switch cfg.Ingest.DLQ.Backend {
 		case "jetstream", "":
 			// JetStream backend (default, supports multiple instances)
 			jsClient, err := natsclient.NewJetStreamClient(natsclient.Config{
-				URL: cfg.DLQ.NatsURL,
+				URL: cfg.Ingest.DLQ.NatsURL,
 			})
 			if err != nil {
 				log.Fatalf("Failed to connect to NATS for DLQ: %v", err)
@@ -138,18 +132,18 @@ func main() {
 				log.Fatalf("Failed to initialize JetStream DLQ: %v", err)
 			}
 			dlqWriter = jsDLQ
-			log.Printf("Dead Letter Queue enabled (backend: jetstream, nats: %s)", cfg.DLQ.NatsURL)
+			log.Printf("Dead Letter Queue enabled (backend: jetstream, nats: %s)", cfg.Ingest.DLQ.NatsURL)
 		case "file":
 			// File backend (single instance only, for development)
-			fileDLQ, err := dlq.NewQueue(cfg.DLQ.BasePath)
+			fileDLQ, err := dlq.NewQueue(cfg.Ingest.DLQ.BasePath)
 			if err != nil {
 				log.Fatalf("Failed to initialize file DLQ: %v", err)
 			}
 			dlqWriter = fileDLQ
-			log.Printf("Dead Letter Queue enabled (backend: file, path: %s)", cfg.DLQ.BasePath)
+			log.Printf("Dead Letter Queue enabled (backend: file, path: %s)", cfg.Ingest.DLQ.BasePath)
 			log.Println("WARNING: File-based DLQ does not support multiple ingest instances")
 		default:
-			log.Fatalf("Unknown DLQ backend: %s (supported: jetstream, file)", cfg.DLQ.Backend)
+			log.Fatalf("Unknown DLQ backend: %s (supported: jetstream, file)", cfg.Ingest.DLQ.Backend)
 		}
 	} else {
 		log.Println("Dead Letter Queue disabled")
@@ -184,7 +178,7 @@ func main() {
 	log.Printf("Normalization pipeline initialized with %d normalizers and %d validators", len(normalizers), len(validators))
 
 	// Initialize clients
-	authClient := authclient.New(cfg.Authenticate.URL, 5*time.Second, cfg.Authenticate.TokenValidationCacheTTL)
+	authClient := authclient.New(cfg.Ingest.Authenticate.URL, 5*time.Second, cfg.Ingest.Authenticate.TokenValidationCacheTTL)
 
 	// Initialize direct OpenSearch client (replaces storage service)
 	openSearchConfig := storage.Config{
@@ -228,11 +222,11 @@ func main() {
 
 	// Create server with config values
 	srv := &http.Server{
-		Addr:         fmt.Sprintf(":%d", cfg.Server.Port),
+		Addr:         fmt.Sprintf(":%d", cfg.Ingest.Server.Port),
 		Handler:      router,
-		ReadTimeout:  cfg.Server.ReadTimeout,
-		WriteTimeout: cfg.Server.WriteTimeout,
-		IdleTimeout:  cfg.Server.IdleTimeout,
+		ReadTimeout:  cfg.Ingest.Server.ReadTimeoutDuration(),
+		WriteTimeout: cfg.Ingest.Server.WriteTimeoutDuration(),
+		IdleTimeout:  cfg.Ingest.Server.IdleTimeoutDuration(),
 	}
 
 	// Start server in goroutine
@@ -249,7 +243,7 @@ func main() {
 	<-quit
 
 	log.Println("Shutting down server...")
-	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), cfg.Server.WriteTimeout)
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), cfg.Ingest.Server.WriteTimeoutDuration())
 	defer shutdownCancel()
 
 	if err := srv.Shutdown(shutdownCtx); err != nil {

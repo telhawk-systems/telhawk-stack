@@ -6,21 +6,21 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/telhawk-systems/telhawk-stack/authenticate/internal/config"
 	"github.com/telhawk-systems/telhawk-stack/authenticate/internal/models"
 	"github.com/telhawk-systems/telhawk-stack/authenticate/internal/repository"
 	"github.com/telhawk-systems/telhawk-stack/authenticate/internal/service"
+	"github.com/telhawk-systems/telhawk-stack/common/config"
 )
 
 // newTestAuthService creates a test auth service
 func newTestAuthService(t *testing.T) *service.AuthService {
+	cfg := config.GetConfig()
+	cfg.Authenticate.JWTSecret = "test-jwt-secret-that-is-long-enough-for-hs256"
+	cfg.Authenticate.JWTRefreshSecret = "test-refresh-secret-that-is-long-enough-for-hs256"
+	cfg.Authenticate.AuditSecret = "test-audit-secret"
+
 	repo := repository.NewInMemoryRepository()
-	cfg := &config.AuthConfig{
-		JWTSecret:        "test-jwt-secret-that-is-long-enough-for-hs256",
-		JWTRefreshSecret: "test-refresh-secret-that-is-long-enough-for-hs256",
-		AuditSecret:      "test-audit-secret",
-	}
-	return service.NewAuthService(repo, nil, cfg)
+	return service.NewAuthService(repo, nil)
 }
 
 // createTestUser creates a user and returns a valid token

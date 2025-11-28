@@ -215,15 +215,41 @@ func ValidateRuleCanBeGenerated(rule *DetectionRule) error {
 		return fmt.Errorf("invalid threshold: %w", err)
 	}
 
-	if _, err := rule.GetQueryFilter(); err != nil {
+	filter, err := rule.GetQueryFilter()
+	if err != nil {
 		return fmt.Errorf("invalid query filter: %w", err)
+	}
+
+	// Validate OCSF field paths in the filter
+	ocsfVal := newOCSFValidator()
+	if fieldErrors := ocsfVal.ValidateFilterFields(filter); len(fieldErrors) > 0 {
+		errMsg := "OCSF schema validation failed:\n"
+		for _, e := range fieldErrors {
+			errMsg += fmt.Sprintf("  - %s\n", e.Error())
+		}
+		return fmt.Errorf("%s", errMsg)
 	}
 
 	// Type-specific validation
 	switch rule.Model.CorrelationType {
 	case "value_count":
-		if _, err := rule.GetValueCountField(); err != nil {
+		countField, err := rule.GetValueCountField()
+		if err != nil {
 			return fmt.Errorf("invalid value count field: %w", err)
+		}
+		// Validate the value count field path
+		if err := ocsfVal.ValidateFieldPath(countField); err != nil {
+			return fmt.Errorf("invalid value count field path '%s': %w", countField, err)
+		}
+	}
+
+	// Validate group_by field paths
+	groupByFields, err := rule.GetGroupByFields()
+	if err == nil && len(groupByFields) > 0 {
+		for _, field := range groupByFields {
+			if err := ocsfVal.ValidateFieldPath(field); err != nil {
+				return fmt.Errorf("invalid group_by field path '%s': %w", field, err)
+			}
 		}
 	}
 

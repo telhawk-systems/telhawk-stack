@@ -88,8 +88,8 @@ open http://localhost:3000
 
 ```bash
 # Authentication
-./scripts/thawk auth login -u admin -p admin123
-./scripts/thawk auth whoami
+./scripts/thawk login -u admin -p admin123
+./scripts/thawk whoami
 
 # Detection rules
 ./scripts/thawk rules list

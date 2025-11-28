@@ -9,10 +9,10 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/telhawk-systems/telhawk-stack/authenticate/internal/audit"
-	"github.com/telhawk-systems/telhawk-stack/authenticate/internal/config"
 	"github.com/telhawk-systems/telhawk-stack/authenticate/internal/models"
 	"github.com/telhawk-systems/telhawk-stack/authenticate/internal/repository"
 	"github.com/telhawk-systems/telhawk-stack/authenticate/pkg/tokens"
+	"github.com/telhawk-systems/telhawk-stack/common/config"
 	"github.com/telhawk-systems/telhawk-stack/common/httputil"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -49,7 +49,8 @@ type AuthService struct {
 	auditLog *audit.Logger
 }
 
-func NewAuthService(repo repository.Repository, ingestClient *audit.IngestClient, cfg *config.AuthConfig) *AuthService {
+func NewAuthService(repo repository.Repository, ingestClient *audit.IngestClient) *AuthService {
+	cfg := config.GetConfig()
 	var auditLogger *audit.Logger
 	auditRepo, ok := repo.(audit.Repository)
 	if !ok {
@@ -57,14 +58,14 @@ func NewAuthService(repo repository.Repository, ingestClient *audit.IngestClient
 	}
 
 	if ingestClient != nil {
-		auditLogger = audit.NewLoggerWithRepoAndIngest(cfg.AuditSecret, auditRepo, ingestClient)
+		auditLogger = audit.NewLoggerWithRepoAndIngest(cfg.Authenticate.Auth.AuditSecret, auditRepo, ingestClient)
 	} else {
-		auditLogger = audit.NewLoggerWithRepo(cfg.AuditSecret, auditRepo)
+		auditLogger = audit.NewLoggerWithRepo(cfg.Authenticate.Auth.AuditSecret, auditRepo)
 	}
 
 	return &AuthService{
 		repo:     repo,
-		tokenGen: tokens.NewTokenGenerator(cfg.JWTSecret, cfg.JWTRefreshSecret),
+		tokenGen: tokens.NewTokenGenerator(cfg.Authenticate.Auth.JWTSecret, cfg.Authenticate.Auth.JWTRefreshSecret),
 		auditLog: auditLogger,
 	}
 }

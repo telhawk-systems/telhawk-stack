@@ -5,12 +5,11 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-	"github.com/telhawk-systems/telhawk-stack/cli/internal/config"
+	"github.com/telhawk-systems/telhawk-stack/common/config"
 )
 
 var (
-	cfgFile string
-	cfg     *config.Config
+	cfg *config.CLIConfig
 )
 
 var rootCmd = &cobra.Command{
@@ -30,16 +29,15 @@ func Execute() error {
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default: $HOME/.thawk/config.yaml)")
 	rootCmd.PersistentFlags().String("profile", "default", "profile to use")
 	rootCmd.PersistentFlags().String("output", "table", "output format: table, json, yaml")
 }
 
 func initConfig() {
 	var err error
-	cfg, err = config.Load(cfgFile)
+	cfg, err = config.LoadCLI()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: Could not load config: %v\n", err)
-		cfg = config.Default()
+		cfg = config.DefaultCLI()
 	}
 }

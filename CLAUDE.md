@@ -69,8 +69,8 @@ The `thawk` CLI provides command-line access to all TelHawk services. Use the sm
 
 ```bash
 # Authentication
-./scripts/thawk auth login -u admin -p admin123
-./scripts/thawk auth whoami
+./scripts/thawk login -u admin -p admin123
+./scripts/thawk whoami
 
 # Detection rules
 ./scripts/thawk rules list
@@ -323,9 +323,9 @@ The CLI uses Cobra for command structure:
 
 ```bash
 # Authentication
-thawk auth login -u <username> -p <password>
-thawk auth whoami
-thawk auth logout
+thawk login -u <username> -p <password>
+thawk whoami
+thawk logout
 
 # HEC token management
 thawk token create --name <token-name>

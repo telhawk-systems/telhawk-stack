@@ -24,7 +24,7 @@ The `./scripts/thawk` wrapper handles building and execution automatically:
 
 ```bash
 # Login
-./scripts/thawk auth login -u admin -p admin123
+./scripts/thawk login -u admin -p admin123
 
 # Search events
 ./scripts/thawk search "severity:high" --last 1h
@@ -37,7 +37,7 @@ The `./scripts/thawk` wrapper handles building and execution automatically:
 
 ```bash
 # 1. Login
-thawk auth login -u admin -p password
+thawk login -u admin -p password
 
 # 2. Create HEC Token for Ingestion
 thawk token create --name production-ingest
@@ -56,13 +56,13 @@ thawk search "severity=high" --last 24h
 
 ```bash
 # Login
-thawk auth login -u username -p password
+thawk login -u username -p password
 
 # Check current user
-thawk auth whoami
+thawk whoami
 
 # Logout
-thawk auth logout
+thawk logout
 ```
 
 ### HEC Token Management
@@ -175,7 +175,7 @@ profiles:
 
 ```bash
 # Login to different profile
-thawk auth login -u user -p pass --profile production
+thawk login -u user -p pass --profile production
 
 # Use specific profile
 thawk search "index=*" --profile production
@@ -206,7 +206,7 @@ thawk token list --output yaml
 
 ```bash
 # Login
-thawk auth login -u analyst -p secure123
+thawk login -u analyst -p secure123
 
 # Search for recent high-severity events
 thawk search "severity=high OR severity=critical" --last 1h

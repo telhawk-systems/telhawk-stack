@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/opensearch-project/opensearch-go/v2"
-	"github.com/telhawk-systems/telhawk-stack/respond/internal/config"
+	"github.com/telhawk-systems/telhawk-stack/common/config"
 	"github.com/telhawk-systems/telhawk-stack/respond/internal/models"
 )
 
@@ -24,19 +24,20 @@ type OpenSearchStorage struct {
 }
 
 // NewOpenSearchStorage creates a new OpenSearch storage client.
-func NewOpenSearchStorage(cfg config.StorageConfig) (*OpenSearchStorage, error) {
+func NewOpenSearchStorage() (*OpenSearchStorage, error) {
+	cfg := config.GetConfig()
 	httpClient := &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: cfg.Insecure,
+				InsecureSkipVerify: cfg.OpenSearch.Insecure,
 			},
 		},
 	}
 
 	osCfg := opensearch.Config{
-		Addresses: []string{cfg.URL},
-		Username:  cfg.Username,
-		Password:  cfg.Password,
+		Addresses: []string{cfg.OpenSearch.URL},
+		Username:  cfg.OpenSearch.Username,
+		Password:  cfg.OpenSearch.Password,
 		Transport: httpClient.Transport,
 	}
 

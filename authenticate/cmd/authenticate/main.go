@@ -5,7 +5,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"log"
 	"log/slog"
 	"net/http"
 	"os"
@@ -16,25 +15,23 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/telhawk-systems/telhawk-stack/authenticate/internal/audit"
-	"github.com/telhawk-systems/telhawk-stack/authenticate/internal/config"
 	"github.com/telhawk-systems/telhawk-stack/authenticate/internal/handlers"
 	"github.com/telhawk-systems/telhawk-stack/authenticate/internal/middleware"
 	"github.com/telhawk-systems/telhawk-stack/authenticate/internal/repository"
 	"github.com/telhawk-systems/telhawk-stack/authenticate/internal/server"
 	"github.com/telhawk-systems/telhawk-stack/authenticate/internal/service"
+	"github.com/telhawk-systems/telhawk-stack/common/config"
 	"github.com/telhawk-systems/telhawk-stack/common/logging"
 )
 
 func main() {
-	// Parse command line flags
-	configPath := flag.String("config", "", "path to config file")
+	// Parse command line flags (for backward compatibility, not used)
+	_ = flag.String("config", "", "path to config file (deprecated, use TELHAWK_CONFIG_DIR)")
 	flag.Parse()
 
-	// Load configuration
-	cfg, err := config.Load(*configPath)
-	if err != nil {
-		log.Fatalf("Failed to load config: %v", err)
-	}
+	// Load configuration using common config package
+	config.MustLoad("authenticate")
+	cfg := config.GetConfig()
 
 	// Initialize structured logging
 	logger := logging.New(
@@ -44,31 +41,28 @@ func main() {
 	logging.SetDefault(logger)
 
 	slog.Info("Starting Authenticate service",
-		slog.Int("port", cfg.Server.Port),
+		slog.Int("port", cfg.Authenticate.Server.Port),
 		slog.String("log_level", cfg.Logging.Level),
 		slog.String("log_format", cfg.Logging.Format),
 	)
-	if *configPath != "" {
-		slog.Info("Loaded configuration", slog.String("config_path", *configPath))
-	}
 
 	// Initialize repository based on config
 	var repo repository.Repository
 	if cfg.Database.Type == "postgres" {
 		connString := fmt.Sprintf(
 			"postgres://%s:%s@%s:%d/%s?sslmode=%s",
-			cfg.Database.Postgres.User,
-			cfg.Database.Postgres.Password,
+			cfg.Authenticate.Database.Postgres.User,
+			cfg.Authenticate.Database.Postgres.Password,
 			cfg.Database.Postgres.Host,
 			cfg.Database.Postgres.Port,
-			cfg.Database.Postgres.Database,
+			cfg.Authenticate.Database.Postgres.Database,
 			cfg.Database.Postgres.SSLMode,
 		)
 
 		slog.Info("Connecting to PostgreSQL",
 			slog.String("host", cfg.Database.Postgres.Host),
 			slog.Int("port", cfg.Database.Postgres.Port),
-			slog.String("database", cfg.Database.Postgres.Database),
+			slog.String("database", cfg.Authenticate.Database.Postgres.Database),
 		)
 
 		pgRepo, err := repository.NewPostgresRepository(context.Background(), connString)
@@ -112,14 +106,14 @@ func main() {
 
 	// Initialize service layer
 	var ingestClient *audit.IngestClient
-	if cfg.Ingest.Enabled && cfg.Ingest.URL != "" && cfg.Ingest.HECToken != "" {
+	if cfg.Authenticate.Ingest.Enabled && cfg.Authenticate.Ingest.URL != "" && cfg.Authenticate.Ingest.HECToken != "" {
 		slog.Info("Enabling auth event forwarding",
-			slog.String("ingest_url", cfg.Ingest.URL),
+			slog.String("ingest_url", cfg.Authenticate.Ingest.URL),
 		)
-		ingestClient = audit.NewIngestClient(cfg.Ingest.URL, cfg.Ingest.HECToken)
+		ingestClient = audit.NewIngestClient(cfg.Authenticate.Ingest.URL, cfg.Authenticate.Ingest.HECToken)
 	}
 
-	authService := service.NewAuthService(repo, ingestClient, &cfg.Auth)
+	authService := service.NewAuthService(repo, ingestClient)
 
 	// Initialize HTTP handlers and middleware
 	handler := handlers.NewAuthHandler(authService)
@@ -128,11 +122,11 @@ func main() {
 
 	// Create server with config values
 	srv := &http.Server{
-		Addr:         fmt.Sprintf(":%d", cfg.Server.Port),
+		Addr:         fmt.Sprintf(":%d", cfg.Authenticate.Server.Port),
 		Handler:      router,
-		ReadTimeout:  cfg.Server.ReadTimeout,
-		WriteTimeout: cfg.Server.WriteTimeout,
-		IdleTimeout:  cfg.Server.IdleTimeout,
+		ReadTimeout:  cfg.Authenticate.Server.ReadTimeoutDuration(),
+		WriteTimeout: cfg.Authenticate.Server.WriteTimeoutDuration(),
+		IdleTimeout:  cfg.Authenticate.Server.IdleTimeoutDuration(),
 	}
 
 	// Start server in goroutine
@@ -150,7 +144,7 @@ func main() {
 	<-quit
 
 	slog.Info("Shutting down server")
-	ctx, cancel := context.WithTimeout(context.Background(), cfg.Server.WriteTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), cfg.Server.WriteTimeoutDuration())
 	defer cancel()
 
 	if err := srv.Shutdown(ctx); err != nil {
