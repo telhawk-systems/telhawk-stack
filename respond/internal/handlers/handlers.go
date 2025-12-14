@@ -185,7 +185,20 @@ func (h *Handler) ListSchemas(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httputil.WriteJSONAPI(w, http.StatusOK, resp)
+	// Convert schemas to JSON:API format
+	items := make([]map[string]interface{}, len(resp.Schemas))
+	for i, schema := range resp.Schemas {
+		items[i] = map[string]interface{}{
+			"id":         schema.ID,
+			"attributes": schema,
+		}
+	}
+
+	httputil.WriteJSONAPICollection(w, http.StatusOK, "detection_schema", items, &httputil.Pagination{
+		Page:  resp.Pagination.Page,
+		Limit: resp.Pagination.Limit,
+		Total: resp.Pagination.Total,
+	})
 }
 
 // UpdateSchema handles PUT /schemas/{id}

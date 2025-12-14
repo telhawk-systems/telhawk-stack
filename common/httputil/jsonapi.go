@@ -66,10 +66,17 @@ func WriteJSONAPICollection(w http.ResponseWriter, status int, resourceType stri
 	}
 
 	if pagination != nil {
+		totalPages := 0
+		if pagination.Limit > 0 {
+			totalPages = (pagination.Total + pagination.Limit - 1) / pagination.Limit
+		}
 		response["meta"] = map[string]interface{}{
-			"page":  pagination.Page,
-			"limit": pagination.Limit,
-			"total": pagination.Total,
+			"pagination": map[string]interface{}{
+				"page":        pagination.Page,
+				"limit":       pagination.Limit,
+				"total":       pagination.Total,
+				"total_pages": totalPages,
+			},
 		}
 	}
 
