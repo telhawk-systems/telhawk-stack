@@ -60,6 +60,7 @@ services:
       timeout: 10s
       retries: 20
       start_period: 120s
+    restart: unless-stopped
 
   auth-db:
     build:
@@ -83,54 +84,6 @@ services:
       retries: 5
       start_period: 10s
     restart: unless-stopped
-
-  # DEPRECATED: Merged into respond
-  # rules-db:
-  #   build:
-  #     context: ./auth-db
-  #     dockerfile: Dockerfile
-  #   container_name: telhawk-rules-db
-  #   command: postgres -c ssl=on -c ssl_cert_file=/var/lib/postgresql/server.crt -c ssl_key_file=/var/lib/postgresql/server.key
-  #   environment:
-  #     - POSTGRES_DB=telhawk_rules
-  #     - POSTGRES_USER=telhawk
-  #     - POSTGRES_PASSWORD=${RULES_DB_PASSWORD:-telhawk-rules-dev}
-  #   volumes:
-  #     - rules-db-data:/var/lib/postgresql/data
-  #   networks:
-  #     - telhawk-db
-  #     - telhawk
-  #   healthcheck:
-  #     test: ["CMD-SHELL", "pg_isready -U telhawk -d telhawk_rules"]
-  #     interval: 10s
-  #     timeout: 5s
-  #     retries: 5
-  #     start_period: 10s
-  #   restart: unless-stopped
-
-  # DEPRECATED: Merged into respond
-  # alerting-db:
-  #   build:
-  #     context: ./auth-db
-  #     dockerfile: Dockerfile
-  #   container_name: telhawk-alerting-db
-  #   command: postgres -c ssl=on -c ssl_cert_file=/var/lib/postgresql/server.crt -c ssl_key_file=/var/lib/postgresql/server.key
-  #   environment:
-  #     - POSTGRES_DB=telhawk_alerting
-  #     - POSTGRES_USER=telhawk
-  #     - POSTGRES_PASSWORD=${ALERTING_DB_PASSWORD:-telhawk-alerting-dev}
-  #   volumes:
-  #     - alerting-db-data:/var/lib/postgresql/data
-  #   networks:
-  #     - telhawk-db
-  #     - telhawk
-  #   healthcheck:
-  #     test: ["CMD-SHELL", "pg_isready -U telhawk -d telhawk_alerting"]
-  #     interval: 10s
-  #     timeout: 5s
-  #     retries: 5
-  #     start_period: 10s
-  #   restart: unless-stopped
 
   respond-db:
     build:
@@ -177,9 +130,8 @@ services:
     image: nats:latest
     container_name: telhawk-nats
     command: ["--jetstream", "--store_dir=/data"]
-    expose:
-      - "4222"
     ports:
+      - "127.0.0.1:4222:4222"
       - "127.0.0.1:8222:8222"
     volumes:
       - nats-data:/data
@@ -291,99 +243,6 @@ services:
       start_period: 10s
     restart: unless-stopped
 
-  # DEPRECATED: Merged into respond
-  # rules:
-  #   build:
-  #     context: .
-  #     dockerfile: rules/Dockerfile
-  #   container_name: telhawk-rules
-  #   # SECURITY: Internal service only - no external exposure
-  #   # Access via web UI
-  #   expose:
-  #     - "8084"
-  #   environment:
-  #     - RULES_SERVER_PORT=8084
-  #     - RULES_SERVER_READ_TIMEOUT=15s
-  #     - RULES_SERVER_WRITE_TIMEOUT=15s
-  #     - RULES_SERVER_IDLE_TIMEOUT=60s
-  #     - RULES_DATABASE_POSTGRES_HOST=rules-db
-  #     - RULES_DATABASE_POSTGRES_PORT=5432
-  #     - RULES_DATABASE_POSTGRES_USER=telhawk
-  #     - RULES_DATABASE_POSTGRES_PASSWORD=${RULES_DB_PASSWORD:-telhawk-rules-dev}
-  #     - RULES_DATABASE_POSTGRES_DATABASE=telhawk_rules
-  #     - RULES_DATABASE_POSTGRES_SSLMODE=require
-  #   volumes:
-  #     - telhawk-certs:/certs:ro
-  #   networks:
-  #     - telhawk-db
-  #     - telhawk
-  #   depends_on:
-  #     telhawk-certs:
-  #       condition: service_completed_successfully
-  #     rules-db:
-  #       condition: service_healthy
-  #   healthcheck:
-  #     test: ["CMD", "/busybox/wget", "-q", "-O", "-", "http://localhost:8084/healthz"]
-  #     interval: 30s
-  #     timeout: 10s
-  #     retries: 3
-  #     start_period: 10s
-  #   restart: unless-stopped
-
-  # DEPRECATED: Merged into respond
-  # alerting:
-  #   build:
-  #     context: .
-  #     dockerfile: alerting/Dockerfile
-  #   container_name: telhawk-alerting
-  #   # SECURITY: Internal service only - no external exposure
-  #   # Access via web UI
-  #   expose:
-  #     - "8085"
-  #   environment:
-  #     - ALERTING_SERVER_PORT=8085
-  #     - ALERTING_SERVER_READ_TIMEOUT=15s
-  #     - ALERTING_SERVER_WRITE_TIMEOUT=15s
-  #     - ALERTING_SERVER_IDLE_TIMEOUT=60s
-  #     - ALERTING_DATABASE_POSTGRES_HOST=alerting-db
-  #     - ALERTING_DATABASE_POSTGRES_PORT=5432
-  #     - ALERTING_DATABASE_POSTGRES_USER=telhawk
-  #     - ALERTING_DATABASE_POSTGRES_PASSWORD=${ALERTING_DB_PASSWORD:-telhawk-alerting-dev}
-  #     - ALERTING_DATABASE_POSTGRES_DATABASE=telhawk_alerting
-  #     - ALERTING_DATABASE_POSTGRES_SSLMODE=require
-  #     - ALERTING_REDIS_URL=redis://redis:6379/0
-  #     - ALERTING_REDIS_ENABLED=${ALERTING_REDIS_ENABLED:-true}
-  #     - ALERTING_REDIS_MAX_RETRIES=3
-  #     - ALERTING_REDIS_POOL_SIZE=10
-  #     - ALERTING_STORAGE_URL=https://opensearch:9200
-  #     - ALERTING_STORAGE_USERNAME=${OPENSEARCH_ADMIN_USER:-admin}
-  #     - ALERTING_STORAGE_PASSWORD=${OPENSEARCH_PASSWORD:-TelHawk123!}
-  #     - ALERTING_STORAGE_INSECURE=true
-  #     - ALERTING_RULES_URL=http://rules:8084
-  #   volumes:
-  #     - telhawk-certs:/certs:ro
-  #   networks:
-  #     - telhawk-db
-  #     - telhawk
-  #   depends_on:
-  #     telhawk-certs:
-  #       condition: service_completed_successfully
-  #     alerting-db:
-  #       condition: service_healthy
-  #     opensearch:
-  #       condition: service_healthy
-  #     redis:
-  #       condition: service_started
-  #     rules:
-  #       condition: service_healthy
-  #   healthcheck:
-  #     test: ["CMD", "/busybox/wget", "-q", "-O", "-", "http://localhost:8085/healthz"]
-  #     interval: 30s
-  #     timeout: 10s
-  #     retries: 3
-  #     start_period: 10s
-  #   restart: unless-stopped
-
   respond:
     build:
       context: .
@@ -433,81 +292,6 @@ services:
       retries: 3
       start_period: 10s
     restart: unless-stopped
-
-  # DEPRECATED: Merged into ingest
-  # storage:
-  #   build:
-  #     context: .
-  #     dockerfile: storage/Dockerfile
-  #   container_name: telhawk-storage
-  #   # SECURITY: Internal service only - no external exposure
-  #   expose:
-  #     - "8083"
-  #   environment:
-  #     - DEBUG_DUMP_JSON=${DEBUG_DUMP_JSON:-false}
-  #     - STORAGE_SERVER_TLS_ENABLED=${STORAGE_TLS_ENABLED:-false}
-  #     - STORAGE_SERVER_TLS_CERT_FILE=/certs/storage.pem
-  #     - STORAGE_SERVER_TLS_KEY_FILE=/certs/storage-key.pem
-  #     - OPENSEARCH_URL=https://opensearch:9200
-  #     - OPENSEARCH_USERNAME=${OPENSEARCH_ADMIN_USER:-admin}
-  #     - OPENSEARCH_PASSWORD=${OPENSEARCH_PASSWORD:-TelHawk123!}
-  #   volumes:
-  #     - telhawk-certs:/certs:ro
-  #   networks:
-  #     - telhawk
-  #   depends_on:
-  #     telhawk-certs:
-  #       condition: service_completed_successfully
-  #     opensearch:
-  #       condition: service_healthy
-  #   healthcheck:
-  #     test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:8083/readyz"]
-  #     interval: 30s
-  #     timeout: 10s
-  #     retries: 3
-  #     start_period: 10s
-  #   restart: unless-stopped
-
-  # DEPRECATED: Renamed to search
-  # query:
-  #   build:
-  #     context: .
-  #     dockerfile: query/Dockerfile
-  #   container_name: telhawk-query
-  #   # SECURITY: Internal service only - no external exposure
-  #   # Access via web UI
-  #   expose:
-  #     - "8082"
-  #   environment:
-  #     - QUERY_SERVER_TLS_ENABLED=${QUERY_TLS_ENABLED:-false}
-  #     - QUERY_SERVER_TLS_CERT_FILE=/certs/query.pem
-  #     - QUERY_SERVER_TLS_KEY_FILE=/certs/query-key.pem
-  #     - QUERY_OPENSEARCH_URL=https://opensearch:9200
-  #     - QUERY_OPENSEARCH_USERNAME=${OPENSEARCH_ADMIN_USER:-admin}
-  #     - QUERY_OPENSEARCH_PASSWORD=${OPENSEARCH_PASSWORD:-TelHawk123!}
-  #     - QUERY_OPENSEARCH_INSECURE=true
-  #     - QUERY_OPENSEARCH_INDEX=telhawk-events-*
-  #     - QUERY_DATABASE_URL=postgres://telhawk:${AUTH_DB_PASSWORD:-telhawk-auth-dev}@auth-db:5432/telhawk_query?sslmode=require
-  #     - QUERY_AUTHENTICATE_URL=http://authenticate:8080
-  #   volumes:
-  #     - telhawk-certs:/certs:ro
-  #   networks:
-  #     - telhawk
-  #     - telhawk-db
-  #   depends_on:
-  #     telhawk-certs:
-  #       condition: service_completed_successfully
-  #     opensearch:
-  #       condition: service_healthy
-  #     auth-db:
-  #       condition: service_healthy
-  #   healthcheck:
-  #     test: ["CMD", "/busybox/wget", "-q", "-O", "-", "http://localhost:8082/api/v1/health"]
-  #     interval: 30s
-  #     timeout: 10s
-  #     retries: 3
-  #     start_period: 10s
-  #   restart: unless-stopped
 
   search:
     build:
