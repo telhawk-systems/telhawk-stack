@@ -10,7 +10,7 @@ server:
 opensearch:
   url: "https://localhost:9200"
   username: "admin"
-  password: "admin"
+  password: "TelHawk123!"
   insecure: true
   index: "ocsf-events"
 
