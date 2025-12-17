@@ -76,17 +76,17 @@ func main() {
 	authClient := auth.NewClient(cfg.Respond.Auth.URL)
 	log.Printf("Auth client configured with URL: %s", cfg.Respond.Auth.URL)
 
-	// Initialize OpenSearch storage for alerts (optional - alerts endpoint works only if connected)
+	// Initialize OpenSearch storage for alerts (optional - alerts handler returns 503 if unavailable)
 	var osStorage *storage.OpenSearchStorage
-	var alertsHandler *handlers.AlertsHandler
-
 	osStorage, err = storage.NewOpenSearchStorage()
 	if err != nil {
-		log.Printf("Warning: Failed to connect to OpenSearch: %v (alerts endpoint will be unavailable)", err)
+		log.Printf("Warning: Failed to connect to OpenSearch: %v (alerts endpoint will return 503)", err)
 	} else {
 		log.Printf("Connected to OpenSearch at %s", cfg.Respond.Storage.URL)
-		alertsHandler = handlers.NewAlertsHandler(osStorage).WithAuthClient(authClient)
 	}
+
+	// Always create AlertsHandler - it handles unavailability gracefully
+	alertsHandler := handlers.NewAlertsHandler(osStorage).WithAuthClient(authClient)
 
 	// Initialize NATS client (optional - service works without it)
 	var natsClient *natsclient.Client

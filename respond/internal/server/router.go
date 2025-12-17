@@ -12,7 +12,7 @@ import (
 // RouterConfig holds configuration for the router.
 type RouterConfig struct {
 	Handler       *handlers.Handler
-	AlertsHandler *handlers.AlertsHandler // Optional: nil if OpenSearch unavailable
+	AlertsHandler *handlers.AlertsHandler // Required: returns 503 if OpenSearch unavailable
 }
 
 // NewRouter constructs a ServeMux with respond API routes registered.
@@ -36,11 +36,10 @@ func NewRouterWithConfig(cfg RouterConfig) http.Handler {
 	mux.HandleFunc("/api/v1/cases", cfg.Handler.CasesHandler)
 	mux.HandleFunc("/api/v1/cases/", caseRouteHandler(cfg.Handler))
 
-	// Alert routes (under /api/v1/ prefix) - requires OpenSearch
-	if cfg.AlertsHandler != nil {
-		mux.HandleFunc("/api/v1/alerts", cfg.AlertsHandler.AlertsRoute)
-		mux.HandleFunc("/api/v1/alerts/", cfg.AlertsHandler.AlertsRoute)
-	}
+	// Alert routes (under /api/v1/ prefix)
+	// Always register routes - handler will return 503 if OpenSearch unavailable
+	mux.HandleFunc("/api/v1/alerts", cfg.AlertsHandler.AlertsRoute)
+	mux.HandleFunc("/api/v1/alerts/", cfg.AlertsHandler.AlertsRoute)
 
 	return middleware.RequestID(mux)
 }

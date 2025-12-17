@@ -20,8 +20,14 @@ type AlertsHandler struct {
 }
 
 // NewAlertsHandler creates a new AlertsHandler instance.
+// Storage can be nil if OpenSearch is unavailable - handlers will return 503.
 func NewAlertsHandler(storage *storage.OpenSearchStorage) *AlertsHandler {
 	return &AlertsHandler{storage: storage}
+}
+
+// isAvailable checks if the alerts handler can function (OpenSearch connected).
+func (h *AlertsHandler) isAvailable() bool {
+	return h.storage != nil
 }
 
 // WithAuthClient sets the auth client for token validation.
@@ -54,6 +60,12 @@ func (h *AlertsHandler) requireUserContext(r *http.Request) (*auth.UserContext, 
 func (h *AlertsHandler) ListAlerts(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		writeAlertsError(w, http.StatusMethodNotAllowed, "method_not_allowed", "Method not allowed")
+		return
+	}
+
+	// Check if alerts service is available
+	if !h.isAvailable() {
+		writeAlertsError(w, http.StatusServiceUnavailable, "service_unavailable", "Alerts service temporarily unavailable: OpenSearch connection failed")
 		return
 	}
 
@@ -136,6 +148,12 @@ func (h *AlertsHandler) ListAlerts(w http.ResponseWriter, r *http.Request) {
 func (h *AlertsHandler) GetAlert(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		writeAlertsError(w, http.StatusMethodNotAllowed, "method_not_allowed", "Method not allowed")
+		return
+	}
+
+	// Check if alerts service is available
+	if !h.isAvailable() {
+		writeAlertsError(w, http.StatusServiceUnavailable, "service_unavailable", "Alerts service temporarily unavailable: OpenSearch connection failed")
 		return
 	}
 
