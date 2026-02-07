@@ -85,7 +85,8 @@ export type AggregationType =
   | 'min'            // Minimum
   | 'max'            // Maximum
   | 'stats'          // All metrics (count, avg, sum, min, max)
-  | 'cardinality';   // Unique count
+  | 'cardinality'    // Unique count
+  | 'top_hits';      // Return sample events from buckets
 
 /**
  * Aggregation specification
@@ -97,6 +98,9 @@ export interface Aggregation {
   size?: number;              // For terms aggregation
   interval?: string;          // For date_histogram (e.g., "1h", "1d")
   aggregations?: Aggregation[]; // Nested aggregations
+  order?: Record<string, 'asc' | 'desc'>; // For terms aggregation (e.g., {"_count": "asc"})
+  top_hits_size?: number;     // For top_hits aggregation (default: 1, max: 100)
+  top_hits_sort?: SortSpec[]; // For top_hits aggregation
 }
 
 /**

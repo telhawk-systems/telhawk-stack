@@ -8,14 +8,14 @@ import "time"
 // =============================================================================
 
 // DetectionSchema represents a versioned detection rule
+// Immutability pattern: version_id is UUIDv7 (timestamp encodes created_at)
 type DetectionSchema struct {
-	ID         string                 `json:"id"`         // Stable rule identifier
-	VersionID  string                 `json:"version_id"` // Version-specific UUID (UUID v7)
+	ID         string                 `json:"id"`         // Stable rule identifier (UUIDv7)
+	VersionID  string                 `json:"version_id"` // Version-specific UUID (UUIDv7 - timestamp encodes when created)
 	Model      map[string]interface{} `json:"model"`      // Data model and aggregation config
 	View       map[string]interface{} `json:"view"`       // Presentation and display config
 	Controller map[string]interface{} `json:"controller"` // Detection logic and evaluation
-	CreatedBy  string                 `json:"created_by"`
-	CreatedAt  time.Time              `json:"created_at"`
+	CreatedBy  string                 `json:"created_by,omitempty"`
 	DisabledAt *time.Time             `json:"disabled_at,omitempty"`
 	DisabledBy *string                `json:"disabled_by,omitempty"`
 	HiddenAt   *time.Time             `json:"hidden_at,omitempty"`
@@ -69,11 +69,10 @@ type VersionHistoryResponse struct {
 
 // DetectionSchemaVersion represents a single version in history
 type DetectionSchemaVersion struct {
-	VersionID  string     `json:"version_id"`
+	VersionID  string     `json:"version_id"` // UUIDv7 - timestamp encodes when created
 	Version    int        `json:"version"`
 	Title      string     `json:"title"`
-	CreatedBy  string     `json:"created_by"`
-	CreatedAt  time.Time  `json:"created_at"`
+	CreatedBy  string     `json:"created_by,omitempty"`
 	DisabledAt *time.Time `json:"disabled_at,omitempty"`
 	Changes    string     `json:"changes,omitempty"`
 }
@@ -116,17 +115,16 @@ type AlertTrigger struct {
 // =============================================================================
 
 // Case represents a security case for investigation
+// Immutability pattern: id is UUIDv7 (timestamp encodes created_at)
 type Case struct {
-	ID          string     `json:"id"`
+	ID          string     `json:"id"` // UUIDv7 - timestamp encodes when created
 	Title       string     `json:"title"`
 	Description string     `json:"description,omitempty"`
 	Severity    string     `json:"severity"` // info, low, medium, high, critical
 	Status      string     `json:"status"`   // open, in_progress, resolved, closed
 	Priority    string     `json:"priority"` // low, medium, high, critical
 	AssigneeID  *string    `json:"assignee_id,omitempty"`
-	CreatedBy   string     `json:"created_by"`
-	CreatedAt   time.Time  `json:"created_at"`
-	UpdatedAt   time.Time  `json:"updated_at"`
+	CreatedBy   string     `json:"created_by,omitempty"`
 	ClosedAt    *time.Time `json:"closed_at,omitempty"`
 	ClosedBy    *string    `json:"closed_by,omitempty"`
 	AlertCount  int        `json:"alert_count,omitempty"` // Calculated field
@@ -137,14 +135,14 @@ type Case struct {
 }
 
 // CaseAlert represents the association between a case and an alert
+// Immutability pattern: id is UUIDv7 (timestamp encodes when alert was added to case)
 type CaseAlert struct {
-	ID                       string    `json:"id"`
-	CaseID                   string    `json:"case_id"`
-	AlertID                  string    `json:"alert_id"` // OpenSearch document ID
-	DetectionSchemaID        string    `json:"detection_schema_id,omitempty"`
-	DetectionSchemaVersionID string    `json:"detection_schema_version_id,omitempty"`
-	AddedAt                  time.Time `json:"added_at"`
-	AddedBy                  string    `json:"added_by"`
+	ID                       string `json:"id"` // UUIDv7 - timestamp encodes when added
+	CaseID                   string `json:"case_id"`
+	AlertID                  string `json:"alert_id"` // OpenSearch document ID
+	DetectionSchemaID        string `json:"detection_schema_id,omitempty"`
+	DetectionSchemaVersionID string `json:"detection_schema_version_id,omitempty"`
+	AddedBy                  string `json:"added_by,omitempty"`
 }
 
 // CreateCaseRequest represents the request to create a new case

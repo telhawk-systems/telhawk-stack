@@ -411,11 +411,19 @@ func (t *OpenSearchTranslator) translateAggregation(agg *model.Aggregation) (map
 		// For terms aggregations, use .keyword suffix for text fields unless already specified
 		// OpenSearch dynamic mapping creates text fields with keyword subfields
 		termsField := t.ensureKeywordField(field)
+
+		termsBody := map[string]interface{}{
+			"field": termsField,
+			"size":  agg.Size,
+		}
+
+		// Add order if specified
+		if len(agg.Order) > 0 {
+			termsBody["order"] = agg.Order
+		}
+
 		aggBody = map[string]interface{}{
-			"terms": map[string]interface{}{
-				"field": termsField,
-				"size":  agg.Size,
-			},
+			"terms": termsBody,
 		}
 
 	case model.AggTypeDateHistogram:
@@ -468,6 +476,47 @@ func (t *OpenSearchTranslator) translateAggregation(agg *model.Aggregation) (map
 			"cardinality": map[string]interface{}{
 				"field": cardinalityField,
 			},
+		}
+
+	case model.AggTypeTopHits:
+		// Default size to 1 if not specified
+		size := agg.TopHitsSize
+		if size == 0 {
+			size = 1
+		}
+
+		topHitsBody := map[string]interface{}{
+			"size": size,
+		}
+
+		// Add sorting if specified
+		if len(agg.TopHitsSort) > 0 {
+			sorts := make([]map[string]interface{}, len(agg.TopHitsSort))
+			for i, s := range agg.TopHitsSort {
+				order := "desc"
+				if s.Order != "" {
+					order = s.Order
+				}
+				sorts[i] = map[string]interface{}{
+					t.translateFieldPath(s.Field): map[string]interface{}{
+						"order": order,
+					},
+				}
+			}
+			topHitsBody["sort"] = sorts
+		} else {
+			// Default sort by time descending
+			topHitsBody["sort"] = []map[string]interface{}{
+				{
+					"time": map[string]interface{}{
+						"order": "desc",
+					},
+				},
+			}
+		}
+
+		aggBody = map[string]interface{}{
+			"top_hits": topHitsBody,
 		}
 
 	default:

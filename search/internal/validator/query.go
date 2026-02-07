@@ -305,12 +305,48 @@ func (v *QueryValidator) validateAggregation(agg *model.Aggregation) error {
 			return fmt.Errorf("terms aggregation size must be > 0")
 		}
 
+		// Validate order if specified
+		if len(agg.Order) > 0 {
+			// Validate order keys
+			validKeys := map[string]bool{
+				"_count": true,
+				"_key":   true,
+			}
+
+			for key, direction := range agg.Order {
+				if !validKeys[key] {
+					return fmt.Errorf("invalid order key: %s (must be _count or _key)", key)
+				}
+				if direction != "asc" && direction != "desc" {
+					return fmt.Errorf("invalid order direction: %s (must be asc or desc)", direction)
+				}
+			}
+		}
+
 	case model.AggTypeDateHistogram:
 		if agg.Field == "" {
 			return fmt.Errorf("date_histogram aggregation requires a field")
 		}
 		if agg.Interval == "" {
 			return fmt.Errorf("date_histogram aggregation requires an interval")
+		}
+
+	case model.AggTypeTopHits:
+		if agg.TopHitsSize < 0 {
+			return fmt.Errorf("top_hits_size must be positive")
+		}
+		if agg.TopHitsSize > 100 {
+			return fmt.Errorf("top_hits_size cannot exceed 100")
+		}
+
+		// Validate sort specifications if provided
+		for i, sort := range agg.TopHitsSort {
+			if err := v.validateFieldPath(sort.Field); err != nil {
+				return fmt.Errorf("top_hits_sort %d: invalid field: %w", i, err)
+			}
+			if sort.Order != "" && sort.Order != "asc" && sort.Order != "desc" {
+				return fmt.Errorf("top_hits_sort %d: invalid order: %s (must be 'asc' or 'desc')", i, sort.Order)
+			}
 		}
 	}
 
@@ -455,6 +491,13 @@ func (v *QueryValidator) collectAggregationFields(agg *model.Aggregation, fieldS
 		fieldSet[agg.Field] = struct{}{}
 	}
 
+	// Collect from top_hits sort
+	for _, sort := range agg.TopHitsSort {
+		if sort.Field != "" && sort.Field != "." {
+			fieldSet[sort.Field] = struct{}{}
+		}
+	}
+
 	// Recurse into nested aggregations
 	for i := range agg.Aggregations {
 		v.collectAggregationFields(&agg.Aggregations[i], fieldSet)
@@ -488,6 +531,7 @@ func (v *QueryValidator) isValidAggregationType(t string) bool {
 		model.AggTypeTerms, model.AggTypeDateHistogram,
 		model.AggTypeAvg, model.AggTypeSum, model.AggTypeMin,
 		model.AggTypeMax, model.AggTypeStats, model.AggTypeCardinality,
+		model.AggTypeTopHits,
 	}
 	for _, valid := range validTypes {
 		if t == valid {

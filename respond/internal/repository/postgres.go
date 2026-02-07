@@ -102,8 +102,8 @@ func (r *PostgresRepository) CreateSchema(ctx context.Context, schema *models.De
 
 	query := `
 		INSERT INTO detection_schemas
-		(id, version_id, model, view, controller, created_at)
-		VALUES ($1, $2, $3, $4, $5, NOW())
+		(id, version_id, model, view, controller)
+		VALUES ($1, $2, $3, $4, $5)
 	`
 
 	_, err = r.pool.Exec(ctx, query,
@@ -128,9 +128,9 @@ func (r *PostgresRepository) GetSchemaByVersionID(ctx context.Context, versionID
 
 	query := `
 		SELECT
-			id, version_id, model, view, controller, created_at,
+			id, version_id, model, view, controller,
 			disabled_at, disabled_by, hidden_at, hidden_by,
-			ROW_NUMBER() OVER (PARTITION BY id ORDER BY created_at) as version
+			ROW_NUMBER() OVER (PARTITION BY id ORDER BY version_id) as version
 		FROM detection_schemas
 		WHERE version_id = $1
 	`
@@ -144,7 +144,6 @@ func (r *PostgresRepository) GetSchemaByVersionID(ctx context.Context, versionID
 		&modelJSON,
 		&viewJSON,
 		&controllerJSON,
-		&schema.CreatedAt,
 		&schema.DisabledAt,
 		&schema.DisabledBy,
 		&schema.HiddenAt,
@@ -181,14 +180,14 @@ func (r *PostgresRepository) GetLatestSchemaByID(ctx context.Context, id string)
 	query := `
 		WITH ranked AS (
 			SELECT
-				id, version_id, model, view, controller, created_at,
+				id, version_id, model, view, controller,
 				disabled_at, disabled_by, hidden_at, hidden_by,
-				ROW_NUMBER() OVER (PARTITION BY id ORDER BY created_at DESC) as rn,
+				ROW_NUMBER() OVER (PARTITION BY id ORDER BY version_id DESC) as rn,
 				COUNT(*) OVER (PARTITION BY id) as version
 			FROM detection_schemas
 			WHERE id = $1
 		)
-		SELECT id, version_id, model, view, controller, created_at,
+		SELECT id, version_id, model, view, controller,
 			disabled_at, disabled_by, hidden_at, hidden_by, version
 		FROM ranked
 		WHERE rn = 1
@@ -203,7 +202,6 @@ func (r *PostgresRepository) GetLatestSchemaByID(ctx context.Context, id string)
 		&modelJSON,
 		&viewJSON,
 		&controllerJSON,
-		&schema.CreatedAt,
 		&schema.DisabledAt,
 		&schema.DisabledBy,
 		&schema.HiddenAt,
@@ -240,13 +238,12 @@ func (r *PostgresRepository) GetSchemaVersionHistory(ctx context.Context, id str
 	query := `
 		SELECT
 			version_id,
-			ROW_NUMBER() OVER (PARTITION BY id ORDER BY created_at) as version,
+			ROW_NUMBER() OVER (PARTITION BY id ORDER BY version_id) as version,
 			view->>'title' as title,
-			created_at,
 			disabled_at
 		FROM detection_schemas
 		WHERE id = $1
-		ORDER BY created_at DESC
+		ORDER BY version_id DESC
 	`
 
 	rows, err := r.pool.Query(ctx, query, id)
@@ -263,7 +260,6 @@ func (r *PostgresRepository) GetSchemaVersionHistory(ctx context.Context, id str
 			&v.VersionID,
 			&v.Version,
 			&title,
-			&v.CreatedAt,
 			&v.DisabledAt,
 		)
 		if err != nil {
@@ -330,19 +326,19 @@ func (r *PostgresRepository) ListSchemas(ctx context.Context, req *models.ListSc
 	query := fmt.Sprintf(`
 		WITH ranked_schemas AS (
 			SELECT
-				id, version_id, model, view, controller, created_at,
+				id, version_id, model, view, controller,
 				disabled_at, disabled_by, hidden_at, hidden_by,
-				ROW_NUMBER() OVER (PARTITION BY id ORDER BY created_at DESC) as rn,
+				ROW_NUMBER() OVER (PARTITION BY id ORDER BY version_id DESC) as rn,
 				COUNT(*) OVER (PARTITION BY id) as version
 			FROM detection_schemas
 			%s
 		)
 		SELECT
-			id, version_id, model, view, controller, created_at,
+			id, version_id, model, view, controller,
 			disabled_at, disabled_by, hidden_at, hidden_by, version
 		FROM ranked_schemas
 		WHERE rn = 1
-		ORDER BY created_at DESC
+		ORDER BY version_id DESC
 		LIMIT $%d OFFSET $%d
 	`, where, argCount+1, argCount+2)
 
@@ -365,7 +361,6 @@ func (r *PostgresRepository) ListSchemas(ctx context.Context, req *models.ListSc
 			&modelJSON,
 			&viewJSON,
 			&controllerJSON,
-			&schema.CreatedAt,
 			&schema.DisabledAt,
 			&schema.DisabledBy,
 			&schema.HiddenAt,
@@ -507,8 +502,8 @@ func (r *PostgresRepository) CreateCase(ctx context.Context, c *models.Case) err
 
 	query := `
 		INSERT INTO cases (id, title, description, status, priority, assignee_id,
-			detection_schema_id, detection_schema_version_id, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
+			detection_schema_id, detection_schema_version_id)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 	`
 
 	_, err := r.pool.Exec(ctx, query,
@@ -531,7 +526,7 @@ func (r *PostgresRepository) GetCaseByID(ctx context.Context, id string) (*model
 		SELECT
 			c.id, c.title, c.description, c.status, c.priority,
 			c.assignee_id, c.detection_schema_id, c.detection_schema_version_id,
-			c.created_at, c.updated_at, c.closed_at, c.closed_by,
+			c.closed_at, c.closed_by,
 			COUNT(ca.alert_id) as alert_count
 		FROM cases c
 		LEFT JOIN case_alerts ca ON c.id = ca.case_id
@@ -543,7 +538,7 @@ func (r *PostgresRepository) GetCaseByID(ctx context.Context, id string) (*model
 	err := r.pool.QueryRow(ctx, query, id).Scan(
 		&c.ID, &c.Title, &c.Description, &c.Status, &c.Priority,
 		&c.AssigneeID, &c.DetectionSchemaID, &c.DetectionSchemaVersionID,
-		&c.CreatedAt, &c.UpdatedAt, &c.ClosedAt, &c.ClosedBy, &c.AlertCount,
+		&c.ClosedAt, &c.ClosedBy, &c.AlertCount,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -596,13 +591,13 @@ func (r *PostgresRepository) ListCases(ctx context.Context, req *models.ListCase
 		SELECT
 			c.id, c.title, c.description, c.status, c.priority,
 			c.assignee_id, c.detection_schema_id, c.detection_schema_version_id,
-			c.created_at, c.updated_at, c.closed_at, c.closed_by,
+			c.closed_at, c.closed_by,
 			COUNT(ca.alert_id) as alert_count
 		FROM cases c
 		LEFT JOIN case_alerts ca ON c.id = ca.case_id
 		%s
 		GROUP BY c.id
-		ORDER BY c.created_at DESC
+		ORDER BY c.id DESC
 		LIMIT $%d OFFSET $%d
 	`, whereClause, argPos, argPos+1)
 
@@ -618,7 +613,7 @@ func (r *PostgresRepository) ListCases(ctx context.Context, req *models.ListCase
 		if err := rows.Scan(
 			&c.ID, &c.Title, &c.Description, &c.Status, &c.Priority,
 			&c.AssigneeID, &c.DetectionSchemaID, &c.DetectionSchemaVersionID,
-			&c.CreatedAt, &c.UpdatedAt, &c.ClosedAt, &c.ClosedBy, &c.AlertCount,
+			&c.ClosedAt, &c.ClosedBy, &c.AlertCount,
 		); err != nil {
 			return nil, 0, fmt.Errorf("failed to scan case: %w", err)
 		}
@@ -638,7 +633,7 @@ func (r *PostgresRepository) UpdateCase(ctx context.Context, id string, req *mod
 	defer cancel()
 
 	// Build dynamic UPDATE query
-	setClauses := []string{"updated_at = NOW()"}
+	setClauses := []string{}
 	args := []interface{}{}
 	argPos := 1
 
@@ -695,7 +690,7 @@ func (r *PostgresRepository) CloseCase(ctx context.Context, id, userID string) e
 
 	query := `
 		UPDATE cases
-		SET status = 'closed', closed_at = NOW(), closed_by = $2, updated_at = NOW()
+		SET status = 'closed', closed_at = NOW(), closed_by = $2
 		WHERE id = $1
 	`
 
@@ -718,7 +713,7 @@ func (r *PostgresRepository) ReopenCase(ctx context.Context, id string) error {
 
 	query := `
 		UPDATE cases
-		SET status = 'open', closed_at = NULL, closed_by = NULL, updated_at = NOW()
+		SET status = 'open', closed_at = NULL, closed_by = NULL
 		WHERE id = $1
 	`
 
@@ -763,8 +758,8 @@ func (r *PostgresRepository) AddAlertsToCase(ctx context.Context, caseID string,
 		}
 
 		query := `
-			INSERT INTO case_alerts (id, case_id, alert_id, added_at, added_by)
-			VALUES ($1, $2, $3, NOW(), $4)
+			INSERT INTO case_alerts (id, case_id, alert_id, added_by)
+			VALUES ($1, $2, $3, $4)
 			ON CONFLICT (case_id, alert_id) DO NOTHING
 		`
 
@@ -783,10 +778,10 @@ func (r *PostgresRepository) GetCaseAlerts(ctx context.Context, caseID string) (
 	defer cancel()
 
 	query := `
-		SELECT id, case_id, alert_id, added_at, added_by
+		SELECT id, case_id, alert_id, added_by
 		FROM case_alerts
 		WHERE case_id = $1
-		ORDER BY added_at DESC
+		ORDER BY id DESC
 	`
 
 	rows, err := r.pool.Query(ctx, query, caseID)
@@ -798,7 +793,7 @@ func (r *PostgresRepository) GetCaseAlerts(ctx context.Context, caseID string) (
 	alerts := []*models.CaseAlert{}
 	for rows.Next() {
 		a := &models.CaseAlert{}
-		if err := rows.Scan(&a.ID, &a.CaseID, &a.AlertID, &a.AddedAt, &a.AddedBy); err != nil {
+		if err := rows.Scan(&a.ID, &a.CaseID, &a.AlertID, &a.AddedBy); err != nil {
 			return nil, fmt.Errorf("failed to scan case alert: %w", err)
 		}
 		alerts = append(alerts, a)

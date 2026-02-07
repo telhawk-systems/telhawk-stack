@@ -39,12 +39,15 @@ type TimeRangeDef struct {
 
 // Aggregation defines a statistical aggregation to perform on query results.
 type Aggregation struct {
-	Type         string        `json:"type"`                   // "terms", "date_histogram", "avg", "sum", "min", "max", "stats", "cardinality"
-	Field        string        `json:"field,omitempty"`        // OCSF field path (e.g., ".actor.user.name")
-	Name         string        `json:"name"`                   // Identifier for this aggregation in results
-	Size         int           `json:"size,omitempty"`         // For terms aggregations
-	Interval     string        `json:"interval,omitempty"`     // For date_histogram (e.g., "1h")
-	Aggregations []Aggregation `json:"aggregations,omitempty"` // Nested aggregations
+	Type         string            `json:"type"`                    // "terms", "date_histogram", "avg", "sum", "min", "max", "stats", "cardinality", "top_hits"
+	Field        string            `json:"field,omitempty"`         // OCSF field path (e.g., ".actor.user.name")
+	Name         string            `json:"name"`                    // Identifier for this aggregation in results
+	Size         int               `json:"size,omitempty"`          // For terms aggregations
+	Interval     string            `json:"interval,omitempty"`      // For date_histogram (e.g., "1h")
+	Aggregations []Aggregation     `json:"aggregations,omitempty"`  // Nested aggregations
+	Order        map[string]string `json:"order,omitempty"`         // For terms aggregation (e.g., {"_count": "asc"})
+	TopHitsSize  int               `json:"top_hits_size,omitempty"` // For top_hits aggregation (default: 1)
+	TopHitsSort  []SortSpec        `json:"top_hits_sort,omitempty"` // For top_hits aggregation
 }
 
 // SortSpec defines a field to sort by and the sort direction.
@@ -87,6 +90,7 @@ const (
 	AggTypeMax           = "max"
 	AggTypeStats         = "stats"
 	AggTypeCardinality   = "cardinality"
+	AggTypeTopHits       = "top_hits"
 )
 
 // IsSimpleCondition returns true if this filter is a simple field condition (not compound).
