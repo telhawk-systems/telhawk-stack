@@ -4,6 +4,7 @@ package scheduler
 import (
 	"context"
 	"log"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -21,6 +22,7 @@ type Scheduler struct {
 	interval  time.Duration
 	stop      chan struct{}
 	stopped   chan struct{}
+	stopOnce  sync.Once
 }
 
 // NewScheduler creates a new correlation scheduler.
@@ -62,7 +64,7 @@ func (s *Scheduler) Start(ctx context.Context) {
 
 // Stop signals the scheduler to stop and waits for it to finish.
 func (s *Scheduler) Stop() {
-	close(s.stop)
+	s.stopOnce.Do(func() { close(s.stop) })
 	<-s.stopped
 }
 

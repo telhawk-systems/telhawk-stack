@@ -1,6 +1,9 @@
 package models
 
-import "time"
+import (
+	"context"
+	"time"
+)
 
 // HEC event format matching Splunk's HTTP Event Collector
 type HECEvent struct {
@@ -42,6 +45,7 @@ type Event struct {
 	ClientID   string                 `json:"client_id"` // Client UUID for data isolation
 	Signature  string                 `json:"signature"`
 	AckID      string                 `json:"ack_id,omitempty"` // Track ack ID for completion
+	Ctx        context.Context        `json:"-"`                // Request context for propagation
 }
 
 type IngestionStats struct {

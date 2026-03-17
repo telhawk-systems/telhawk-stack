@@ -316,15 +316,20 @@ func (at *alertTimer) stop() {
 // GetMetrics returns a snapshot of scheduler metrics.
 func (s *Scheduler) GetMetrics() map[string]interface{} {
 	s.metrics.mu.RLock()
-	defer s.metrics.mu.RUnlock()
-
-	return map[string]interface{}{
+	metricsSnapshot := map[string]interface{}{
 		"alerts_triggered":    s.metrics.AlertsTriggered,
 		"alert_executions":    s.metrics.AlertExecutions,
 		"alert_errors":        s.metrics.AlertErrors,
 		"notifications_sent":  s.metrics.NotificationsSent,
 		"notification_errors": s.metrics.NotificationErrors,
 		"last_check_time":     s.metrics.LastCheckTime.Format(time.RFC3339),
-		"active_alert_count":  len(s.alertTimers),
 	}
+	s.metrics.mu.RUnlock()
+
+	s.mu.RLock()
+	activeAlerts := len(s.alertTimers)
+	s.mu.RUnlock()
+
+	metricsSnapshot["active_alert_count"] = activeAlerts
+	return metricsSnapshot
 }

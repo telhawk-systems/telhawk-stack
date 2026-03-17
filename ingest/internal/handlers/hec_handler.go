@@ -21,8 +21,8 @@ import (
 )
 
 type IngestServiceInterface interface {
-	IngestEvent(event *models.HECEvent, sourceIP string, tokenInfo *service.TokenInfo) (string, error)
-	IngestRaw(data []byte, sourceIP string, tokenInfo *service.TokenInfo, source, sourceType, host string) (string, error)
+	IngestEvent(ctx context.Context, event *models.HECEvent, sourceIP string, tokenInfo *service.TokenInfo) (string, error)
+	IngestRaw(ctx context.Context, data []byte, sourceIP string, tokenInfo *service.TokenInfo, source, sourceType, host string) (string, error)
 	ValidateHECToken(ctx context.Context, token string) (*service.TokenInfo, error)
 	GetStats() models.IngestionStats
 	QueryAcks(ackIDs []string) map[string]bool
@@ -136,7 +136,7 @@ func (h *HECHandler) HandleEvent(w http.ResponseWriter, r *http.Request) {
 	// Ingest events
 	var ackID string
 	for _, event := range events {
-		eventAckID, err := h.service.IngestEvent(&event, sourceIP, tokenInfo)
+		eventAckID, err := h.service.IngestEvent(r.Context(), &event, sourceIP, tokenInfo)
 		if err != nil {
 			h.sendError(w, hec.ErrServerBusy, http.StatusServiceUnavailable)
 			return
@@ -247,7 +247,7 @@ func (h *HECHandler) HandleRaw(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Ingest raw event
-	ackID, err := h.service.IngestRaw(body, sourceIP, tokenInfo, source, sourceType, host)
+	ackID, err := h.service.IngestRaw(r.Context(), body, sourceIP, tokenInfo, source, sourceType, host)
 	if err != nil {
 		h.sendError(w, hec.ErrServerBusy, http.StatusServiceUnavailable)
 		return

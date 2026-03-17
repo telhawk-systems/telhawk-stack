@@ -15,9 +15,9 @@ import (
 // newTestAuthService creates a test auth service
 func newTestAuthService(t *testing.T) *service.AuthService {
 	cfg := config.GetConfig()
-	cfg.Authenticate.JWTSecret = "test-jwt-secret-that-is-long-enough-for-hs256"
-	cfg.Authenticate.JWTRefreshSecret = "test-refresh-secret-that-is-long-enough-for-hs256"
-	cfg.Authenticate.AuditSecret = "test-audit-secret"
+	cfg.Authenticate.Auth.JWTSecret = "test-jwt-secret-that-is-long-enough-for-hs256"
+	cfg.Authenticate.Auth.JWTRefreshSecret = "test-refresh-secret-that-is-long-enough-for-hs256"
+	cfg.Authenticate.Auth.AuditSecret = "test-audit-secret"
 
 	repo := repository.NewInMemoryRepository()
 	return service.NewAuthService(repo, nil)

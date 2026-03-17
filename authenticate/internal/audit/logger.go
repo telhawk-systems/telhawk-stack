@@ -49,7 +49,11 @@ func NewLoggerWithRepoAndIngest(secretKey string, repo Repository, ingestClient 
 }
 
 func (l *Logger) Log(actorType, actorID, actorUsername, action, resource, resourceID, ipAddress, userAgent, result, reason string, metadata map[string]interface{}) *models.AuditLog {
-	id, _ := uuid.NewV7()
+	id, err := uuid.NewV7()
+	if err != nil {
+		slog.Error("audit: failed to generate log entry ID", "error", err)
+		return nil
+	}
 	log := &models.AuditLog{
 		ID:            id.String(),
 		Timestamp:     time.Now().UTC(),

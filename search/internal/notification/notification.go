@@ -135,7 +135,11 @@ func (s *SlackChannel) Send(ctx context.Context, alert *models.Alert, results []
 	}
 
 	if alert.Description != "" {
-		payload["attachments"].([]map[string]interface{})[0]["text"] = alert.Description
+		attachments, ok := payload["attachments"].([]map[string]interface{})
+		if !ok || len(attachments) == 0 {
+			return fmt.Errorf("unexpected attachments structure in slack payload")
+		}
+		attachments[0]["text"] = alert.Description
 	}
 
 	jsonData, err := json.Marshal(payload)

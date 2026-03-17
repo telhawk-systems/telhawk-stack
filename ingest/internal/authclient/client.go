@@ -32,6 +32,7 @@ type tokenCache struct {
 	mu      sync.RWMutex
 	entries map[string]*cacheEntry
 	ttl     time.Duration
+	maxSize int
 }
 
 type cacheEntry struct {
@@ -40,16 +41,27 @@ type cacheEntry struct {
 	expiresAt time.Time
 }
 
+func newTokenCache(ttl time.Duration, maxSize int) *tokenCache {
+	tc := &tokenCache{ttl: ttl, maxSize: maxSize, entries: make(map[string]*cacheEntry)}
+	go tc.runCleanup()
+	return tc
+}
+
+func (tc *tokenCache) runCleanup() {
+	ticker := time.NewTicker(tc.ttl / 2)
+	defer ticker.Stop()
+	for range ticker.C {
+		tc.cleanup()
+	}
+}
+
 func New(baseURL string, timeout time.Duration, cacheTTL time.Duration) *Client {
 	return &Client{
 		baseURL: baseURL,
 		httpClient: &http.Client{
 			Timeout: timeout,
 		},
-		cache: &tokenCache{
-			entries: make(map[string]*cacheEntry),
-			ttl:     cacheTTL,
-		},
+		cache: newTokenCache(cacheTTL, 10000),
 	}
 }
 
@@ -111,14 +123,19 @@ func (tc *tokenCache) set(token string, info *ValidateHECTokenResponse) {
 	tc.mu.Lock()
 	defer tc.mu.Unlock()
 
+	// Evict an arbitrary entry when at capacity
+	if len(tc.entries) >= tc.maxSize {
+		for k := range tc.entries {
+			delete(tc.entries, k)
+			break
+		}
+	}
+
 	tc.entries[token] = &cacheEntry{
 		valid:     info.Valid,
 		tokenInfo: *info,
 		expiresAt: time.Now().Add(tc.ttl),
 	}
-
-	// Clean up expired entries periodically
-	go tc.cleanup()
 }
 
 func (tc *tokenCache) cleanup() {

@@ -191,7 +191,10 @@ func (s *AuthService) Login(ctx context.Context, req *models.LoginRequest, ipAdd
 		return nil, err
 	}
 
-	sessionID, _ := uuid.NewV7()
+	sessionID, err := uuid.NewV7()
+	if err != nil {
+		return nil, fmt.Errorf("generating session ID: %w", err)
+	}
 	session := &models.Session{
 		ID:           sessionID.String(),
 		UserID:       user.ID,
@@ -279,10 +282,10 @@ func (s *AuthService) ValidateToken(ctx context.Context, tokenString string) (*m
 	// Check if JWT permissions version matches current DB version
 	// This detects stale permissions when roles have changed since token was issued
 	currentVersion, err := s.repo.GetUserPermissionsVersion(ctx, claims.UserID)
-	permissionsStale := false
-	if err == nil && currentVersion != claims.PermissionsVersion {
-		permissionsStale = true
+	if err != nil {
+		return nil, fmt.Errorf("fetching permissions version: %w", err)
 	}
+	permissionsStale := currentVersion != claims.PermissionsVersion
 
 	return &models.ValidateTokenResponse{
 		Valid:              true,
@@ -479,10 +482,16 @@ func (s *AuthService) CreateHECToken(ctx context.Context, userID, clientID, name
 		return nil, fmt.Errorf("client_id is required for HEC token creation")
 	}
 
-	tokenUUID, _ := uuid.NewV7()
+	tokenUUID, err := uuid.NewV7()
+	if err != nil {
+		return nil, fmt.Errorf("generating token UUID: %w", err)
+	}
 	token := tokenUUID.String()
 
-	idUUID, _ := uuid.NewV7()
+	idUUID, err := uuid.NewV7()
+	if err != nil {
+		return nil, fmt.Errorf("generating HEC token ID: %w", err)
+	}
 	hecToken := &models.HECToken{
 		ID:                idUUID.String(),
 		UserID:            userID,

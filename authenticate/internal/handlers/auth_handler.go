@@ -22,6 +22,15 @@ func NewAuthHandler(service *service.AuthService) *AuthHandler {
 	}
 }
 
+func hasRole(rolesHeader, target string) bool {
+	for _, r := range strings.Split(rolesHeader, ",") {
+		if strings.TrimSpace(r) == target {
+			return true
+		}
+	}
+	return false
+}
+
 func (h *AuthHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	// Note: Method checking is handled by mux pattern "POST /api/v1/users/create"
 
@@ -34,7 +43,7 @@ func (h *AuthHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 
 	// Authorization check: require admin role
 	roles := r.Header.Get("X-User-Roles")
-	if !strings.Contains(roles, "admin") {
+	if !hasRole(roles, "admin") {
 		http.Error(w, "Forbidden: admin role required", http.StatusForbidden)
 		return
 	}
@@ -492,7 +501,7 @@ func (h *AuthHandler) ListHECTokens(w http.ResponseWriter, r *http.Request) {
 	}
 
 	roles := r.Header.Get("X-User-Roles")
-	isAdmin := strings.Contains(roles, "admin")
+	isAdmin := hasRole(roles, "admin")
 
 	var data []map[string]interface{}
 

@@ -43,6 +43,9 @@ class ApiClient {
     }
 
     const data = await response.json();
+    if (!data.csrf_token) {
+      throw new Error('Server returned empty or missing CSRF token');
+    }
     this.csrfToken = data.csrf_token;
     return data.csrf_token;
   }
@@ -761,6 +764,26 @@ class ApiClient {
       throw new Error('Failed to get case');
     }
 
+    return response.json();
+  }
+
+  async updateDetectionRule(id: string, body: any): Promise<any> {
+    if (!this.csrfToken) {
+      await this.getCSRFToken();
+    }
+    const response = await fetch(`/api/rules/schemas/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': this.csrfToken!,
+      },
+      credentials: 'include',
+      body: JSON.stringify(body),
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: 'Failed to update rule' }));
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    }
     return response.json();
   }
 

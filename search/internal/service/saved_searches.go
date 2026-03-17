@@ -246,13 +246,16 @@ func (s *SearchService) RunSavedSearch(ctx context.Context, id string, clientID 
 	}
 
 	// Unmarshal saved query into Query model
+	if saved.Query == nil {
+		return nil, fmt.Errorf("saved search %s has nil query", id)
+	}
 	queryJSON, err := json.Marshal(saved.Query)
 	if err != nil {
-		return nil, fmt.Errorf("marshal saved query: %w", err)
+		return nil, fmt.Errorf("marshaling saved query: %w", err)
 	}
 	var query model.Query
 	if err := json.Unmarshal(queryJSON, &query); err != nil {
-		return nil, fmt.Errorf("unmarshal saved query: %w", err)
+		return nil, fmt.Errorf("saved search %s has invalid query: %w", id, err)
 	}
 
 	// CRITICAL: Inject client_id filter for data isolation (multi-tenant security)

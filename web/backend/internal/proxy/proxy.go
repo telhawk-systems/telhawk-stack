@@ -39,9 +39,19 @@ func (p *Proxy) Handler() http.Handler {
 			return
 		}
 
+		// Copy only an explicit allowlist of headers to avoid forwarding hop-by-hop,
+		// Host, or attacker-controlled trust headers to backend services.
+		allowedHeaders := map[string]bool{
+			"Content-Type":     true,
+			"Accept":           true,
+			"Accept-Language":  true,
+			"Accept-Encoding":  true,
+			"X-Request-Id":     true,
+			"X-Correlation-Id": true,
+		}
 		for key, values := range r.Header {
-			for _, value := range values {
-				proxyReq.Header.Add(key, value)
+			if allowedHeaders[http.CanonicalHeaderKey(key)] {
+				proxyReq.Header[http.CanonicalHeaderKey(key)] = values
 			}
 		}
 
@@ -70,17 +80,10 @@ func (p *Proxy) Handler() http.Handler {
 			proxyReq.Header.Set("X-User-Roles", rolesStr)
 		}
 
-		// Forward scope headers for multi-organization data isolation
-		// These headers are set by the frontend ScopeProvider
-		if scopeType := r.Header.Get("X-Scope-Type"); scopeType != "" {
-			proxyReq.Header.Set("X-Scope-Type", scopeType)
-		}
-		if orgID := r.Header.Get("X-Organization-ID"); orgID != "" {
-			proxyReq.Header.Set("X-Organization-ID", orgID)
-		}
-		if clientID := r.Header.Get("X-Client-ID"); clientID != "" {
-			proxyReq.Header.Set("X-Client-ID", clientID)
-		}
+		// Scope headers (X-Scope-Type, X-Organization-ID, X-Client-ID) must not be
+		// forwarded from the client request; they would allow any authenticated user
+		// to impersonate another tenant. They are intentionally omitted here and must
+		// be set by backend services from their own JWT validation if needed.
 
 		resp, err := p.httpClient.Do(proxyReq)
 		if err != nil {

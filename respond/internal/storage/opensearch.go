@@ -244,6 +244,12 @@ func (s *OpenSearchStorage) buildAlertsQuery(req *models.ListAlertsRequest) map[
 		})
 	}
 
+	if req.CaseID != "" {
+		must = append(must, map[string]interface{}{
+			"term": map[string]interface{}{"case_id": req.CaseID},
+		})
+	}
+
 	// Time range filter
 	if req.From != nil || req.To != nil {
 		rangeFilter := map[string]interface{}{}
@@ -271,6 +277,7 @@ func (s *OpenSearchStorage) parseAlertFromOCSF(id string, source json.RawMessage
 		Time                     string `json:"time"`
 		Severity                 string `json:"severity"`
 		SeverityID               int    `json:"severity_id"`
+		Status                   string `json:"status"`
 		DetectionSchemaID        string `json:"detection_schema_id"`
 		DetectionSchemaVersionID string `json:"detection_schema_version_id"`
 		FindingInfo              struct {
@@ -308,6 +315,12 @@ func (s *OpenSearchStorage) parseAlertFromOCSF(id string, source json.RawMessage
 		eventCount = int(ec)
 	}
 
+	// Extract status from document; default to "open" if absent
+	status := ocsf.Status
+	if status == "" {
+		status = "open"
+	}
+
 	alert := &models.Alert{
 		AlertID:                  id,
 		DetectionSchemaID:        ocsf.DetectionSchemaID,
@@ -316,7 +329,7 @@ func (s *OpenSearchStorage) parseAlertFromOCSF(id string, source json.RawMessage
 		Title:                    ocsf.FindingInfo.Title,
 		Description:              ocsf.FindingInfo.Desc,
 		Severity:                 ocsf.Severity,
-		Status:                   "open", // Default status
+		Status:                   status,
 		TriggeredAt:              triggeredAt,
 		EventCount:               eventCount,
 		Fields:                   ocsf.RawData,

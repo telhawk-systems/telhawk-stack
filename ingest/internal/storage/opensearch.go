@@ -640,14 +640,19 @@ func (c *Client) createISMPolicy(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	checkBody, _ := io.ReadAll(checkRes.Body)
 	checkRes.Body.Close()
 
 	// If policy exists (200), update it. Otherwise create it (404)
 	method := "PUT"
 	url := "/_plugins/_ism/policies/" + policyName
 	if checkRes.StatusCode == 200 {
-		// Policy exists, update with sequence number
-		url += "?if_seq_no=1&if_primary_term=1"
+		// Policy exists; parse current _seq_no and _primary_term for optimistic concurrency control
+		var existing map[string]interface{}
+		json.Unmarshal(checkBody, &existing)
+		seqNo := existing["_seq_no"]
+		primaryTerm := existing["_primary_term"]
+		url += fmt.Sprintf("?if_seq_no=%v&if_primary_term=%v", seqNo, primaryTerm)
 	}
 
 	httpReq, err := http.NewRequestWithContext(

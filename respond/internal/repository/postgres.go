@@ -527,6 +527,7 @@ func (r *PostgresRepository) GetCaseByID(ctx context.Context, id string) (*model
 			c.id, c.title, c.description, c.status, c.priority,
 			c.assignee_id, c.detection_schema_id, c.detection_schema_version_id,
 			c.closed_at, c.closed_by,
+			c.severity, c.created_by,
 			COUNT(ca.alert_id) as alert_count
 		FROM cases c
 		LEFT JOIN case_alerts ca ON c.id = ca.case_id
@@ -538,7 +539,8 @@ func (r *PostgresRepository) GetCaseByID(ctx context.Context, id string) (*model
 	err := r.pool.QueryRow(ctx, query, id).Scan(
 		&c.ID, &c.Title, &c.Description, &c.Status, &c.Priority,
 		&c.AssigneeID, &c.DetectionSchemaID, &c.DetectionSchemaVersionID,
-		&c.ClosedAt, &c.ClosedBy, &c.AlertCount,
+		&c.ClosedAt, &c.ClosedBy,
+		&c.Severity, &c.CreatedBy, &c.AlertCount,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -570,6 +572,11 @@ func (r *PostgresRepository) ListCases(ctx context.Context, req *models.ListCase
 		args = append(args, req.Priority)
 		argPos++
 	}
+	if req.Severity != "" {
+		whereClause += fmt.Sprintf(" AND c.severity = $%d", argPos)
+		args = append(args, req.Severity)
+		argPos++
+	}
 	if req.AssigneeID != "" {
 		whereClause += fmt.Sprintf(" AND c.assignee_id = $%d", argPos)
 		args = append(args, req.AssigneeID)
@@ -592,6 +599,7 @@ func (r *PostgresRepository) ListCases(ctx context.Context, req *models.ListCase
 			c.id, c.title, c.description, c.status, c.priority,
 			c.assignee_id, c.detection_schema_id, c.detection_schema_version_id,
 			c.closed_at, c.closed_by,
+			c.severity, c.created_by,
 			COUNT(ca.alert_id) as alert_count
 		FROM cases c
 		LEFT JOIN case_alerts ca ON c.id = ca.case_id
@@ -613,7 +621,8 @@ func (r *PostgresRepository) ListCases(ctx context.Context, req *models.ListCase
 		if err := rows.Scan(
 			&c.ID, &c.Title, &c.Description, &c.Status, &c.Priority,
 			&c.AssigneeID, &c.DetectionSchemaID, &c.DetectionSchemaVersionID,
-			&c.ClosedAt, &c.ClosedBy, &c.AlertCount,
+			&c.ClosedAt, &c.ClosedBy,
+			&c.Severity, &c.CreatedBy, &c.AlertCount,
 		); err != nil {
 			return nil, 0, fmt.Errorf("failed to scan case: %w", err)
 		}

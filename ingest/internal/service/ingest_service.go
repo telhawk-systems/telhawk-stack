@@ -24,6 +24,7 @@ type IngestService struct {
 	statsMutex    sync.RWMutex
 	eventQueue    chan *models.Event
 	stopChan      chan struct{}
+	wg            sync.WaitGroup
 	pipeline      *pipeline.Pipeline
 	dlq           dlq.Writer
 	storageClient StorageClient
@@ -59,6 +60,7 @@ func NewIngestService(pipeline *pipeline.Pipeline, dlqWriter dlq.Writer, storage
 	metrics.QueueCapacity.Set(float64(queueCap))
 
 	// Start event processor
+	s.wg.Add(1)
 	go s.processEvents()
 
 	return s
@@ -69,7 +71,7 @@ func (s *IngestService) SetAckManager(manager *ack.Manager) {
 	s.ackManager = manager
 }
 
-func (s *IngestService) IngestEvent(event *models.HECEvent, sourceIP string, tokenInfo *TokenInfo) (string, error) {
+func (s *IngestService) IngestEvent(ctx context.Context, event *models.HECEvent, sourceIP string, tokenInfo *TokenInfo) (string, error) {
 	// Determine source_type with fallback to default
 	sourceType := event.SourceType
 	if sourceType == "" {
@@ -96,6 +98,7 @@ func (s *IngestService) IngestEvent(event *models.HECEvent, sourceIP string, tok
 		Fields:     event.Fields,
 		HECTokenID: hecTokenID,
 		ClientID:   clientID,
+		Ctx:        ctx,
 	}
 
 	// Serialize raw event
@@ -134,7 +137,7 @@ func (s *IngestService) IngestEvent(event *models.HECEvent, sourceIP string, tok
 	}
 }
 
-func (s *IngestService) IngestRaw(data []byte, sourceIP string, tokenInfo *TokenInfo, source, sourceType, host string) (string, error) {
+func (s *IngestService) IngestRaw(ctx context.Context, data []byte, sourceIP string, tokenInfo *TokenInfo, source, sourceType, host string) (string, error) {
 	// Extract token details
 	var hecTokenID, clientID string
 	if tokenInfo != nil {
@@ -154,6 +157,7 @@ func (s *IngestService) IngestRaw(data []byte, sourceIP string, tokenInfo *Token
 		Raw:        data,
 		HECTokenID: hecTokenID,
 		ClientID:   clientID,
+		Ctx:        ctx,
 	}
 
 	event.Signature = s.signEvent(event)
@@ -184,6 +188,7 @@ func (s *IngestService) IngestRaw(data []byte, sourceIP string, tokenInfo *Token
 }
 
 func (s *IngestService) processEvents() {
+	defer s.wg.Done()
 	for {
 		select {
 		case event := <-s.eventQueue:
@@ -209,7 +214,7 @@ func (s *IngestService) processEvents() {
 
 			// Forward to Storage service
 			startTime = time.Now()
-			err = s.forwardToStorage(normalizedEvent)
+			err = s.forwardToStorage(event.Ctx, normalizedEvent)
 			metrics.StorageDuration.Observe(time.Since(startTime).Seconds())
 
 			if err != nil {
@@ -242,7 +247,11 @@ func (s *IngestService) normalizeEvent(event *models.Event) (map[string]interfac
 		return s.eventToMap(event), nil
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	parent := event.Ctx
+	if parent == nil {
+		parent = context.Background()
+	}
+	ctx, cancel := context.WithTimeout(parent, 5*time.Second)
 	defer cancel()
 
 	// Create raw event envelope for pipeline
@@ -312,13 +321,16 @@ func (s *IngestService) ocsfEventToMap(event *ocsf.Event) (map[string]interface{
 	return result, nil
 }
 
-func (s *IngestService) forwardToStorage(event map[string]interface{}) error {
+func (s *IngestService) forwardToStorage(parent context.Context, event map[string]interface{}) error {
 	if s.storageClient == nil {
 		log.Println("storage client not configured; skipping storage")
 		return nil
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	if parent == nil {
+		parent = context.Background()
+	}
+	ctx, cancel := context.WithTimeout(parent, 10*time.Second)
 	defer cancel()
 
 	events := []map[string]interface{}{event}
@@ -487,5 +499,5 @@ func (s *IngestService) Stop() {
 		s.ackManager.Close()
 	}
 	close(s.stopChan)
-	close(s.eventQueue)
+	s.wg.Wait()
 }

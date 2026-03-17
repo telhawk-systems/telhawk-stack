@@ -275,9 +275,9 @@ func (m *mockRepository) LogAudit(ctx context.Context, entry *models.AuditLogEnt
 // Helper to create test auth service
 func setupTestService() (*AuthService, *mockRepository) {
 	cfg := config.GetConfig()
-	cfg.Authenticate.JWTSecret = "test-jwt-secret-that-is-long-enough-for-hs256"
-	cfg.Authenticate.JWTRefreshSecret = "test-refresh-secret-that-is-long-enough-for-hs256"
-	cfg.Authenticate.AuditSecret = "test-audit-secret"
+	cfg.Authenticate.Auth.JWTSecret = "test-jwt-secret-that-is-long-enough-for-hs256"
+	cfg.Authenticate.Auth.JWTRefreshSecret = "test-refresh-secret-that-is-long-enough-for-hs256"
+	cfg.Authenticate.Auth.AuditSecret = "test-audit-secret"
 
 	repo := newMockRepository()
 	service := NewAuthService(repo, nil)

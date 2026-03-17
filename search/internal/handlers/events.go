@@ -25,6 +25,10 @@ func (h *Handler) Events(w http.ResponseWriter, r *http.Request) {
 			h.writeJSONAPIUnauthorized(w)
 			return
 		}
+		if uc.ClientID == "" {
+			http.Error(w, "missing client scope", http.StatusForbidden)
+			return
+		}
 		// Build search request from params
 		q := r.URL.Query().Get("filter[query]")
 		page, size := parsePage(r.URL)

@@ -1,5 +1,6 @@
 import { useState, useEffect, FormEvent } from 'react';
 import { DetectionSchema, DetectionSchemaCreateRequest } from '../../types/rules';
+import { apiClient } from '../../services/api';
 
 interface EditRuleModalProps {
   isOpen: boolean;
@@ -97,19 +98,8 @@ export function EditRuleModal({ isOpen, schema, onClose, onSuccess }: EditRuleMo
         },
       };
 
-      // PUT to create a new version of the existing rule
-      const response = await fetch(`/api/rules/schemas/${schema.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(request),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: 'Failed to update rule' }));
-        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-      }
+      // PUT to create a new version of the existing rule (uses apiClient for CSRF injection)
+      await apiClient.updateDetectionRule(schema.id, request);
 
       // Success
       onSuccess();

@@ -161,11 +161,9 @@ func (s *SearchService) ExecuteQuery(ctx context.Context, q *model.Query) (*mode
 	}
 
 	results := make([]map[string]interface{}, 0, len(searchResult.Hits.Hits))
-	var searchAfter []interface{}
 
 	for _, hit := range searchResult.Hits.Hits {
 		results = append(results, hit.Source)
-		searchAfter = hit.Sort
 	}
 
 	latency := time.Since(startTime).Milliseconds()
@@ -182,9 +180,11 @@ func (s *SearchService) ExecuteQuery(ctx context.Context, q *model.Query) (*mode
 		OpenSearchQuery: string(osQueryJSON),
 	}
 
-	if len(searchAfter) > 0 && len(results) > 0 {
-		response.SearchAfter = searchAfter
+	var nextCursor []interface{}
+	if len(results) == req.Limit && len(searchResult.Hits.Hits) > 0 {
+		nextCursor = searchResult.Hits.Hits[len(searchResult.Hits.Hits)-1].Sort
 	}
+	response.SearchAfter = nextCursor
 
 	if searchResult.Aggregations != nil && len(searchResult.Aggregations) > 0 {
 		response.Aggregations = searchResult.Aggregations

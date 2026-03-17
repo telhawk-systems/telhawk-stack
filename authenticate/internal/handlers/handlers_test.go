@@ -215,9 +215,9 @@ func (r *testRepo) ListClientsByOrganization(ctx context.Context, orgID string) 
 
 func setupTestConfig() {
 	cfg := config.GetConfig()
-	cfg.Authenticate.JWTSecret = "test-secret-key-long-enough"
-	cfg.Authenticate.JWTRefreshSecret = "test-refresh-secret-long"
-	cfg.Authenticate.AuditSecret = "test-audit"
+	cfg.Authenticate.Auth.JWTSecret = "test-secret-key-long-enough"
+	cfg.Authenticate.Auth.JWTRefreshSecret = "test-refresh-secret-long"
+	cfg.Authenticate.Auth.AuditSecret = "test-audit"
 }
 
 func setupHandler() *AuthHandler {
