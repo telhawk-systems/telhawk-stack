@@ -14,6 +14,7 @@ var (
 	ErrHECTokenNotFound     = errors.New("HEC token not found")
 	ErrOrganizationNotFound = errors.New("organization not found")
 	ErrClientNotFound       = errors.New("client not found")
+	ErrConflict             = errors.New("concurrent modification conflict: row was modified by another request")
 )
 
 type Repository interface {

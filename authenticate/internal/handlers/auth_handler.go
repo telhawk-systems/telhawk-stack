@@ -145,7 +145,14 @@ func (h *AuthHandler) ValidateToken(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := h.service.ValidateToken(r.Context(), req.Token)
 	if err != nil {
-		http.Error(w, "Invalid token", http.StatusUnauthorized)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	if resp == nil || !resp.Valid {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(resp)
 		return
 	}
 

@@ -169,7 +169,10 @@ func (s *SearchService) ExecuteQuery(ctx context.Context, q *model.Query) (*mode
 	latency := time.Since(startTime).Milliseconds()
 
 	// Serialize the OpenSearch query for debugging
-	osQueryJSON, _ := json.Marshal(osQuery)
+	osQueryJSON, err := json.Marshal(osQuery)
+	if err != nil {
+		return nil, fmt.Errorf("marshal opensearch query: %w", err)
+	}
 
 	response := &models.SearchResponse{
 		RequestID:       generateID(),
@@ -181,7 +184,7 @@ func (s *SearchService) ExecuteQuery(ctx context.Context, q *model.Query) (*mode
 	}
 
 	var nextCursor []interface{}
-	if len(results) == req.Limit && len(searchResult.Hits.Hits) > 0 {
+	if len(results) == q.Limit && len(searchResult.Hits.Hits) > 0 {
 		nextCursor = searchResult.Hits.Hits[len(searchResult.Hits.Hits)-1].Sort
 	}
 	response.SearchAfter = nextCursor

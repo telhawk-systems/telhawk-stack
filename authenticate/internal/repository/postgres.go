@@ -330,6 +330,13 @@ func (r *PostgresRepository) UpdateUser(ctx context.Context, user *models.User) 
 	}
 
 	if result.RowsAffected() == 0 {
+		// Check if the user exists at all (by stable ID) to distinguish
+		// "not found" from "concurrent modification with stale version_id"
+		var exists bool
+		_ = r.pool.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM users WHERE id = $1 AND deleted_at IS NULL)`, user.ID).Scan(&exists)
+		if exists {
+			return ErrConflict
+		}
 		return ErrUserNotFound
 	}
 

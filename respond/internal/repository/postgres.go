@@ -501,13 +501,14 @@ func (r *PostgresRepository) CreateCase(ctx context.Context, c *models.Case) err
 	}
 
 	query := `
-		INSERT INTO cases (id, title, description, status, priority, assignee_id,
-			detection_schema_id, detection_schema_version_id)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		INSERT INTO cases (id, title, description, status, priority, severity, created_by,
+			assignee_id, detection_schema_id, detection_schema_version_id)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 	`
 
 	_, err := r.pool.Exec(ctx, query,
 		c.ID, c.Title, c.Description, c.Status, c.Priority,
+		c.Severity, c.CreatedBy,
 		c.AssigneeID, c.DetectionSchemaID, c.DetectionSchemaVersionID,
 	)
 	if err != nil {

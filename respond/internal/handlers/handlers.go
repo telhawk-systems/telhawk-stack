@@ -430,6 +430,7 @@ func (h *Handler) ListCases(w http.ResponseWriter, r *http.Request) {
 		Page:       page,
 		Limit:      limit,
 		Status:     q.Get("status"),
+		Severity:   q.Get("severity"),
 		Priority:   q.Get("priority"),
 		AssigneeID: q.Get("assignee_id"),
 	}

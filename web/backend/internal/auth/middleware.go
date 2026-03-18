@@ -54,6 +54,12 @@ func (m *Middleware) Protect(next http.Handler) http.Handler {
 			return
 		}
 
+		if validateResp == nil {
+			log.Printf("Token validation returned nil response")
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
 		if !validateResp.Valid {
 			refreshCookie, err := r.Cookie("refresh_token")
 			if err != nil {
@@ -71,7 +77,7 @@ func (m *Middleware) Protect(next http.Handler) http.Handler {
 			m.setAccessTokenCookie(w, loginResp.AccessToken, loginResp.ExpiresIn)
 
 			newValidateResp, err := m.authClient.ValidateToken(loginResp.AccessToken)
-			if err != nil || !newValidateResp.Valid {
+			if err != nil || newValidateResp == nil || !newValidateResp.Valid {
 				http.Error(w, "Unauthorized", http.StatusUnauthorized)
 				return
 			}

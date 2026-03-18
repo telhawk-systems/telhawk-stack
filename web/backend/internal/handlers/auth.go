@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -29,12 +31,20 @@ type LoginRequest struct {
 
 func (h *AuthHandler) GetCSRFToken(w http.ResponseWriter, r *http.Request) {
 	// Go 1.25's CrossOriginProtection uses header-based validation
-	// (Sec-Fetch-Site and Origin) instead of tokens
-	// Return empty token for backward compatibility with frontend
+	// (Sec-Fetch-Site and Origin) instead of tokens.
+	// Generate a random token for the frontend which expects a non-empty value.
+	tokenBytes := make([]byte, 32)
+	if _, err := rand.Read(tokenBytes); err != nil {
+		log.Printf("Failed to generate CSRF token: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	token := hex.EncodeToString(tokenBytes)
+
 	log.Printf("CSRF token requested from %s (using header-based protection)", r.RemoteAddr)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"csrf_token": "",
+		"csrf_token": token,
 	})
 }
 

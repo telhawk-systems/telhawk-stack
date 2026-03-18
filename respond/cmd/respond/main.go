@@ -186,6 +186,7 @@ func main() {
 		log.Fatalf("Server forced to shutdown: %v", err) //nolint:gocritic // repo.Close() called explicitly above
 	}
 	cancel()
+	repo.Close()
 
 	log.Println("Server stopped gracefully")
 }

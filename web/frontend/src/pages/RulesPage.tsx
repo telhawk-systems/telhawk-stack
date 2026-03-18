@@ -4,6 +4,7 @@ import { Layout } from '../components/Layout';
 import { DetectionSchema } from '../types/rules';
 import { CreateRuleModal } from '../components/rules/CreateRuleModal';
 import { EditRuleModal } from '../components/rules/EditRuleModal';
+import { apiClient } from '../services/api';
 
 export function RulesPage() {
   const navigate = useNavigate();
@@ -83,8 +84,11 @@ export function RulesPage() {
   const handleDisableSchema = async (id: string, disabled: boolean) => {
     try {
       const endpoint = disabled ? 'enable' : 'disable';
+      const csrfToken = await apiClient.getCSRFToken();
       const response = await fetch(`/api/rules/schemas/${id}/${endpoint}`, {
         method: 'PUT',
+        headers: { 'X-CSRF-Token': csrfToken },
+        credentials: 'include',
       });
 
       if (!response.ok) {
@@ -101,8 +105,11 @@ export function RulesPage() {
   const handleHideSchema = async (id: string, hidden: boolean) => {
     try {
       const endpoint = hidden ? 'unhide' : 'hide';
+      const csrfToken = await apiClient.getCSRFToken();
       const response = await fetch(`/api/rules/schemas/${id}/${endpoint}`, {
         method: 'PUT',
+        headers: { 'X-CSRF-Token': csrfToken },
+        credentials: 'include',
       });
 
       if (!response.ok) {

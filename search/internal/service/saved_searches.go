@@ -237,6 +237,7 @@ func (s *SearchService) UnhideSavedSearch(ctx context.Context, id, userID string
 // RunSavedSearch executes a saved search and returns results.
 // clientID is required for data isolation - results will be filtered to only the client's data.
 func (s *SearchService) RunSavedSearch(ctx context.Context, id string, clientID string) (*models.SearchResponse, error) {
+	startTime := time.Now()
 	saved, err := s.GetSavedSearch(ctx, id)
 	if err != nil {
 		return nil, err
@@ -321,7 +322,7 @@ func (s *SearchService) RunSavedSearch(ctx context.Context, id string, clientID 
 	}
 	return &models.SearchResponse{
 		RequestID:    generateID(),
-		LatencyMS:    0,
+		LatencyMS:    int(time.Since(startTime).Milliseconds()),
 		ResultCount:  len(results),
 		TotalMatches: searchResult.Hits.Total.Value,
 		Results:      results,

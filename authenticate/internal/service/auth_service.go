@@ -188,6 +188,13 @@ func (s *AuthService) Login(ctx context.Context, req *models.LoginRequest, ipAdd
 
 	refreshToken, err := s.tokenGen.GenerateRefreshToken()
 	if err != nil {
+		s.auditLog.Log(
+			models.ActorTypeUser, user.ID, user.Username,
+			models.ActionLogin, "session", "",
+			ipAddress, userAgent,
+			models.ResultFailure, "refresh token generation failed",
+			nil,
+		)
 		return nil, err
 	}
 

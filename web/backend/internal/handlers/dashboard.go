@@ -196,11 +196,13 @@ func (h *DashboardHandler) GetMetrics(w http.ResponseWriter, r *http.Request) {
 	}
 	unwrapped, _ := json.Marshal(legacy)
 
-	// Update cache
-	h.cacheMutex.Lock()
-	h.cachedData = unwrapped
-	h.cacheTime = time.Now()
-	h.cacheMutex.Unlock()
+	// Only cache successful responses
+	if resp.StatusCode == http.StatusOK {
+		h.cacheMutex.Lock()
+		h.cachedData = unwrapped
+		h.cacheTime = time.Now()
+		h.cacheMutex.Unlock()
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("X-Cache", "MISS")

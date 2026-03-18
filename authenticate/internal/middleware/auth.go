@@ -42,7 +42,7 @@ func (m *AuthMiddleware) RequireAuth(next http.HandlerFunc) http.HandlerFunc {
 
 		token := parts[1]
 		resp, err := m.authService.ValidateToken(r.Context(), token)
-		if err != nil || !resp.Valid {
+		if err != nil || resp == nil || !resp.Valid {
 			http.Error(w, "Invalid or expired token", http.StatusUnauthorized)
 			return
 		}

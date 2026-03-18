@@ -59,7 +59,10 @@ func (h *HECHandler) HandleEvent(w http.ResponseWriter, r *http.Request) {
 		allowed, err := h.rateLimiter.Allow(ctx, "ip:"+sourceIP)
 		if err != nil {
 			log.Printf("rate limit check error: %v", err)
-		} else if !allowed {
+			h.sendError(w, hec.ErrServerBusy, http.StatusServiceUnavailable)
+			return
+		}
+		if !allowed {
 			metrics.EventsTotal.WithLabelValues("event", "rate_limited").Inc()
 			h.sendError(w, hec.ErrServerBusy, http.StatusTooManyRequests)
 			return
@@ -89,7 +92,10 @@ func (h *HECHandler) HandleEvent(w http.ResponseWriter, r *http.Request) {
 		allowed, err := h.rateLimiter.Allow(ctx, "token:"+token)
 		if err != nil {
 			log.Printf("rate limit check error: %v", err)
-		} else if !allowed {
+			h.sendError(w, hec.ErrServerBusy, http.StatusServiceUnavailable)
+			return
+		}
+		if !allowed {
 			metrics.EventsTotal.WithLabelValues("event", "token_rate_limited").Inc()
 			h.sendError(w, hec.ErrServerBusy, http.StatusTooManyRequests)
 			return
@@ -135,16 +141,26 @@ func (h *HECHandler) HandleEvent(w http.ResponseWriter, r *http.Request) {
 
 	// Ingest events
 	var ackID string
+	var failedCount int
 	for _, event := range events {
 		eventAckID, err := h.service.IngestEvent(r.Context(), &event, sourceIP, tokenInfo)
 		if err != nil {
-			h.sendError(w, hec.ErrServerBusy, http.StatusServiceUnavailable)
-			return
+			log.Printf("failed to ingest event in batch: %v", err)
+			failedCount++
+			continue
 		}
 		// Use the first ackID for the response (in batch, all share same ack)
 		if ackID == "" {
 			ackID = eventAckID
 		}
+	}
+
+	if failedCount == len(events) {
+		h.sendError(w, hec.ErrServerBusy, http.StatusServiceUnavailable)
+		return
+	}
+	if failedCount > 0 {
+		log.Printf("batch partially failed: %d/%d events failed", failedCount, len(events))
 	}
 
 	// Record HEC token usage stats

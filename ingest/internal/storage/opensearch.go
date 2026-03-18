@@ -640,7 +640,11 @@ func (c *Client) createISMPolicy(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	checkBody, _ := io.ReadAll(checkRes.Body)
+	checkBody, err := io.ReadAll(checkRes.Body)
+	if err != nil {
+		checkRes.Body.Close()
+		return fmt.Errorf("failed to read ISM policy check response: %w", err)
+	}
 	checkRes.Body.Close()
 
 	// If policy exists (200), update it. Otherwise create it (404)
@@ -649,7 +653,9 @@ func (c *Client) createISMPolicy(ctx context.Context) error {
 	if checkRes.StatusCode == 200 {
 		// Policy exists; parse current _seq_no and _primary_term for optimistic concurrency control
 		var existing map[string]interface{}
-		json.Unmarshal(checkBody, &existing)
+		if err := json.Unmarshal(checkBody, &existing); err != nil {
+			return fmt.Errorf("failed to parse ISM policy response: %w", err)
+		}
 		seqNo := existing["_seq_no"]
 		primaryTerm := existing["_primary_term"]
 		url += fmt.Sprintf("?if_seq_no=%v&if_primary_term=%v", seqNo, primaryTerm)
@@ -674,7 +680,10 @@ func (c *Client) createISMPolicy(ctx context.Context) error {
 
 	// Accept 200 (updated), 201 (created), or 409 (already exists with same content)
 	if res.StatusCode >= 400 && res.StatusCode != 409 {
-		bodyBytes, _ := io.ReadAll(res.Body)
+		bodyBytes, err := io.ReadAll(res.Body)
+		if err != nil {
+			return fmt.Errorf("failed to create ISM policy: %d (could not read body: %v)", res.StatusCode, err)
+		}
 		return fmt.Errorf("failed to create ISM policy: %d - %s", res.StatusCode, string(bodyBytes))
 	}
 

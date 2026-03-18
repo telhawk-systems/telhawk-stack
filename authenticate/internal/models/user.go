@@ -197,6 +197,9 @@ type Session struct {
 
 // IsActive returns true if session is not revoked or expired
 func (s *Session) IsActive() bool {
+	if s.ExpiresAt.IsZero() {
+		return false
+	}
 	return s.RevokedAt == nil && s.ExpiresAt.After(time.Now())
 }
 

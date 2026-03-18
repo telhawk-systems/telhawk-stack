@@ -121,7 +121,9 @@ func (t *OpenSearchTranslator) buildBoolQuery(filter *model.FilterExpr, timeRang
 		if err != nil {
 			return nil, err
 		}
-		must = append(must, timeFilter)
+		if timeFilter != nil {
+			must = append(must, timeFilter)
+		}
 	}
 
 	if len(must) > 0 {
@@ -376,6 +378,11 @@ func (t *OpenSearchTranslator) buildTimeRangeFilter(tr *model.TimeRangeDef) (map
 	} else if tr.Start != nil {
 		// No end time specified, default to now
 		rangeQuery["lte"] = time.Now().Unix()
+	}
+
+	// If neither Start, End, nor Last is provided, skip the range filter
+	if len(rangeQuery) == 0 {
+		return nil, nil
 	}
 
 	return map[string]interface{}{

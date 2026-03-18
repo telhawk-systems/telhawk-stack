@@ -339,6 +339,10 @@ func (s *IngestService) forwardToStorage(parent context.Context, event map[strin
 		return fmt.Errorf("storage ingest failed: %w", err)
 	}
 
+	if resp == nil {
+		return fmt.Errorf("storage returned nil response")
+	}
+
 	if resp.Failed > 0 {
 		return fmt.Errorf("storage reported %d failures: %v", resp.Failed, resp.Errors)
 	}
@@ -372,9 +376,7 @@ type TokenInfo struct {
 
 func (s *IngestService) ValidateHECToken(ctx context.Context, token string) (*TokenInfo, error) {
 	if s.authClient == nil {
-		log.Println("auth client not configured; skipping token validation")
-		// Return empty token info when no auth client (dev mode)
-		return &TokenInfo{}, nil
+		return nil, fmt.Errorf("auth client not configured; cannot validate token")
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)

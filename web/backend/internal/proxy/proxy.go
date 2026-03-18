@@ -100,6 +100,8 @@ func (p *Proxy) Handler() http.Handler {
 		}
 
 		w.WriteHeader(resp.StatusCode)
-		io.Copy(w, resp.Body)
+		if _, err := io.Copy(w, resp.Body); err != nil {
+			log.Printf("Error copying proxy response body: %v", err)
+		}
 	})
 }
