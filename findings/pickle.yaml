@@ -1,0 +1,14 @@
+squeeze:
+  middleware:
+    auth: [Auth]
+    rate_limit: [RateLimit]
+  rules:
+    ownership_scoping: true
+    read_scoping: true
+    unbounded_query: true
+    uuid_error_handling: true
+    required_fields: true
+    enum_validation: true
+    no_printf: true
+    param_mismatch: true
+    auth_without_middleware: true

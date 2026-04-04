@@ -87,3 +87,4 @@ authenticate/auth
 respond/migrations
 authenticate/migrations
 search/search
+specs
