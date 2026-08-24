@@ -6,7 +6,7 @@ This guide covers the simplified development environment using a single long-run
 
 The dev container provides:
 - **Bind-mounted source code** - edit locally, run in container
-- **Go 1.25.4** - latest version
+- **Go 1.25.13** - repository version
 - **Node.js 24.x** - latest version for frontend development
 - **Hot reload** - Vite dev server for frontend
 - **Service manager** - `thawk serve` daemon with auto-restart
@@ -223,7 +223,7 @@ All bound to `127.0.0.1` for security.
 | Debugging | Easy (Delve, logs) | Limited |
 | Services | All in one container | Separate containers |
 | TLS | Disabled | Enabled |
-| Go version | 1.25.4 | 1.23.4 (older) |
+| Go version | 1.25.13 | 1.23.4 (older) |
 | Node.js | 24.x | N/A |
 | Hot reload | Yes (frontend) | No |
 
